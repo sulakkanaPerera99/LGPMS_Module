@@ -1,0 +1,96 @@
+import { getProjectNumberByCode } from '../../models/water_billing_system/waterprojectsModel.js';
+import { getCustomerCountBySabhaAndProject, insertCustomer, getCustomersBySabha } from '../../models/water_billing_system/waterCustomerAccountsModel.js';
+
+export const registerCustomer = async (req, res) => {
+    try {
+        const {
+            customerType,
+            oldBillNumber,
+            fullName,
+            nic,
+            propertyAddress,
+            mailingAddress,
+            contactInfo,
+            connectionType,
+            projectCode,
+            isSamurdhi,
+            samurdhiNumber,
+            isMetered,
+            sabha_code
+        } = req.body;
+
+        // Validation
+        if (!sabha_code) {
+            return res.status(400).json({ success: false, message: "Sabha Code is required" });
+        }
+
+        // Business Logic: Bill Number Generation
+        // 1. Sabha Suffix: Last 3 digits of sabha_code
+        const sabhaSuffix = String(sabha_code).slice(-3);
+
+        // 2. Project Number: Fetch from DB based on projectCode or default to '00'
+        let projectNum = '00';
+        if (projectCode) {
+            const fetchedProjectNum = await getProjectNumberByCode(projectCode, sabha_code);
+            if (fetchedProjectNum !== null && fetchedProjectNum !== undefined) {
+                projectNum = String(fetchedProjectNum).padStart(2, '0');
+            }
+        }
+
+        // 3. Serial Number: Count existing rows for sabha_code and project_code + 1
+        const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
+        const serialNum = String(customerCount + 1).padStart(2, '0');
+
+        // Format: [SabhaSuffix][ProjectNum][SerialNum]
+        const newBillNumber = `${sabhaSuffix}${projectNum}${serialNum}`;
+
+        // Data Mapping (camelCase -> snake_case)
+        const customerData = {
+            customer_type: customerType,
+            old_bill_number: oldBillNumber,
+            new_bill_number: newBillNumber,
+            full_name: fullName,
+            nic: nic,
+            property_address: propertyAddress,
+            mailing_address: mailingAddress,
+            contact_info: contactInfo,
+            connection_type: connectionType,
+            project_code: projectCode,
+            is_samurdhi: isSamurdhi,
+            samurdhi_number: samurdhiNumber,
+            is_metered: isMetered,
+            sabha_code: sabha_code
+        };
+
+        // Insert into DB
+        await insertCustomer(customerData);
+
+        return res.status(201).json({
+            success: true,
+            message: "Customer registered successfully",
+            data: { new_bill_number: newBillNumber }
+        });
+
+    } catch (error) {
+        console.error("Error registering customer:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    }
+};
+
+export const getAllCustomers = async (req, res) => {
+    try {
+        const { sabha_code } = req.params;
+
+        if (!sabha_code) {
+            return res.status(400).json({ success: false, message: "Sabha Code is required" });
+        }
+
+        const customers = await getCustomersBySabha(sabha_code);
+
+        return res.status(200).json(customers);
+
+    } catch (error) {
+        console.error("Error fetching customers:", error);
+        return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    }
+};
