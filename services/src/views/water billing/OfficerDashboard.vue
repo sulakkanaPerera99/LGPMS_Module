@@ -9,10 +9,11 @@ const cards = ref([
   { id: 2, title: 'Edit and manage billing fees (Tariffs)', route: '/edit-billing-fees' },
   { id: 3, title: 'Register new customer', route: '/add-customer' },
   { id: 4, title: 'Manage water accounts', route: '/manage-water-accounts' },
-  { id: 5, title: 'Bill payment (Add PIV)', route: '/bill-payment' },
-  { id: 6, title: 'Print bill', route: '/print-bill' },
-  { id: 7, title: 'Report Generation', route: '/water-bill-report-generation'},
-  { id: 8, title: 'View customer history', route: '/view-customer-history' }
+  { id: 5, title: 'Add meter reading (Manual)', route: '/add-meter-reading' },
+  { id: 6, title: 'Bill payment (Add PIV)', route: '/bill-payment' },
+  { id: 7, title: 'Print bill', route: '/print-bill' },
+  { id: 8, title: 'Report Generation', route: '/water-bill-report-generation'},
+  { id: 9, title: 'View customer history', route: '/view-customer-history' }
 ])
 
 const navigateTo = (route) => {

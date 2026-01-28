@@ -19,7 +19,7 @@ import WaterProjectRoute from "./routes/water_billing_system/waterProjectRoutes.
 import billingFeesRoute from "./routes/water_billing_system/billingFeesRoute.js";
 import customerRoutes from "./routes/water_billing_system/waterCustomerAccountsRoutes.js";
 import waterCustomerRoutes from './routes/water_billing_system/waterCustomerAccountsRoutes.js';
-
+import waterReadingsRoutes from './routes/water_billing_system/waterReadingsRoutes.js';
 
 import path from 'path';
 const __filename=fileURLToPath(import.meta.url);
@@ -51,6 +51,7 @@ app.use(dateroutes);
 app.use('/api',WaterProjectRoute); // අලුත් Water Project Route එක එකතු කළා
 app.use('/api/water-billing', customerRoutes);
 app.use('/api', waterCustomerRoutes);
+app.use('/api/water-readings', waterReadingsRoutes);
 
 
 

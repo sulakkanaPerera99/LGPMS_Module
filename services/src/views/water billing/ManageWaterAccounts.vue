@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import axios from 'axios'
 
 // 1. Data Storage
@@ -23,7 +23,7 @@ const activeFilters = reactive({
 // 4. Fetch Data on Load
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
-  
+
   if (userDataString) {
     const userData = JSON.parse(userDataString);
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
@@ -38,12 +38,47 @@ onMounted(async () => {
   }
 });
 
+// 4.5. Watchers for automatic API calls
+watch(searchQuery, () => fetchAccounts(), { immediate: false });
+watch(sortBy, () => fetchAccounts(), { immediate: false });
+watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
+
 // 5. API Call Function
 const fetchAccounts = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(`/water-customers/${currentSabha.value}`);
-    accounts.value = response.data; 
+    // Construct query parameters
+    const params = {};
+
+    // Search parameter
+    if (searchQuery.value && searchQuery.value.trim()) {
+      params.search = searchQuery.value.trim();
+    }
+
+    // Sort parameter
+    if (sortBy.value) {
+      params.sort = sortBy.value;
+    }
+
+    // Filter parameters - convert arrays to comma-separated strings
+    if (activeFilters.connectionTypes && activeFilters.connectionTypes.length > 0) {
+      params.connectionTypes = activeFilters.connectionTypes.join(',');
+    }
+
+    if (activeFilters.samurdhi && activeFilters.samurdhi.length > 0) {
+      params.samurdhi = activeFilters.samurdhi.join(',');
+    }
+
+    if (activeFilters.metered && activeFilters.metered.length > 0) {
+      params.metered = activeFilters.metered.join(',');
+    }
+
+    if (activeFilters.status && activeFilters.status.length > 0) {
+      params.status = activeFilters.status.join(',');
+    }
+
+    const response = await axios.get(`/water-customers/${currentSabha.value}`, { params });
+    accounts.value = response.data;
     console.log("Accounts Loaded:", accounts.value);
   } catch (error) {
     console.error("Error fetching accounts:", error);
@@ -65,55 +100,7 @@ const clearFilters = () => {
   activeFilters.status = []
 }
 
-// 7. Computed Properties
-const filteredAccounts = computed(() => {
-  let result = [...accounts.value]
 
-  // A. Filter Dialog Logic
-  if (activeFilters.connectionTypes.length > 0) {
-    result = result.filter(acc => activeFilters.connectionTypes.includes(acc.connectionType));
-  }
-  if (activeFilters.samurdhi.length > 0) {
-    result = result.filter(acc => {
-      const status = acc.isSamurdhi ? 'Samurdhi' : 'Not Samurdhi';
-      return activeFilters.samurdhi.includes(status);
-    });
-  }
-  if (activeFilters.metered.length > 0) {
-    result = result.filter(acc => {
-      const status = acc.isMetered ? 'Metered' : 'Not Metered';
-      return activeFilters.metered.includes(status);
-    });
-  }
-
-  // B. Search Logic (Updated to search BOTH Old and New Bill Numbers)
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(acc => 
-      (acc.fullName && acc.fullName.toLowerCase().includes(query)) ||
-      (acc.nic && acc.nic.toLowerCase().includes(query)) ||
-      (acc.newBillNumber && acc.newBillNumber.toLowerCase().includes(query)) ||
-      (acc.oldBillNumber && acc.oldBillNumber.toLowerCase().includes(query))
-    )
-  }
-
-  // C. Sort Logic
-  result.sort((a, b) => {
-    const nameA = a.fullName || '';
-    const nameB = b.fullName || '';
-    // We primarily sort by NEW Bill Number now
-    const billA = a.newBillNumber || ''; 
-    const billB = b.newBillNumber || '';
-
-    if (sortBy.value === 'name_asc') return nameA.localeCompare(nameB)
-    if (sortBy.value === 'name_desc') return nameB.localeCompare(nameA)
-    if (sortBy.value === 'bill_asc') return billA.localeCompare(billB)
-    if (sortBy.value === 'bill_desc') return billB.localeCompare(billA)
-    return 0
-  })
-
-  return result
-})
 </script>
 
 <template>
@@ -162,7 +149,7 @@ const filteredAccounts = computed(() => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="acc in filteredAccounts" :key="acc.id">
+            <tr v-for="acc in accounts" :key="acc.id">
               <td class="old-bill">{{ acc.oldBillNumber || '-' }}</td>
               <td class="new-bill">{{ acc.newBillNumber }}</td>
               
@@ -182,7 +169,7 @@ const filteredAccounts = computed(() => {
                 <button class="action-btn">Edit</button>
               </td>
             </tr>
-            <tr v-if="filteredAccounts.length === 0">
+            <tr v-if="accounts.length === 0">
                 <td colspan="13" style="text-align:center; padding: 20px;">No customers found.</td>
             </tr>
           </tbody>

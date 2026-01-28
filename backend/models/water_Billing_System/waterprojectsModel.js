@@ -7,13 +7,15 @@ export const insertProject = (data, callback) => {
 };
 
 export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
-    let query = 'SELECT *, name AS project_name, code AS project_code, number as project_number, users as registered_users FROM water_projects WHERE sabha_code = ?';
+    let query = `SELECT p.id, p.sabha_code, p.name, p.code, p.number, COUNT(c.id) as registered_users FROM water_projects p LEFT JOIN water_customer_accounts c ON c.project_code = p.code AND c.sabha_code = p.sabha_code WHERE p.sabha_code = ?`;
     const queryParams = [sabhaCode];
 
     if (search) {
-        query += ' AND (name LIKE ? OR code LIKE ?)';
+        query += ' AND (p.name LIKE ? OR p.code LIKE ?)';
         queryParams.push(`%${search}%`, `%${search}%`);
     }
+
+    query += ' GROUP BY p.id, p.sabha_code, p.name, p.code, p.number';
 
     if (sort) {
         let field = sort;

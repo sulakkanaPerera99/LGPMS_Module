@@ -36,6 +36,7 @@ import BTCReportGeneration from '@/views/certificate issuing/Business and Indust
 import WaterBillReportGeneration from '@/views/water billing/WaterBillReportGeneration.vue'
 import GenerateSLCertificate from '@/views/certificate issuing/Street Line/GenerateSLCertificate.vue'
 import StreetLineReportGeneration from '@/views/certificate issuing/Street Line/StreetLineReportGeneration.vue'
+import AddReadings from "@/views/water billing/AddReadings.vue";
 
 //UnderDevelopment 
 
@@ -228,6 +229,11 @@ const routes = [
         path: '/bt-report-generation',
         name: 'bt-report-generation',
         component: BTCReportGeneration
+      },
+      {
+        path: '/add-meter-reading',
+        name: 'add-meter-reading',
+        component: AddReadings
       }
 ];
 

@@ -47,7 +47,10 @@ const fetchProjects = async () => {
     const response = await axios.get(`/water-projects/${currentSabha.value}`, {
       params: { search: searchQuery.value, sort: sortBy.value }
     });
-    projects.value = response.data; 
+    projects.value = response.data.map(project => ({
+      ...project,
+      users: project.registered_users
+    }));
   } catch (error) {
     console.error("Error fetching projects:", error);
   }
@@ -62,7 +65,6 @@ const addProject = async () => {
       name: projectName.value,
       code: projectCode.value,
       number: projectNumber.value, // 3. Backend එකට 'number' නමින් යවනවා
-      users: parseInt(users.value) || 0,
       sabha_code: currentSabha.value
     };
 

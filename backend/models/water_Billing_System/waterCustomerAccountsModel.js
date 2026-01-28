@@ -24,9 +24,9 @@ export const insertCustomer = (data) => {
     });
 };
 
-export const getCustomersBySabha = (sabhaCode) => {
+export const getCustomersBySabha = (sabhaCode, filters = {}) => {
     return new Promise((resolve, reject) => {
-        const query = `
+        let query = `
             SELECT
                 id,
                 nic,
@@ -45,7 +45,72 @@ export const getCustomersBySabha = (sabhaCode) => {
             FROM water_customer_accounts
             WHERE sabha_code = ?
         `;
-        db.query(query, [sabhaCode], (err, results) => {
+
+        const params = [sabhaCode];
+        const conditions = [];
+
+        // Search filter
+        if (filters.search) {
+            conditions.push(`(full_name LIKE ? OR nic LIKE ? OR old_bill_number LIKE ? OR new_bill_number LIKE ? OR project_code LIKE ?)`);
+            const searchTerm = `%${filters.search}%`;
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        }
+
+        // Connection Types filter
+        if (filters.connectionTypes && filters.connectionTypes.length > 0) {
+            const placeholders = filters.connectionTypes.map(() => '?').join(',');
+            conditions.push(`connection_type IN (${placeholders})`);
+            params.push(...filters.connectionTypes);
+        }
+
+        // Samurdhi filter
+        if (filters.isSamurdhi && filters.isSamurdhi.length > 0) {
+            const placeholders = filters.isSamurdhi.map(() => '?').join(',');
+            conditions.push(`is_samurdhi IN (${placeholders})`);
+            params.push(...filters.isSamurdhi);
+        }
+
+        // Metered filter
+        if (filters.isMetered && filters.isMetered.length > 0) {
+            const placeholders = filters.isMetered.map(() => '?').join(',');
+            conditions.push(`is_metered IN (${placeholders})`);
+            params.push(...filters.isMetered);
+        }
+
+        // Status filter (currently all are 'Active', but keeping for future use)
+        if (filters.status && filters.status.length > 0) {
+            // Since status is hardcoded to 'Active', this won't filter anything currently
+            // But keeping the structure for future expansion
+        }
+
+        // Append conditions to query
+        if (conditions.length > 0) {
+            query += ' AND ' + conditions.join(' AND ');
+        }
+
+        // Sorting
+        if (filters.sort) {
+            switch (filters.sort) {
+                case 'name_asc':
+                    query += ' ORDER BY full_name ASC';
+                    break;
+                case 'name_desc':
+                    query += ' ORDER BY full_name DESC';
+                    break;
+                case 'bill_asc':
+                    query += ' ORDER BY new_bill_number ASC';
+                    break;
+                case 'bill_desc':
+                    query += ' ORDER BY new_bill_number DESC';
+                    break;
+                default:
+                    query += ' ORDER BY full_name ASC';
+            }
+        } else {
+            query += ' ORDER BY full_name ASC';
+        }
+
+        db.query(query, params, (err, results) => {
             if (err) {
                 return reject(err);
             }

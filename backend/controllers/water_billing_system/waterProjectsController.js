@@ -2,13 +2,13 @@ import { insertProject, getProjectsBySabha, getProjectList as getProjectListMode
 
 // --- Create New Project ---
 export const addWaterProject = (req, res) => {
-    const { name, code, number, users, sabha_code } = req.body;
+    const { name, code, number, sabha_code } = req.body;
 
     // Validation: අවශ්‍ය දත්ත තියෙනවද කියලා බලනවා
     if (!name || !code || !sabha_code) {
-        return res.status(400).json({ 
+        return res.status(400).json({
             status: "error",
-            message: "Project Name, Code and Sabha Code are required!" 
+            message: "Project Name, Code and Sabha Code are required!"
         });
     }
 
@@ -18,7 +18,6 @@ export const addWaterProject = (req, res) => {
         name: name,
         code: code,
         number: number,
-        users: users || 0, // Users ලා නැත්නම් 0 දානවා
         // created_at එක Database එකෙන් ඉබේම වැටෙනවා
     };
 

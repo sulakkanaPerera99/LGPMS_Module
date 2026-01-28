@@ -39,7 +39,7 @@ export const registerCustomer = async (req, res) => {
 
         // 3. Serial Number: Count existing rows for sabha_code and project_code + 1
         const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
-        const serialNum = String(customerCount + 1).padStart(2, '0');
+        const serialNum = String(customerCount + 1).padStart(3, '0');
 
         // Format: [SabhaSuffix][ProjectNum][SerialNum]
         const newBillNumber = `${sabhaSuffix}${projectNum}${serialNum}`;
@@ -80,12 +80,56 @@ export const registerCustomer = async (req, res) => {
 export const getAllCustomers = async (req, res) => {
     try {
         const { sabha_code } = req.params;
+        const { search, sort, connectionTypes, samurdhi, metered, status } = req.query;
 
         if (!sabha_code) {
             return res.status(400).json({ success: false, message: "Sabha Code is required" });
         }
 
-        const customers = await getCustomersBySabha(sabha_code);
+        // Build filters object
+        const filters = {};
+
+        // Search filter
+        if (search && search.trim()) {
+            filters.search = search.trim();
+        }
+
+        // Sort filter
+        if (sort) {
+            filters.sort = sort;
+        }
+
+        // Connection Types filter
+        if (connectionTypes) {
+            filters.connectionTypes = connectionTypes.split(',').map(type => type.trim()).filter(type => type);
+        }
+
+        // Samurdhi filter - map frontend values to database values
+        if (samurdhi) {
+            const samurdhiValues = samurdhi.split(',').map(val => val.trim()).filter(val => val);
+            filters.isSamurdhi = samurdhiValues.map(val => {
+                if (val === 'Samurdhi') return 1;
+                if (val === 'Not Samurdhi') return 0;
+                return null;
+            }).filter(val => val !== null);
+        }
+
+        // Metered filter - map frontend values to database values
+        if (metered) {
+            const meteredValues = metered.split(',').map(val => val.trim()).filter(val => val);
+            filters.isMetered = meteredValues.map(val => {
+                if (val === 'Metered') return 1;
+                if (val === 'Not Metered') return 0;
+                return null;
+            }).filter(val => val !== null);
+        }
+
+        // Status filter (for future use)
+        if (status) {
+            filters.status = status.split(',').map(stat => stat.trim()).filter(stat => stat);
+        }
+
+        const customers = await getCustomersBySabha(sabha_code, filters);
 
         return res.status(200).json(customers);
 
