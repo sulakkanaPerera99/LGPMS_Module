@@ -37,12 +37,37 @@ export const registerCustomer = async (req, res) => {
             }
         }
 
-        // 3. Serial Number: Count existing rows for sabha_code and project_code + 1
-        const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
-        const serialNum = String(customerCount + 1).padStart(3, '0');
+        // 3. Account Type Code (New Logic)
+        // Domestic: 1, Commercial: 2, Industrial/Construction: 3
+        let accountTypeCode = '1'; // Default
+        if (customerType) {
+            const type = customerType.toLowerCase();
+            if (type === 'domestic') {
+                accountTypeCode = '1';
+            } else if (type === 'commercial') {
+                accountTypeCode = '2';
+            } else if (type.includes('industrial') || type.includes('construction')) {
+                accountTypeCode = '3';
+            }
+        }
 
-        // Format: [SabhaSuffix][ProjectNum][SerialNum]
-        const newBillNumber = `${sabhaSuffix}${projectNum}${serialNum}`;
+        // 4. Samurdhi Status Code (New Logic)
+        // Yes: 1, No: 0
+        // Check for boolean true, string "true", or number 1
+        const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
+        const samurdhiCode = isSamurdhiBool ? '1' : '0';
+
+        // 5. Metered Status Code (New Logic)
+        // Metered: 1, Not Metered: 0
+        const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
+        const meteredCode = isMeteredBool ? '1' : '0';
+
+        // 6. Serial Number: Count existing rows for sabha_code and project_code + 1
+        const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
+        const serialNum = String(customerCount + 1).padStart(3, '0'); // Assuming 3 digits for serial
+
+        // Final Format: [SabhaSuffix][ProjectNum][AccountType][Samurdhi][Metered][SerialNum]
+        const newBillNumber = `${sabhaSuffix}${projectNum}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
         // Data Mapping (camelCase -> snake_case)
         const customerData = {
