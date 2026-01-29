@@ -37,6 +37,7 @@ import WaterBillReportGeneration from '@/views/water billing/WaterBillReportGene
 import GenerateSLCertificate from '@/views/certificate issuing/Street Line/GenerateSLCertificate.vue'
 import StreetLineReportGeneration from '@/views/certificate issuing/Street Line/StreetLineReportGeneration.vue'
 import AddReadings from "@/views/water billing/AddReadings.vue";
+import BillTemplate from '@/views/water billing/BillTemplate.vue'
 
 //UnderDevelopment 
 
@@ -234,6 +235,11 @@ const routes = [
         path: '/add-meter-reading',
         name: 'add-meter-reading',
         component: AddReadings
+      },
+      {
+        path: '/bill-template/:id',
+        name: 'BillTemplate',
+        component: BillTemplate
       }
 ];
 
