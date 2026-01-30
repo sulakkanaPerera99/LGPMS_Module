@@ -24,7 +24,7 @@ export const insertCustomer = (data) => {
     });
 };
 
-export const getCustomersBySabha = (sabhaCode, filters = {}) => {
+export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
     return new Promise((resolve, reject) => {
         let query = `
             SELECT
@@ -47,6 +47,12 @@ export const getCustomersBySabha = (sabhaCode, filters = {}) => {
         `;
 
         const params = [sabhaCode];
+
+        if (projectCode) {
+            query += " AND project_code = ?";
+            params.push(projectCode);
+        }
+
         const conditions = [];
 
         // Search filter

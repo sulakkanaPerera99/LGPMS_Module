@@ -115,7 +115,7 @@ const submitForm = async () => {
             <div class="form-group">
               <label for="pCode">Water Project Code</label>
               <select id="pCode" v-model="projectCode">
-                <option value="">None (General Config)</option>
+                <option value="">Select Project</option>
                 <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
                   {{ project.code }} - {{ project.name }}
                 </option>

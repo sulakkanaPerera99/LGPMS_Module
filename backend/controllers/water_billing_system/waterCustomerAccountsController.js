@@ -105,7 +105,7 @@ export const registerCustomer = async (req, res) => {
 export const getAllCustomers = async (req, res) => {
     try {
         const { sabha_code } = req.params;
-        const { search, sort, connectionTypes, samurdhi, metered, status } = req.query;
+        const { search, sort, connectionTypes, samurdhi, metered, status, projectCode } = req.query;
 
         if (!sabha_code) {
             return res.status(400).json({ success: false, message: "Sabha Code is required" });
@@ -154,7 +154,7 @@ export const getAllCustomers = async (req, res) => {
             filters.status = status.split(',').map(stat => stat.trim()).filter(stat => stat);
         }
 
-        const customers = await getCustomersBySabha(sabha_code, filters);
+        const customers = await getCustomersBySabha(sabha_code, projectCode, filters);
 
         return res.status(200).json(customers);
 

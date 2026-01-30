@@ -1,16 +1,15 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router' // 1. Router import කරගත්තා
+import { useRouter } from 'vue-router'
 
-// Router initialize කිරීම
 const router = useRouter()
 
 // 1. Data Storage
 const accounts = ref([])
+const availableProjectCodes = ref([]) // ✅ Projects ගබඩා කරගන්න Array එක
 const currentSabha = ref('')
 const isLoading = ref(false)
-// selectedBill ඉවත් කළා (Details පෙන්වන්නේ නැති නිසා)
 
 // 2. Search & Sort State
 const searchQuery = ref('')
@@ -19,6 +18,7 @@ const sortBy = ref('name_asc')
 // 3. Filter State
 const isFilterDialogOpen = ref(false)
 const activeFilters = reactive({
+  projectCode: '', // ✅ Project එක Filter කිරීමට අලුත් property එකක්
   connectionTypes: [],
   samurdhi: [],
   metered: [],
@@ -34,7 +34,11 @@ onMounted(async () => {
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
 
     if (currentSabha.value) {
-      await fetchAccounts();
+      // ✅ Accounts සහ Projects දෙකම එකවර Load කරන්න
+      await Promise.all([
+        fetchAccounts(),
+        fetchProjects() // <--- මෙන්න මේ Function Call එක තමයි කලින් අඩු වෙලා තිබුණේ
+      ]);
     } else {
       alert("Session Error: Sabha Code not found.");
     }
@@ -43,12 +47,24 @@ onMounted(async () => {
   }
 });
 
-// 4.5. Watchers for automatic API calls
+// 4.5. Watchers
 watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 
-// 5. API Call Function
+// --- 🆕 5.1 Fetch Projects Function (අලුතින් එකතු කළ කොටස) ---
+const fetchProjects = async () => {
+    try {
+        // Backend Route: /water-project-list/:sabha_code
+        const response = await axios.get(`/water-project-list/${currentSabha.value}`);
+        availableProjectCodes.value = response.data;
+        // console.log("Projects Loaded:", availableProjectCodes.value);
+    } catch (error) {
+        console.error("Error loading projects:", error);
+    }
+};
+
+// 5. API Call Function (Fetch Accounts)
 const fetchAccounts = async () => {
   isLoading.value = true;
   try {
@@ -60,6 +76,13 @@ const fetchAccounts = async () => {
 
     if (sortBy.value) {
       params.sort = sortBy.value;
+    }
+
+    // --- ✅ Project Filter එක API එකට යැවීම ---
+    // Backend Controller එකේ 'projectCode' හෝ 'project_code' බලාපොරොත්තු වන නම අනුව මෙය ගැලපෙන්න ඕන.
+    // සාමාන්‍යයෙන් query params වල camelCase භාවිතා වේ.
+    if (activeFilters.projectCode) {
+        params.projectCode = activeFilters.projectCode;
     }
 
     if (activeFilters.connectionTypes && activeFilters.connectionTypes.length > 0) {
@@ -95,6 +118,7 @@ const applyFilters = () => {
 }
 
 const clearFilters = () => {
+  activeFilters.projectCode = '' // ✅ Project Filter එකත් Reset කරන්න
   activeFilters.connectionTypes = []
   activeFilters.samurdhi = []
   activeFilters.metered = []
@@ -102,17 +126,12 @@ const clearFilters = () => {
   fetchAccounts();
 }
 
-// 7. Navigation Logic (Bill Template එක Open කිරීම)
+// 7. Navigation Logic
 const openBillTemplate = (account) => {
-    // මෙතන 'BillTemplate' කියන්නේ ඔයාගේ router.js file එකේ bill template එකට දීලා තියෙන name එක වෙන්න ඕන.
-    // අපි account.id එක pass කරනවා.
     router.push({ 
         name: 'BillTemplate', 
         params: { id: account.id } 
     });
-    
-    // හෝ Query params යවනවා නම්:
-    // router.push({ path: '/bill-template', query: { id: account.id } });
 }
 </script>
 
@@ -173,6 +192,16 @@ const openBillTemplate = (account) => {
         <h4>Filter Accounts</h4>
         
         <div class="filter-section">
+            <label for="pCode" style="display:block; margin-bottom:5px; font-weight:bold; font-size:10px; color:#2c3e50;">Water Project</label>
+            <select id="pCode" v-model="activeFilters.projectCode" style="width:100%; padding:5px; font-size:10px; border:1px solid #ccc; border-radius:4px;">
+              <option value="">All Projects</option>
+              <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
+                {{ project.code }} - {{ project.name }}
+              </option>
+            </select>
+        </div>
+
+        <div class="filter-section">
           <h5>Connection Type</h5>
           <div class="checkbox-list">
             <label class="checkbox-item"><input type="checkbox" value="Industrial/Construction" v-model="activeFilters.connectionTypes"> Industrial/Construction</label>
@@ -207,8 +236,7 @@ const openBillTemplate = (account) => {
 </template>
 
 <style scoped>
-/* Styles for Details Card removed since HTML was removed */
-
+/* Page Styles */
 .page-container {
   padding: 20px;
   max-width: 1200px;
@@ -340,6 +368,7 @@ const openBillTemplate = (account) => {
   color: white;
 }
 
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
