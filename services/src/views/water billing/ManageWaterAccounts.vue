@@ -186,6 +186,18 @@ const clearFilters = () => {
         <h4>Filter Accounts</h4>
         
         <div class="filter-section">
+          <h5>Account Status</h5>
+          <div class="checkbox-list">
+            <label class="checkbox-item">
+            <input type="checkbox" value="Active" v-model="activeFilters.status"> Active
+            </label>
+            <label class="checkbox-item">
+            <input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-section">
           <h5>Connection Type</h5>
           <div class="checkbox-list">
             <label class="checkbox-item"><input type="checkbox" value="Industrial/Construction" v-model="activeFilters.connectionTypes"> Industrial/Construction</label>

@@ -81,7 +81,7 @@ export const registerCustomer = async (req, res) => {
             samurdhi_number: samurdhiNumber,
             is_metered: isMetered,
             sabha_code: sabha_code,
-            status: 1 // <--- NEW UPDATE: Default status set to 1 (Active)
+            status: 1 //Default status set to 1 (Active)
         };
 
         // Insert into DB

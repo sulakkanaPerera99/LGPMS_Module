@@ -69,6 +69,13 @@ export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
             params.push(...filters.connectionTypes);
         }
 
+        // Status filter
+        if (filters.status && filters.status.length > 0) {
+            const placeholders = filters.status.map(() => '?').join(',');
+            conditions.push(`status IN (${placeholders})`); // මෙතන column එකේ නම 'status' විය යුතුයි
+            params.push(...filters.status);
+        }
+
         // Samurdhi filter
         if (filters.isSamurdhi && filters.isSamurdhi.length > 0) {
             const placeholders = filters.isSamurdhi.map(() => '?').join(',');
