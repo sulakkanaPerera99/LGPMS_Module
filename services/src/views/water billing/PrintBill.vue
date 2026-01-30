@@ -174,7 +174,11 @@ const openBillTemplate = (account) => {
             <tr v-for="acc in accounts" :key="acc.id">
               <td>{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
-              <td>{{ acc.status || 'Active' }}</td>
+              <td>
+               <span :class="{'status-active': acc.status === 1, 'status-inactive': acc.status === 0}">
+                  {{ acc.status === 1 ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
               <td>
                 <button class="action-btn" @click="openBillTemplate(acc)">Print Bill</button>
               </td>
@@ -458,4 +462,21 @@ const openBillTemplate = (account) => {
     font-size: 10px;
     color: #42b883;
 }
+
+.status-active {
+  color: #27ae60; /* Green */
+  font-weight: bold;
+  background-color: #eafaf1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.status-inactive {
+  color: #c0392b; /* Red */
+  font-weight: bold;
+  background-color: #fdedec;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 </style>

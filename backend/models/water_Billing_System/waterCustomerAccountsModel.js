@@ -41,7 +41,7 @@ export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
                 is_samurdhi AS isSamurdhi,
                 samurdhi_number AS samurdhiNumber,
                 is_metered AS isMetered,
-                'Active' AS status
+                status AS status
             FROM water_customer_accounts
             WHERE sabha_code = ?
         `;

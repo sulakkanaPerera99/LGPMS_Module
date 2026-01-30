@@ -164,7 +164,11 @@ const clearFilters = () => {
                 {{ acc.isSamurdhi ? `Yes (${acc.samurdhiNumber || ''})` : 'No' }}
               </td>
               <td>{{ acc.isMetered ? 'Yes' : 'No' }}</td>
-              <td>{{ acc.status || 'Active' }}</td>
+              <td>
+               <span :class="{'status-active': acc.status === 1, 'status-inactive': acc.status === 0}">
+                  {{ acc.status === 1 ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
               <td>
                 <button class="action-btn">Edit</button>
               </td>
@@ -448,4 +452,21 @@ const clearFilters = () => {
   color: white;
   border-color: #42b883;
 }
+
+.status-active {
+  color: #27ae60; /* Green */
+  font-weight: bold;
+  background-color: #eafaf1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.status-inactive {
+  color: #c0392b; /* Red */
+  font-weight: bold;
+  background-color: #fdedec;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 </style>

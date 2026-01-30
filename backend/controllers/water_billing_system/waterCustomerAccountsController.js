@@ -37,8 +37,7 @@ export const registerCustomer = async (req, res) => {
             }
         }
 
-        // 3. Account Type Code (New Logic)
-        // Domestic: 1, Commercial: 2, Industrial/Construction: 3
+        // 3. Account Type Code
         let accountTypeCode = '1'; // Default
         if (customerType) {
             const type = customerType.toLowerCase();
@@ -51,22 +50,19 @@ export const registerCustomer = async (req, res) => {
             }
         }
 
-        // 4. Samurdhi Status Code (New Logic)
-        // Yes: 1, No: 0
-        // Check for boolean true, string "true", or number 1
+        // 4. Samurdhi Status Code
         const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
         const samurdhiCode = isSamurdhiBool ? '1' : '0';
 
-        // 5. Metered Status Code (New Logic)
-        // Metered: 1, Not Metered: 0
+        // 5. Metered Status Code
         const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
         const meteredCode = isMeteredBool ? '1' : '0';
 
-        // 6. Serial Number: Count existing rows for sabha_code and project_code + 1
+        // 6. Serial Number
         const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
-        const serialNum = String(customerCount + 1).padStart(3, '0'); // Assuming 3 digits for serial
+        const serialNum = String(customerCount + 1).padStart(3, '0');
 
-        // Final Format: [SabhaSuffix][ProjectNum][AccountType][Samurdhi][Metered][SerialNum]
+        // Final Bill Number
         const newBillNumber = `${sabhaSuffix}${projectNum}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
         // Data Mapping (camelCase -> snake_case)
@@ -84,7 +80,8 @@ export const registerCustomer = async (req, res) => {
             is_samurdhi: isSamurdhi,
             samurdhi_number: samurdhiNumber,
             is_metered: isMetered,
-            sabha_code: sabha_code
+            sabha_code: sabha_code,
+            status: 1 // <--- NEW UPDATE: Default status set to 1 (Active)
         };
 
         // Insert into DB
@@ -114,22 +111,13 @@ export const getAllCustomers = async (req, res) => {
         // Build filters object
         const filters = {};
 
-        // Search filter
-        if (search && search.trim()) {
-            filters.search = search.trim();
-        }
-
-        // Sort filter
-        if (sort) {
-            filters.sort = sort;
-        }
-
-        // Connection Types filter
+        if (search && search.trim()) filters.search = search.trim();
+        if (sort) filters.sort = sort;
         if (connectionTypes) {
             filters.connectionTypes = connectionTypes.split(',').map(type => type.trim()).filter(type => type);
         }
 
-        // Samurdhi filter - map frontend values to database values
+        // Samurdhi filter
         if (samurdhi) {
             const samurdhiValues = samurdhi.split(',').map(val => val.trim()).filter(val => val);
             filters.isSamurdhi = samurdhiValues.map(val => {
@@ -139,7 +127,7 @@ export const getAllCustomers = async (req, res) => {
             }).filter(val => val !== null);
         }
 
-        // Metered filter - map frontend values to database values
+        // Metered filter
         if (metered) {
             const meteredValues = metered.split(',').map(val => val.trim()).filter(val => val);
             filters.isMetered = meteredValues.map(val => {
@@ -149,9 +137,16 @@ export const getAllCustomers = async (req, res) => {
             }).filter(val => val !== null);
         }
 
-        // Status filter (for future use)
+        // Status filter (UPDATED LOGIC)
+        // Maps 'Active' -> 1 and 'Inactive' -> 0
         if (status) {
-            filters.status = status.split(',').map(stat => stat.trim()).filter(stat => stat);
+            const statusValues = status.split(',').map(stat => stat.trim()).filter(stat => stat);
+            filters.status = statusValues.map(val => {
+                const v = val.toLowerCase();
+                if (v === 'active' || v === '1') return 1;
+                if (v === 'inactive' || v === '0') return 0;
+                return null;
+            }).filter(val => val !== null);
         }
 
         const customers = await getCustomersBySabha(sabha_code, projectCode, filters);
