@@ -1,4 +1,5 @@
-import { insertProject, getProjectsBySabha, getProjectList as getProjectListModel } from "../../models/water_Billing_System/waterprojectsModel.js";
+import { insertProject, getProjectsBySabha, getProjectList as getProjectListModel, updateProjectModel } from "../../models/water_Billing_System/waterprojectsModel.js";
+
 
 // --- Create New Project ---
 export const addWaterProject = (req, res) => {
@@ -69,5 +70,50 @@ export const getProjectList = (req, res) => {
     getProjectListModel(sabha_code, (err, results) => {
         if (err) return res.status(500).send(err);
         return res.json(results);
+    });
+};
+
+// --- Edit/Update Water Project ---
+export const editWaterProject = (req, res) => {
+    const id = req.params.id; // URL එකෙන් ID එක ගන්නවා
+    const { name, code, number } = req.body; // Frontend එකෙන් එවන data
+
+    // Validation
+    if (!id) {
+        return res.status(400).json({ status: "error", message: "Project ID is required" });
+    }
+
+    if (!name || !code || !number) {
+        return res.status(400).json({ status: "error", message: "All fields (Name, Code, Number) are required!" });
+    }
+
+    // Update කරන්න ඕන Data ටික object එකක් විදියට හදාගන්නවා
+    const updateData = {
+        name: name,
+        code: code,
+        number: number
+    };
+
+    updateProjectModel(id, updateData, (err, results) => {
+        if (err) {
+            console.error("Database Update Error:", err);
+            return res.status(500).json({ 
+                status: "error", 
+                message: "Database error occurred during update." 
+            });
+        }
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ 
+                status: "error", 
+                message: "Project not found with the given ID." 
+            });
+        }
+
+        return res.json({
+            status: "success",
+            message: "Project updated successfully",
+            data: { id, ...updateData }
+        });
     });
 };

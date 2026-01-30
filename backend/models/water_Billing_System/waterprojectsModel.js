@@ -57,3 +57,9 @@ export const getProjectNumberByCode = (projectCode, sabhaCode) => {
         });
     });
 };
+
+export const updateProjectModel = (id, data, callback) => {
+    const query = 'UPDATE water_projects SET ? WHERE id = ?';
+    // 'data' කියන object එකේ තියෙන field names, database column names එක්ක සමාන වෙන්න ඕනේ
+    db.query(query, [data, id], callback);
+};

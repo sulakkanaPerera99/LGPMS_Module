@@ -1,5 +1,5 @@
 import express from "express";
-import { addWaterProject, getSabhaProjects, getProjectList } from "../../controllers/water_billing_system/waterProjectsController.js";
+import { addWaterProject, getSabhaProjects, getProjectList, editWaterProject } from "../../controllers/water_billing_system/waterProjectsController.js";
 
 
 const router = express.Router();
@@ -12,5 +12,8 @@ router.get('/water-projects/:sabha_code', getSabhaProjects);
 
 // Dropdown සඳහා Project List එක ලබා ගැනීමට
 router.get('/water-project-list/:sabha_code', getProjectList);
+
+// දත්ත යාවත්කාලීන කිරීමට (Update - Edit)
+router.put('/water-projects/:id', editWaterProject);
 
 export default router;

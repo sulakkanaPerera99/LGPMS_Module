@@ -13,6 +13,15 @@ const searchQuery = ref('');
 const sortBy = ref('name_asc');
 const currentSabha = ref('');
 
+// Edit Modal State
+const showEditModal = ref(false);
+const editForm = ref({
+  name: '',
+  code: '',
+  number: ''
+});
+const editingId = ref(null);
+
 // Page එක Load වෙනකොටම Data ටික Backend එකෙන් ගන්නවා
 onMounted(async () => {
   const userData = JSON.parse(sessionStorage.getItem('userData'));
@@ -90,6 +99,46 @@ const addProject = async () => {
     alert("Please fill in the required fields.");
   }
 };
+
+// Edit Modal Functions
+const openEditModal = (project) => {
+  editingId.value = project.id;
+  // Copy data to reactive object to avoid direct mutation of table data
+  editForm.value = {
+    name: project.name,
+    code: project.code,
+    number: project.number
+  };
+  showEditModal.value = true;
+};
+
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editingId.value = null;
+  editForm.value = { name: '', code: '', number: '' };
+};
+
+const updateProject = async () => {
+  if (editForm.value.name.trim() && editForm.value.code.trim() && editForm.value.number.trim()) {
+    if (confirm("Are you sure you want to update this project?")) {
+      try {
+        const payload = { ...editForm.value, sabha_code: currentSabha.value };
+        const response = await axios.put(`/water-projects/${editingId.value}`, payload);
+        
+        if (response.data.status === "success") {
+          alert("Project Updated Successfully!");
+          closeEditModal();
+          fetchProjects(); // Refresh the list to show changes
+        }
+      } catch (error) {
+        console.error("Error updating:", error);
+        alert("Failed to update project.");
+      }
+    }
+  } else {
+    alert("Please fill in all required fields.");
+  }
+};
 </script>
 
 <template>
@@ -157,11 +206,36 @@ const addProject = async () => {
               <td>{{ project.number }}</td>
               <td>{{ project.users }}</td>
               <td>
-                <button class="action-btn">Edit</button>
+                <button class="action-btn" @click="openEditModal(project)">Edit</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content">
+        <h4>Edit Project</h4>
+        <form @submit.prevent="updateProject" class="edit-form">
+          <div class="form-group">
+            <label>Project Name</label>
+            <input v-model="editForm.name" type="text" required />
+          </div>
+          <div class="form-group">
+            <label>Project Code</label>
+            <input v-model="editForm.code" type="text" required />
+          </div>
+          <div class="form-group">
+            <label>Project Number</label>
+            <input v-model="editForm.number" type="text" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="closeEditModal">Cancel</button>
+            <button type="submit" class="save-btn">Save Changes</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -338,5 +412,66 @@ input:focus {
   font-size: 7px; /* Strict Requirement */
   background-color: white;
   cursor: pointer;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Glass/Dim effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s ease;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  background: #f1f1f1;
+  border: 1px solid #ccc;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.save-btn {
+  background: #42b883;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>
