@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerCustomer, getAllCustomers } from '../../controllers/water_billing_system/waterCustomerAccountsController.js';
+import { registerCustomer, getAllCustomers, editCustomerDetails } from '../../controllers/water_billing_system/waterCustomerAccountsController.js';
 
 const router = express.Router();
 
@@ -7,5 +7,9 @@ const router = express.Router();
 // If app.use('/api', waterCustomerRoutes), the full URL is POST /api/register-customer
 router.post('/register-customer', registerCustomer);
 router.get('/water-customers/:sabha_code', getAllCustomers);
+
+// 2. Update Customer Route (PUT method)
+// :id කියන්නේ අපි update කරන්න ඕන customer ගේ database ID එක.
+router.put('/update-customer/:id', editCustomerDetails);
 
 export default router;

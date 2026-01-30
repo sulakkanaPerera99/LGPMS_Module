@@ -20,14 +20,24 @@ const activeFilters = reactive({
   status: []
 })
 
+// --- NEW: Edit Modal State ---
+const isEditDialogOpen = ref(false)
+const isSaving = ref(false)
+const editForm = reactive({
+  id: null,
+  fullName: '',
+  nic: '',
+  contactInfo: '',
+  isSamurdhi: false,
+  samurdhiNumber: ''
+})
+
 // 4. Fetch Data on Load
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
-
   if (userDataString) {
     const userData = JSON.parse(userDataString);
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
-
     if (currentSabha.value) {
       await fetchAccounts();
     } else {
@@ -38,48 +48,23 @@ onMounted(async () => {
   }
 });
 
-// 4.5. Watchers for automatic API calls
 watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 
-// 5. API Call Function
 const fetchAccounts = async () => {
   isLoading.value = true;
   try {
-    // Construct query parameters
     const params = {};
-
-    // Search parameter
-    if (searchQuery.value && searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim();
-    }
-
-    // Sort parameter
-    if (sortBy.value) {
-      params.sort = sortBy.value;
-    }
-
-    // Filter parameters - convert arrays to comma-separated strings
-    if (activeFilters.connectionTypes && activeFilters.connectionTypes.length > 0) {
-      params.connectionTypes = activeFilters.connectionTypes.join(',');
-    }
-
-    if (activeFilters.samurdhi && activeFilters.samurdhi.length > 0) {
-      params.samurdhi = activeFilters.samurdhi.join(',');
-    }
-
-    if (activeFilters.metered && activeFilters.metered.length > 0) {
-      params.metered = activeFilters.metered.join(',');
-    }
-
-    if (activeFilters.status && activeFilters.status.length > 0) {
-      params.status = activeFilters.status.join(',');
-    }
+    if (searchQuery.value && searchQuery.value.trim()) params.search = searchQuery.value.trim();
+    if (sortBy.value) params.sort = sortBy.value;
+    if (activeFilters.connectionTypes?.length) params.connectionTypes = activeFilters.connectionTypes.join(',');
+    if (activeFilters.samurdhi?.length) params.samurdhi = activeFilters.samurdhi.join(',');
+    if (activeFilters.metered?.length) params.metered = activeFilters.metered.join(',');
+    if (activeFilters.status?.length) params.status = activeFilters.status.join(',');
 
     const response = await axios.get(`/water-customers/${currentSabha.value}`, { params });
     accounts.value = response.data;
-    console.log("Accounts Loaded:", accounts.value);
   } catch (error) {
     console.error("Error fetching accounts:", error);
     alert("Failed to load customer data.");
@@ -88,11 +73,7 @@ const fetchAccounts = async () => {
   }
 };
 
-// 6. Filter Logic
-const applyFilters = () => {
-  isFilterDialogOpen.value = false
-}
-
+const applyFilters = () => { isFilterDialogOpen.value = false }
 const clearFilters = () => {
   activeFilters.connectionTypes = []
   activeFilters.samurdhi = []
@@ -100,6 +81,60 @@ const clearFilters = () => {
   activeFilters.status = []
 }
 
+// --- NEW: Edit Functions ---
+
+const openEditModal = (acc) => {
+  // Populate form with existing data
+  editForm.id = acc.id
+  editForm.fullName = acc.fullName
+  editForm.nic = acc.nic
+  editForm.contactInfo = acc.contactInfo
+  // Handle boolean conversion correctly (DB might send 1/0)
+  editForm.isSamurdhi = Boolean(acc.isSamurdhi)
+  editForm.samurdhiNumber = acc.samurdhiNumber || ''
+  
+  isEditDialogOpen.value = true
+}
+
+const closeEditModal = () => {
+  isEditDialogOpen.value = false
+  // Clear form
+  editForm.id = null
+  editForm.fullName = ''
+  editForm.nic = ''
+  editForm.contactInfo = ''
+  editForm.isSamurdhi = false
+  editForm.samurdhiNumber = ''
+}
+
+const saveCustomer = async () => {
+  if (!editForm.id) return
+  isSaving.value = true
+  
+  try {
+    const payload = {
+      fullName: editForm.fullName,
+      nic: editForm.nic,
+      contactInfo: editForm.contactInfo,
+      isSamurdhi: editForm.isSamurdhi,
+      samurdhiNumber: editForm.samurdhiNumber
+    }
+
+    // Call the PUT API
+    const response = await axios.put(`/update-customer/${editForm.id}`, payload)
+    
+    if (response.status === 200) {
+      alert(response.data.message || "Customer updated successfully")
+      closeEditModal()
+      await fetchAccounts() // Refresh list
+    }
+  } catch (error) {
+    console.error("Error updating customer:", error)
+    alert("Failed to update customer. Please check inputs.")
+  } finally {
+    isSaving.value = false
+  }
+}
 
 </script>
 
@@ -114,7 +149,7 @@ const clearFilters = () => {
       <div class="controls-row">
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
-          <input type="text" v-model="searchQuery" placeholder="Search by Name, NIC, Old or New Bill No..." class="search-input" />
+          <input type="text" v-model="searchQuery" placeholder="Search..." class="search-input" />
         </div>
         <div class="sort-wrapper">
           <select v-model="sortBy" class="sort-select">
@@ -133,48 +168,35 @@ const clearFilters = () => {
         <table v-else class="accounts-table">
           <thead>
             <tr>
-              <th>Old Bill No</th>
-              <th>New Bill No</th>
+              <th>Bill No</th>
               <th>Full Name</th>
               <th>NIC</th>
-              <th>Address (Property)</th>
-              <th>Address (Mailing)</th>
+              <th>Address</th>
               <th>Contact</th>
-              <th>Type</th>
-              <th>Project</th>
               <th>Samurdhi</th>
-              <th>Metered</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="acc in accounts" :key="acc.id">
-              <td class="old-bill">{{ acc.oldBillNumber || '-' }}</td>
               <td class="new-bill">{{ acc.newBillNumber }}</td>
-              
               <td>{{ acc.fullName }}</td>
               <td>{{ acc.nic }}</td>
               <td>{{ acc.propertyAddress }}</td>
-              <td>{{ acc.mailingAddress }}</td>
               <td>{{ acc.contactInfo }}</td>
-              <td>{{ acc.connectionType }}</td>
-              <td>{{ acc.projectCode }}</td>
-              <td>
-                {{ acc.isSamurdhi ? `Yes (${acc.samurdhiNumber || ''})` : 'No' }}
-              </td>
-              <td>{{ acc.isMetered ? 'Yes' : 'No' }}</td>
+              <td>{{ acc.isSamurdhi ? `Yes (${acc.samurdhiNumber})` : 'No' }}</td>
               <td>
                <span :class="{'status-active': acc.status === 1, 'status-inactive': acc.status === 0}">
                   {{ acc.status === 1 ? 'Active' : 'Inactive' }}
                 </span>
               </td>
               <td>
-                <button class="action-btn">Edit</button>
+                <button class="action-btn" @click="openEditModal(acc)">Edit</button>
               </td>
             </tr>
             <tr v-if="accounts.length === 0">
-                <td colspan="13" style="text-align:center; padding: 20px;">No customers found.</td>
+                <td colspan="8" style="text-align:center; padding: 20px;">No customers found.</td>
             </tr>
           </tbody>
         </table>
@@ -184,54 +206,126 @@ const clearFilters = () => {
     <div v-if="isFilterDialogOpen" class="modal-overlay">
       <div class="modal-content">
         <h4>Filter Accounts</h4>
-        
         <div class="filter-section">
-          <h5>Account Status</h5>
-          <div class="checkbox-list">
-            <label class="checkbox-item">
-            <input type="checkbox" value="Active" v-model="activeFilters.status"> Active
-            </label>
-            <label class="checkbox-item">
-            <input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive
-            </label>
-          </div>
+           <div class="checkbox-list">
+             </div>
         </div>
-
-        <div class="filter-section">
-          <h5>Connection Type</h5>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" value="Industrial/Construction" v-model="activeFilters.connectionTypes"> Industrial/Construction</label>
-            <label class="checkbox-item"><input type="checkbox" value="Domestic" v-model="activeFilters.connectionTypes"> Domestic</label>
-            <label class="checkbox-item"><input type="checkbox" value="Commercial" v-model="activeFilters.connectionTypes"> Commercial</label>
-          </div>
-        </div>
-
-        <div class="filter-section">
-          <h5>Samurdhi Status</h5>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" value="Samurdhi" v-model="activeFilters.samurdhi"> Samurdhi</label>
-            <label class="checkbox-item"><input type="checkbox" value="Not Samurdhi" v-model="activeFilters.samurdhi"> Not Samurdhi</label>
-          </div>
-        </div>
-
-        <div class="filter-section">
-          <h5>Metered Status</h5>
-          <div class="checkbox-list">
-            <label class="checkbox-item"><input type="checkbox" value="Metered" v-model="activeFilters.metered"> Metered</label>
-            <label class="checkbox-item"><input type="checkbox" value="Not Metered" v-model="activeFilters.metered"> Not Metered</label>
-          </div>
-        </div>
-
         <div class="modal-actions">
           <button class="modal-btn" @click="clearFilters">Clear All</button>
           <button class="modal-btn primary" @click="applyFilters">Apply Filters</button>
         </div>
       </div>
     </div>
+
+    <div v-if="isEditDialogOpen" class="modal-overlay">
+      <div class="modal-content edit-modal">
+        <h4>Edit Customer Details</h4>
+        
+        <form @submit.prevent="saveCustomer" class="edit-form">
+           <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" v-model="editForm.fullName" required />
+           </div>
+           
+           <div class="form-group">
+              <label>NIC (Changing this will transfer ownership)</label>
+              <input type="text" v-model="editForm.nic" required class="warning-input" />
+           </div>
+
+           <div class="form-group">
+              <label>Contact Info</label>
+              <input type="text" v-model="editForm.contactInfo" />
+           </div>
+
+           <div class="form-group checkbox-row">
+              <input type="checkbox" id="editSamurdhi" v-model="editForm.isSamurdhi" />
+              <label for="editSamurdhi">Samurdhi Beneficiary</label>
+           </div>
+
+           <div class="form-group" v-if="editForm.isSamurdhi">
+              <label>Samurdhi Number</label>
+              <input type="text" v-model="editForm.samurdhiNumber" />
+           </div>
+
+           <div class="modal-actions">
+             <button type="button" class="modal-btn" @click="closeEditModal" :disabled="isSaving">Cancel</button>
+             <button type="submit" class="modal-btn primary" :disabled="isSaving">
+               {{ isSaving ? 'Saving...' : 'Save Changes' }}
+             </button>
+           </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
+/* Previous Styles Remain Same */
+
+/* New Styles for Edit Modal */
+.edit-modal {
+  width: 400px; /* Slightly wider */
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.form-group input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.warning-input {
+  border-color: #f39c12 !important; /* Orange border to warn about ownership change */
+  background-color: #fef9e7;
+}
+
+.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Reusing your existing modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white; padding: 20px; border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.modal-btn {
+  padding: 6px 12px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-size: 10px;
+}
+.modal-btn.primary {
+  background: #42b883; color: white; border-color: #42b883;
+}
+.status-active { color: green; font-weight: bold; }
+.status-inactive { color: red; font-weight: bold; }
+
+
 /* Highlighting the bill numbers slightly */
 .new-bill {
   font-weight: bold;
