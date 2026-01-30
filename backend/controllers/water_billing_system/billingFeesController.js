@@ -1,6 +1,5 @@
 // controllers/water_billing_system/BillingfeesController.js
 
-// Model එක Import කිරීම (අගට .js තිබිය යුතුයි)
 import * as BillingFeesModel from '../../models/water_billing_system/BillingfeesModel.js';
 
 export const addConfig = async (req, res) => {
@@ -9,9 +8,11 @@ export const addConfig = async (req, res) => {
             projectCode, 
             connectionType, 
             isMetered, 
+            isSamurdhi,   // <--- NEW: Samurdhi Status
             fixedRate, 
             unitRanges, 
             otherCharges, 
+            discounts,    // <--- NEW: Discounts Array
             sabha_code 
         } = req.body;
 
@@ -27,9 +28,11 @@ export const addConfig = async (req, res) => {
             projectCode,
             connectionType,
             isMetered,
+            isSamurdhi,   // <--- Pass to Model
             fixedRate,
             unitRanges,
             otherCharges,
+            discounts,    // <--- Pass to Model
             sabha_code
         });
 
@@ -61,14 +64,21 @@ export const getConfigs = async (req, res) => {
 
         const configs = await BillingFeesModel.getBillingConfigs(sabha_code);
 
+        // Data Mapping (snake_case DB fields -> camelCase Frontend fields)
         const processedConfigs = configs.map(config => ({
             id: config.id,
             projectCode: config.project_code,
             connectionType: config.connection_type,
             isMetered: Boolean(config.is_metered),
+            isSamurdhi: Boolean(config.is_samurdhi), // <--- NEW
             fixedRate: config.fixed_rate,
+            
+            // JSON Parsing checks
             unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : config.unit_ranges,
             otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : config.other_charges,
+            discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []), // <--- NEW
+            
+            status: config.status, // <--- NEW
             createdAt: config.created_at
         }));
 

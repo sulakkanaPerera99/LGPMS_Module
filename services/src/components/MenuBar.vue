@@ -28,11 +28,12 @@
             
             <li><router-link @click="scrollToTop()" to="/add-customer">Register Customer</router-link></li>
             <li><router-link @click="scrollToTop()" to="/manage-water-accounts">Water Accounts</router-link></li>
-            <li><router-link @click="scrollToTop()" to="/view-customer-history">Customer History</router-link></li>
 
             <li><router-link @click="scrollToTop()" to="/add-meter-reading">Add Meter Readings</router-link></li>
             <li><router-link @click="scrollToTop()" to="/bill-payment">Bill Payment (PIV)</router-link></li>
             <li><router-link @click="scrollToTop()" to="/print-bill">Print Bill</router-link></li>
+            
+            <li><router-link @click="scrollToTop()" to="/view-customer-history">Customer History</router-link></li>
             
             <li><router-link @click="scrollToTop()" to="/water-bill-report-generation">Reports</router-link></li>
           </ul>
