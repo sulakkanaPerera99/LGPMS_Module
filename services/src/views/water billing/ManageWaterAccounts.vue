@@ -168,7 +168,8 @@ const saveCustomer = async () => {
         <table v-else class="accounts-table">
           <thead>
             <tr>
-              <th>Bill No</th>
+              <th>Old Bill No</th>
+              <th>New Bill No</th>
               <th>Full Name</th>
               <th>NIC</th>
               <th>Address</th>
@@ -180,6 +181,7 @@ const saveCustomer = async () => {
           </thead>
           <tbody>
             <tr v-for="acc in accounts" :key="acc.id">
+              <td>{{ acc.oldBillNumber }}</td>
               <td class="new-bill">{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
               <td>{{ acc.nic }}</td>
@@ -206,9 +208,76 @@ const saveCustomer = async () => {
     <div v-if="isFilterDialogOpen" class="modal-overlay">
       <div class="modal-content">
         <h4>Filter Accounts</h4>
+         <div class="filter-section">
+
+          <h5>Account Status</h5>
+
+          <div class="checkbox-list">
+
+            <label class="checkbox-item">
+
+            <input type="checkbox" value="Active" v-model="activeFilters.status"> Active
+
+            </label>
+
+            <label class="checkbox-item">
+
+            <input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive
+
+            </label>
+
+          </div>
+
+        </div>
+
+
+
         <div class="filter-section">
-           <div class="checkbox-list">
-             </div>
+
+          <h5>Connection Type</h5>
+
+          <div class="checkbox-list">
+
+            <label class="checkbox-item"><input type="checkbox" value="Industrial/Construction" v-model="activeFilters.connectionTypes"> Industrial/Construction</label>
+
+            <label class="checkbox-item"><input type="checkbox" value="Domestic" v-model="activeFilters.connectionTypes"> Domestic</label>
+
+            <label class="checkbox-item"><input type="checkbox" value="Commercial" v-model="activeFilters.connectionTypes"> Commercial</label>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="filter-section">
+
+          <h5>Samurdhi Status</h5>
+
+          <div class="checkbox-list">
+
+            <label class="checkbox-item"><input type="checkbox" value="Samurdhi" v-model="activeFilters.samurdhi"> Samurdhi</label>
+
+            <label class="checkbox-item"><input type="checkbox" value="Not Samurdhi" v-model="activeFilters.samurdhi"> Not Samurdhi</label>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="filter-section">
+
+          <h5>Metered Status</h5>
+
+          <div class="checkbox-list">
+
+            <label class="checkbox-item"><input type="checkbox" value="Metered" v-model="activeFilters.metered"> Metered</label>
+
+            <label class="checkbox-item"><input type="checkbox" value="Not Metered" v-model="activeFilters.metered"> Not Metered</label>
+
+          </div>
+
         </div>
         <div class="modal-actions">
           <button class="modal-btn" @click="clearFilters">Clear All</button>

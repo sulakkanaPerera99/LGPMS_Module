@@ -1,92 +1,213 @@
-import { getPendingCustomers, saveBatchReadings, getProjectCodes } from '../../models/water_Billing_System/waterReadingsModel.js';
+import db from '../../config/database.js'; 
+import { getPendingCustomers, getProjectCodes } from '../../models/water_Billing_System/waterReadingsModel.js';
+import { calculateBill } from '../../utils/BillCalculator.js'; 
 
+// 1. Get Pending Customers
 export const getPendingCustomersController = async (req, res) => {
     try {
         const { sabha_code, project_code, month, year } = req.query;
-
         if (!sabha_code || !project_code || !month || !year) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Missing required parameters: sabha_code, project_code, month, year'
-            });
+            return res.status(400).json({ status: 'error', message: 'Missing parameters' });
         }
-
         const customers = await getPendingCustomers(sabha_code, project_code, parseInt(month), parseInt(year));
-
-        res.json({
-            status: 'success',
-            data: customers
-        });
+        res.json({ status: 'success', data: customers });
     } catch (error) {
-        console.error('Error fetching pending customers:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Internal server error'
-        });
+        console.error('Error fetching customers:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
 
+// 2. Save Batch Readings (insertedCount Fixed ✅)
 export const saveBatchReadingsController = async (req, res) => {
+    const dbPromise = db.promise();
+
     try {
         const readings = req.body;
 
         if (!Array.isArray(readings) || readings.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Readings must be a non-empty array'
-            });
+            return res.status(400).json({ status: 'error', message: 'Readings must be a non-empty array' });
         }
 
-        // Validate each reading
+        await dbPromise.beginTransaction();
+        let processedCount = 0;
+
         for (const reading of readings) {
-            if (!reading.account_id || !reading.current_reading || !reading.reading_date) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: 'Each reading must have account_id, current_reading, and reading_date'
-                });
+            // Basic Validation
+            if (!reading.account_id || reading.current_reading === undefined || !reading.bill_number_ref) {
+                throw new Error(`Invalid data (Missing ID, Reading, or Bill Ref) for Account ID: ${reading.account_id || 'Unknown'}`);
             }
+
+            // Check for existing reading to prevent duplicate entry error
+            const [existingReadings] = await dbPromise.query(
+                `SELECT id FROM water_meter_readings WHERE account_id = ? AND year = ? AND month = ?`,
+                [reading.account_id, reading.year, reading.month]
+            );
+
+            if (existingReadings.length > 0) {
+                console.warn(`Skipping duplicate reading for Account ID: ${reading.account_id}, Year: ${reading.year}, Month: ${reading.month}`);
+                continue;
+            }
+
+            // =========================================================
+            // 🟢 STEP 1: Parse Data from Bill Number (Reference Number)
+            // =========================================================
+            const billRef = String(reading.bill_number_ref).trim();
+            
+            if (billRef.length < 8) {
+                throw new Error(`Invalid Bill Number format: ${billRef}`);
+            }
+
+            const typeCode = billRef.charAt(5);     
+            const samurdhiCode = billRef.charAt(6); 
+            const meteredCode = billRef.charAt(7);  
+
+            // Mapping Logic
+            let accountType = 'Domestic'; 
+            if (typeCode === '1') accountType = 'Domestic';
+            else if (typeCode === '2') accountType = 'Commercial';
+            else if (typeCode === '3') accountType = 'Construction/Industrial'; 
+            
+            const isSamurdhi = (samurdhiCode === '1') ? 1 : 0;
+            const isMetered = (meteredCode === '1') ? 1 : 0;
+
+            // =========================================================
+            // 🟢 STEP 1.5: Get Customer History ID
+            // =========================================================
+            const [historyRows] = await dbPromise.query(
+                `SELECT id FROM water_customer_history 
+                 WHERE customer_id = ? 
+                 ORDER BY id DESC LIMIT 1`, 
+                [reading.account_id]
+            );
+
+            let customerHistoryId = null;
+            if (historyRows.length > 0) {
+                customerHistoryId = historyRows[0].id;
+            } else {
+                // Fallback: Create new history record if missing
+                const [currentAccount] = await dbPromise.query(`SELECT * FROM water_customer_accounts WHERE id = ?`, [reading.account_id]);
+                if(currentAccount.length > 0) {
+                    const acc = currentAccount[0];
+                    const [newHistory] = await dbPromise.query(`
+                        INSERT INTO water_customer_history 
+                        (customer_id, connection_type, is_samurdhi, is_metered, status, created_at)
+                        VALUES (?, ?, ?, ?, 'Active', NOW())
+                    `, [acc.id, acc.connection_type, acc.is_samurdhi, acc.is_metered]);
+                    customerHistoryId = newHistory.insertId;
+                } else {
+                     throw new Error(`Account not found for ID: ${reading.account_id}`);
+                }
+            }
+
+            // =========================================================
+            // 🟢 STEP 2: Save Meter Reading
+            // =========================================================
+            const readingInsertQuery = `
+                INSERT INTO water_meter_readings 
+                (account_id, sabha_code, bill_number, project_code, reading_date, year, month, previous_reading, current_reading, reader_id, reading_source, reading_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `;
+            
+            const safePreviousReading = reading.previous_reading !== undefined ? reading.previous_reading : 0;
+            const safeReadingSource = reading.reading_source || 'Manual';
+            const safeReaderId = reading.reader_id || 0; 
+            const readingStatus = 1;
+
+            const [readingResult] = await dbPromise.query(readingInsertQuery, [
+                reading.account_id,
+                reading.sabha_code,       
+                reading.bill_number_ref,  
+                reading.project_code,     
+                reading.reading_date,
+                reading.year,
+                reading.month,
+                safePreviousReading,
+                reading.current_reading,
+                safeReaderId,             
+                safeReadingSource,
+                readingStatus             
+            ]);
+
+            const newReadingId = readingResult.insertId;
+
+            // =========================================================
+            // 🟢 STEP 3: Calculate Bill
+            // =========================================================
+            const billData = await calculateBill(dbPromise, {
+                current_reading: reading.current_reading,
+                previous_reading: safePreviousReading,
+                sabha_code: reading.sabha_code,     
+                project_code: reading.project_code, 
+                connection_type: accountType, 
+                is_samurdhi: isSamurdhi,      
+                is_metered: isMetered         
+            });
+
+            // Bill Number Generate
+            const billNumber = `${reading.bill_number_ref}/${reading.year}/${reading.month}`;
+
+            // =========================================================
+            // 🟢 STEP 4: Save Bill
+            // =========================================================
+            const billInsertQuery = `
+                INSERT INTO water_bills 
+                (account_id, customer_history_id, tariff_id, bill_number, reading_id, sabha_code, billing_date, period_from, period_to, 
+                 previous_reading, current_reading, units_consumed, water_consumption_charge, fixed_charge, 
+                 monthly_charge, other_charges, discounts, total_amount, payment_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            `;
+
+            const periodFrom = `${reading.year}-${reading.month}-01`;
+            const periodTo = new Date(reading.year, reading.month, 0).toISOString().split('T')[0];
+
+            await dbPromise.query(billInsertQuery, [
+                reading.account_id,
+                customerHistoryId, 
+                billData.applied_config_id, 
+                billNumber,
+                newReadingId,
+                reading.sabha_code,
+                periodFrom,
+                periodTo,
+                safePreviousReading,
+                reading.current_reading,
+                billData.units_consumed,
+                billData.water_consumption_charge,
+                billData.fixed_charge,
+                billData.monthly_charge,
+                billData.other_charges,
+                billData.discounts,
+                billData.monthly_charge, 
+            ]);
+
+            processedCount++;
         }
 
-        const result = await saveBatchReadings(readings);
+        await dbPromise.commit();
+        
+        // ✅ FIX: added 'data: { insertedCount }' back
+        res.json({ 
+            status: 'success', 
+            message: `Successfully saved ${processedCount} readings/bills.`,
+            data: { insertedCount: processedCount } 
+        });
 
-        res.json({
-            status: 'success',
-            message: `${readings.length} readings saved successfully`,
-            data: {
-                insertedCount: result.affectedRows
-            }
-        });
     } catch (error) {
-        console.error('Error saving batch readings:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Internal server error'
-        });
+        try { await dbPromise.rollback(); } catch (e) {}
+        console.error('Error saving batch:', error.message);
+        res.status(500).json({ status: 'error', message: 'Transaction failed: ' + error.message });
     }
 };
 
+// 3. Get Project Codes
 export const getProjectCodesController = async (req, res) => {
     try {
         const { sabha_code } = req.query;
-
-        if (!sabha_code) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Missing required parameter: sabha_code'
-            });
-        }
-
+        if (!sabha_code) return res.status(400).json({ status: 'error', message: 'Missing sabha_code' });
         const projects = await getProjectCodes(sabha_code);
-
-        res.json({
-            status: 'success',
-            data: projects
-        });
+        res.json({ status: 'success', data: projects });
     } catch (error) {
-        console.error('Error fetching project codes:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Internal server error'
-        });
+        console.error('Error:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };

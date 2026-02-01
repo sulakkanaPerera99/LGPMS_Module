@@ -35,8 +35,8 @@ export const registerCustomer = async (req, res) => {
         }
 
         let accountTypeCode = '1'; 
-        if (customerType) {
-            const type = customerType.toLowerCase();
+        if (connectionType) {
+            const type = connectionType.toLowerCase();
             if (type === 'domestic') accountTypeCode = '1';
             else if (type === 'commercial') accountTypeCode = '2';
             else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = '3';
