@@ -18,7 +18,6 @@ import EditAndManageBillingFees from '../views/water billing/EditAndManageBillin
 import AddCustomer from '../views/water billing/AddCustomer.vue'
 import ManageWaterAccounts from '../views/water billing/ManageWaterAccounts.vue'
 import BillPayment from '../views/water billing/BillPayment.vue'
-import WaterBillPayment from '../views/water billing/PaymentInterface.vue'
 import StreetLine from '@/views/certificate issuing/Street Line/StreetLineDashboard.vue'
 import CheckDues from '@/views/certificate issuing/Street Line/CheckDues.vue'
 import AssignTO from '@/views/certificate issuing/Street Line/AssignTO.vue'
@@ -39,6 +38,7 @@ import GenerateSLCertificate from '@/views/certificate issuing/Street Line/Gener
 import StreetLineReportGeneration from '@/views/certificate issuing/Street Line/StreetLineReportGeneration.vue'
 import AddReadings from "@/views/water billing/AddReadings.vue";
 import BillTemplate from '@/views/water billing/BillTemplate.vue'
+import PaymentInterface from "../views/water billing/PaymentInterface.vue";
 
 //UnderDevelopment 
 
@@ -143,12 +143,6 @@ const routes = [
         component: BillPayment
       },
       {
-        path: '/pay-bill/:accountId',
-        name: 'WaterBillPayment',
-        component: WaterBillPayment,
-        props: true
-      },
-      {
         path:'/print-bill',
         name:'print-bill',
         component: PrintBill
@@ -247,6 +241,19 @@ const routes = [
         path: '/bill-template/:id',
         name: 'BillTemplate',
         component: BillTemplate
+      },
+      {
+        path: '/pay-bill/:billNumber',
+        name: 'PaymentInterface',
+        component: PaymentInterface,
+        props: true
+      },
+      // Backward compatibility for existing links using the old route name and param
+      {
+        path: '/pay-bill-legacy/:accountId',
+        name: 'WaterBillPayment',
+        component: PaymentInterface,
+        props: (route) => ({ billNumber: route.params.accountId })
       }
 ];
 

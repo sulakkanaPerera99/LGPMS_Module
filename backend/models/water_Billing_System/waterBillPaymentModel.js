@@ -104,3 +104,37 @@ export const fetchProjectsModel = async (sabha_code) => {
         throw error;
     }
 };
+
+// Fetch pending bill details by bill number
+export const fetchPendingBillDetails = async (identifier) => {
+    const query = `
+        SELECT 
+            b.id, 
+            b.bill_number, 
+            b.billing_date, 
+            b.period_from, 
+            b.period_to, 
+            b.previous_reading, 
+            b.current_reading, 
+            b.units_consumed, 
+            b.water_consumption_charge, 
+            b.fixed_charge, 
+            b.monthly_charge, 
+            b.other_charges, 
+            b.previous_dues, 
+            b.total_amount, 
+            b.payment_status,
+            c.full_name, 
+            c.nic, 
+            c.new_bill_number as account_number
+        FROM water_bills b
+        INNER JOIN water_customer_accounts c ON b.account_id = c.id
+        WHERE (b.bill_number = ? OR b.account_id = ?) AND b.payment_status = 'Pending'
+    `;
+    try {
+        const [rows] = await db.promise().query(query, [identifier, identifier]);
+        return rows[0];
+    } catch (error) {
+        throw error;
+    }
+};
