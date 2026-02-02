@@ -18,6 +18,7 @@ import EditAndManageBillingFees from '../views/water billing/EditAndManageBillin
 import AddCustomer from '../views/water billing/AddCustomer.vue'
 import ManageWaterAccounts from '../views/water billing/ManageWaterAccounts.vue'
 import BillPayment from '../views/water billing/BillPayment.vue'
+import WaterBillPayment from '../views/water billing/PaymentInterface.vue'
 import StreetLine from '@/views/certificate issuing/Street Line/StreetLineDashboard.vue'
 import CheckDues from '@/views/certificate issuing/Street Line/CheckDues.vue'
 import AssignTO from '@/views/certificate issuing/Street Line/AssignTO.vue'
@@ -140,6 +141,12 @@ const routes = [
         path: '/bill-payment',
         name: 'bill-payment',
         component: BillPayment
+      },
+      {
+        path: '/pay-bill/:accountId',
+        name: 'WaterBillPayment',
+        component: WaterBillPayment,
+        props: true
       },
       {
         path:'/print-bill',
