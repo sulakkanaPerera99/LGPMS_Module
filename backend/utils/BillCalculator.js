@@ -26,7 +26,7 @@ const calculateOtherCharges = (chargesList) => {
     return total;
 };
 
-export const calculateBill = async (connection, data) => {
+export const calculateBill = async (connection, data, previousDues = 0) => {
     // A. Units Calculation
     const currentReading = parseFloat(data.current_reading);
     const previousReading = parseFloat(data.previous_reading);
@@ -82,6 +82,7 @@ export const calculateBill = async (connection, data) => {
     const discountAmount = parseFloat(config.discounts) || 0;
 
     const monthlyTotal = (waterCharge + fixedCharge + otherChargesTotal) - discountAmount;
+    const totalAmount = monthlyTotal + previousDues;
 
     return {
         units_consumed: unitsConsumed,
@@ -90,6 +91,8 @@ export const calculateBill = async (connection, data) => {
         other_charges: otherChargesTotal.toFixed(2),
         discounts: discountAmount.toFixed(2),
         monthly_charge: monthlyTotal.toFixed(2),
+        previous_dues: previousDues.toFixed(2),
+        total_amount: totalAmount.toFixed(2),
         applied_config_id: config.id 
     };
 };

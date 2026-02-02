@@ -133,6 +133,18 @@ export const saveBatchReadingsController = async (req, res) => {
             // =========================================================
             // 🟢 STEP 3: Calculate Bill
             // =========================================================
+
+            // Fetch Previous Dues
+            const [customerAccount] = await dbPromise.query(
+                `SELECT current_balance FROM water_customer_accounts WHERE id = ?`,
+                [reading.account_id]
+            );
+
+            let previous_dues = 0;
+            if (customerAccount.length > 0 && customerAccount[0].current_balance) {
+                previous_dues = parseFloat(customerAccount[0].current_balance);
+            }
+ 
             const billData = await calculateBill(dbPromise, {
                 current_reading: reading.current_reading,
                 previous_reading: safePreviousReading,
@@ -141,7 +153,7 @@ export const saveBatchReadingsController = async (req, res) => {
                 connection_type: accountType, 
                 is_samurdhi: isSamurdhi,      
                 is_metered: isMetered         
-            });
+            }, previous_dues);
 
             // Bill Number Generate
             const billNumber = `${reading.bill_number_ref}/${reading.year}/${reading.month}`;
@@ -153,8 +165,8 @@ export const saveBatchReadingsController = async (req, res) => {
                 INSERT INTO water_bills 
                 (account_id, customer_history_id, tariff_id, bill_number, reading_id, sabha_code, billing_date, period_from, period_to, 
                  previous_reading, current_reading, units_consumed, water_consumption_charge, fixed_charge, 
-                 monthly_charge, other_charges, discounts, total_amount, payment_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+                 monthly_charge, other_charges, discounts, previous_dues, total_amount, payment_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
             `;
 
             const periodFrom = `${reading.year}-${reading.month}-01`;
@@ -177,7 +189,8 @@ export const saveBatchReadingsController = async (req, res) => {
                 billData.monthly_charge,
                 billData.other_charges,
                 billData.discounts,
-                billData.monthly_charge, 
+                billData.previous_dues,
+                billData.total_amount, 
             ]);
 
             processedCount++;
