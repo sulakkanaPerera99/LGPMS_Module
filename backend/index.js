@@ -22,7 +22,9 @@ import waterCustomerRoutes from './routes/water_billing_system/waterCustomerAcco
 import waterReadingsRoutes from './routes/water_billing_system/waterReadingsRoutes.js';
 import waterBillPaymentRoutes from './routes/water_billing_system/waterBillPaymentRoutes.js';
 import paymentRoutes from './routes/water_billing_system/paymentRoutes.js';
+import paymentHistoryRoutes from './routes/water_billing_system/paymentHistoryRoutes.js';
 
+// ... existing code ...
 import path from 'path';
 const __filename=fileURLToPath(import.meta.url);
 const __dirname=path.dirname(__filename);
@@ -56,7 +58,7 @@ app.use('/api', waterCustomerRoutes);
 app.use('/api/water-readings', waterReadingsRoutes);
 app.use('/api', waterBillPaymentRoutes);
 app.use('/api', paymentRoutes);
-
+app.use('/api', paymentHistoryRoutes);
 
 
 // පහත තිබූ res.setHeader කොටස අයින් කළා (Removed manual headers block)
