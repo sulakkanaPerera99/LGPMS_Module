@@ -15,7 +15,6 @@
       <h2 class="mb-4">Water Bill Payment</h2>
       
       <div class="row">
-        <!-- Customer Details -->
         <div class="col-md-6 mb-3">
           <div class="card h-100">
             <div class="card-header bg-primary text-white">
@@ -29,7 +28,6 @@
           </div>
         </div>
 
-        <!-- Bill Summary -->
         <div class="col-md-6 mb-3">
           <div class="card h-100">
             <div class="card-header bg-info text-white">
@@ -53,7 +51,6 @@
         </div>
       </div>
 
-      <!-- Charges Breakdown -->
       <div class="card mb-4">
         <div class="card-header">
           Charges Breakdown
@@ -87,9 +84,20 @@
         </div>
       </div>
 
-      <!-- Payment Amount Input -->
       <div class="card mb-4">
         <div class="card-body">
+          <div class="form-check mb-3">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="applyDiscount" 
+              v-model="applyDiscount"
+            >
+            <label class="form-check-label" for="applyDiscount">
+              Apply Discount (if available in configuration)
+            </label>
+          </div>
+
           <div class="form-group">
             <label for="paymentAmount" class="font-weight-bold">Enter Payment Amount (LKR)</label>
             <input 
@@ -104,10 +112,14 @@
         </div>
       </div>
 
-      <!-- Payment Action -->
       <div class="payment-actions text-end">
-        <button @click="proceedToPayment" class="btn btn-success btn-lg" :disabled="paymentAmount <= 0">
-          Pay Now ({{ formatCurrency(paymentAmount) }})
+        <button 
+          @click="proceedToPayment" 
+          class="btn btn-success btn-lg" 
+          :disabled="paymentAmount <= 0 || isProcessing"
+        >
+          <span v-if="isProcessing">Processing...</span>
+          <span v-else>Pay Now ({{ formatCurrency(paymentAmount) }})</span>
         </button>
       </div>
     </div>
@@ -125,7 +137,9 @@ export default {
       billDetails: null,
       loading: true,
       error: null,
-      paymentAmount: 0
+      paymentAmount: 0,
+      applyDiscount: false, // Checkbox state
+      isProcessing: false // To prevent double clicks
     };
   },
   async mounted() {
@@ -142,7 +156,7 @@ export default {
       try {
         this.loading = true;
         this.error = null;
-        // Assuming API is running on localhost:3000 based on backend context
+        // Make sure this URL matches your backend route for fetching details
         const response = await axios.get(`http://localhost:3000/api/water-bill-details/${billNumber}`);
         
         if (response.data.success) {
@@ -170,13 +184,49 @@ export default {
         if (value === undefined || value === null) return '0.00';
         return parseFloat(value).toFixed(2);
     },
-    proceedToPayment() {
+    
+    // ✅ NEW: Updated Logic to Call Backend
+    async proceedToPayment() {
         if (this.paymentAmount <= 0) {
           alert("Please enter a valid amount greater than 0.");
           return;
         }
-        // Placeholder for payment gateway integration
-        alert(`Initiating payment for ${this.formatCurrency(this.paymentAmount)}...`);
+
+        // Confirmation
+        if(!confirm(`Are you sure you want to pay LKR ${this.formatCurrency(this.paymentAmount)}?`)) {
+            return;
+        }
+
+        this.isProcessing = true;
+
+        try {
+            // Prepare Payload for Controller
+            // NOTE: Ensure your billDetails object has 'id' (bill_id) and 'accountId'
+            const payload = {
+                bill_id: this.billDetails.id, 
+                account_id: this.billDetails.accountId,
+                payment_amount: this.paymentAmount,
+                apply_discount: this.applyDiscount
+            };
+
+            // Call the Backend Route
+            const response = await axios.post('http://localhost:3000/api/payments/process', payload);
+
+            if (response.data.success) {
+                alert("Payment Successful!");
+                // Redirect back to list or dashboard
+                this.$router.push('/officer-dashboard'); // Or wherever you want to go
+            } else {
+                alert("Payment Failed: " + response.data.message);
+            }
+
+        } catch (error) {
+            console.error("Payment Error:", error);
+            const errMsg = error.response?.data?.message || "An error occurred during payment processing.";
+            alert("Error: " + errMsg);
+        } finally {
+            this.isProcessing = false;
+        }
     }
   }
 };

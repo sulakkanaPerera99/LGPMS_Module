@@ -109,7 +109,8 @@ export const fetchProjectsModel = async (sabha_code) => {
 export const fetchPendingBillDetails = async (identifier) => {
     const query = `
         SELECT 
-            b.id, 
+            b.id,
+            b.account_id,
             b.bill_number, 
             b.billing_date, 
             b.period_from, 

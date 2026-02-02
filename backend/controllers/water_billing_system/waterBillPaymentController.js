@@ -67,7 +67,11 @@ export const getBillDetails = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: {
-                billId: billDetails.id,
+                // ✅ අලුතින් එකතු කළ කොටස (Payment එකට අත්‍යවශ්‍යයි)
+                id: billDetails.id,                // Bill ID එක
+                accountId: billDetails.account_id, // Account ID එක
+                
+                // දැනට තිබුණු කොටස්
                 billNumber: billDetails.bill_number,
                 customerName: billDetails.full_name,
                 accountNumber: billDetails.account_number,

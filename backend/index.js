@@ -21,6 +21,7 @@ import customerRoutes from "./routes/water_billing_system/waterCustomerAccountsR
 import waterCustomerRoutes from './routes/water_billing_system/waterCustomerAccountsRoutes.js';
 import waterReadingsRoutes from './routes/water_billing_system/waterReadingsRoutes.js';
 import waterBillPaymentRoutes from './routes/water_billing_system/waterBillPaymentRoutes.js';
+import paymentRoutes from './routes/water_billing_system/paymentRoutes.js';
 
 import path from 'path';
 const __filename=fileURLToPath(import.meta.url);
@@ -54,6 +55,7 @@ app.use('/api/water-billing', customerRoutes);
 app.use('/api', waterCustomerRoutes);
 app.use('/api/water-readings', waterReadingsRoutes);
 app.use('/api', waterBillPaymentRoutes);
+app.use('/api', paymentRoutes);
 
 
 
