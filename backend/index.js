@@ -1,67 +1,59 @@
-// using nodemon so that you do not need to type node index.js every time new code saved
-
-// import express - is for building the Rest apis
 import express from "express";
-
-// import body-parser - helps to parse the request and create the req.body object
 import bodyParser from "body-parser";
-
-// import cors - provides Express middleware to enable CORS with various options, connect frontend
 import cors from "cors";
+import { fileURLToPath } from 'url';
+import path from 'path';
 
-// import routes
-import {fileURLToPath} from 'url';
+// --- Routes Imports ---
 import router from "./routes/routes.js";
 import newrouter from "./routes/newroutes.js";
-// import asesroutes from "./routes/asesroutes.js"
-import dateroutes from "./routes/dateroutes.js"
-import WaterProjectRoute from "./routes/water_billing_system/waterProjectRoutes.js"; // අපි අලුතෙන් හදපු Route එක Import කළා
+import dateroutes from "./routes/dateroutes.js";
+import WaterProjectRoute from "./routes/water_billing_system/waterProjectRoutes.js";
 import billingFeesRoute from "./routes/water_billing_system/billingFeesRoute.js";
 import customerRoutes from "./routes/water_billing_system/waterCustomerAccountsRoutes.js";
 import waterCustomerRoutes from './routes/water_billing_system/waterCustomerAccountsRoutes.js';
 import waterReadingsRoutes from './routes/water_billing_system/waterReadingsRoutes.js';
 import waterBillPaymentRoutes from './routes/water_billing_system/waterBillPaymentRoutes.js';
 import paymentRoutes from './routes/water_billing_system/paymentRoutes.js';
-import paymentHistoryRoutes from './routes/water_billing_system/paymentHistoryRoutes.js';
+import paymentHistoryRoutes from './routes/water_billing_system/customerRoutes.js';
+import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes.js'; // Path fixed (removed ../backend)
 
-// ... existing code ...
-import path from 'path';
-const __filename=fileURLToPath(import.meta.url);
-const __dirname=path.dirname(__filename);
+// *** 1. නිවැරදි කළ Import Path එක ***
+import waterBillRoutes from "./routes/water_billing_system/BillTemplateRoutes.js"; 
 
-// init express
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-// use express json
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// --- CORS සැකසුම් (වෙනස් කළ කොටස) ---
+// --- CORS Config ---
 app.use(cors({
-    origin: ["http://localhost:8080", "https://elgservices.lk"], // මෙන්න මෙතන තමයි දෙකටම අවසර දෙන්නේ
+    origin: ["http://localhost:8080", "https://elgservices.lk"],
     credentials: true
 }));
 
+// --- Route Registration ---
+
+// *** 2. මෙම කොටස අලුතින් එකතු කරන්න (Route Mount කිරීම) ***
+app.use('/api', waterBillRoutes); 
+// මෙය දැමූ පසු ඔබේ URL එක වනුයේ: http://localhost:3000/api/water-bills/:id
 
 app.use('/api', billingFeesRoute);
-
-
-// use router
 app.use(router);
 app.use(newrouter);
-// app.use(asesroutes);
 app.use(dateroutes);
-app.use('/api',WaterProjectRoute); // අලුත් Water Project Route එක එකතු කළා
+app.use('/api', WaterProjectRoute);
 app.use('/api/water-billing', customerRoutes);
 app.use('/api', waterCustomerRoutes);
 app.use('/api/water-readings', waterReadingsRoutes);
 app.use('/api', waterBillPaymentRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', paymentHistoryRoutes);
-
-
-// පහත තිබූ res.setHeader කොටස අයින් කළා (Removed manual headers block)
+app.use('/api/reports', waterBillingReportRoutes);
 
 app.get('/api/getserverdate', (req, res) => {
   const serverDate = new Date();
@@ -72,7 +64,6 @@ app.get('/', function(req, res){
     res.json({ message: 'Welcome to LGPMS api' });
 });
 
-// PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
