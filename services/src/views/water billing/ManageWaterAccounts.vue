@@ -330,9 +330,7 @@ const saveCustomer = async () => {
 </template>
 
 <style scoped>
-/* Previous Styles Remain Same */
 
-/* New Styles for Edit Modal */
 .edit-modal {
   width: 400px; /* Slightly wider */
 }

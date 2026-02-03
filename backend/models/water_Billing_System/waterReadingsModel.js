@@ -26,6 +26,7 @@ export const getPendingCustomers = (sabhaCode, projectCode, month, year) => {
             WHERE c.sabha_code = ?
                 AND c.project_code = ?
                 AND r.id IS NULL
+                AND c.status = 1
             ORDER BY c.new_bill_number
         `;
         db.query(query, [year, month, sabhaCode, projectCode], (err, results) => {

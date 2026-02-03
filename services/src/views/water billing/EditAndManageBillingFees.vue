@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
-const availableProjectCodes = ref([])
+
 
 // Form State
 const projectCode = ref('')
@@ -21,6 +21,8 @@ const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])    // <--- NEW: 
 
 // Table Data
 const billingFeesList = ref([])
+
+const availableProjectCodes = ref([])
 
 onMounted(async () => {
   try {
