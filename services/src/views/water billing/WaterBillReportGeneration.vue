@@ -40,7 +40,9 @@ const fetchProjectCodes = async () => {
 const fetchReportData = async () => {
   isLoading.value = true;
   try {
+    // ✅ URL එක හරියටම backend route එකට ගැලපෙන්න ඕන
     const response = await axios.get(`/reports/projects/${currentSabha.value}`);
+    
     if(response.data.success) {
         reports.value = response.data.data;
     }
@@ -101,7 +103,6 @@ const getPercentageColor = (percentage) => {
                {{ project.code }} - {{ project.name }}
               </option>
             </select>
-            <span class="select-arrow">▼</span>
           </div>
         </div>
         
@@ -194,52 +195,37 @@ const getPercentageColor = (percentage) => {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #333;
+  font-family: sans-serif;
 }
 
-/* --- Header Styles (Maroon Theme) --- */
+/* --- Header Styles (Matched to Reference) --- */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-  border-bottom: 3px solid #800000; /* Maroon Border */
-  padding-bottom: 15px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
 }
 
 .page-header h2 {
   margin: 0;
-  color: #800000; /* Maroon Text */
-  font-size: 24px;
+  color: #2c3e50; /* Matched Color */
+  font-size: 20px; /* Slightly larger for main title */
   font-weight: 700;
 }
 
 .subtitle {
-  margin: 5px 0 0;
+  margin: 2px 0 0;
   color: #666;
-  font-size: 13px;
+  font-size: 10px; /* Small font */
 }
 
 .back-link {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background-color: #f8f9fa;
-  color: #800000;
+  color: #42b883; /* Green Theme */
   text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 8px 15px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  transition: all 0.3s ease;
-}
-
-.back-link:hover {
-  background-color: #800000;
-  color: white;
-  border-color: #800000;
+  font-weight: bold;
+  font-size: 10px;
 }
 
 /* --- Card Styles --- */
@@ -247,75 +233,77 @@ const getPercentageColor = (percentage) => {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
-  overflow: hidden;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 15px;
 }
 
 /* --- Filter Section --- */
 .filter-card {
-  padding: 15px 20px;
-  background-color: #fff5f5; /* Light Reddish tint */
-  border-left: 4px solid #800000;
+  background-color: #ffffff;
+  border-left: 4px solid #42b883; /* Green Border */
+  padding: 15px;
 }
 
 .filter-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
 }
 
 .filter-group label {
-  font-weight: 600;
-  color: #444;
-  font-size: 14px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #2c3e50;
 }
 
 .select-wrapper {
   position: relative;
-  width: 250px;
+  width: 200px;
 }
 
 .filter-select {
   width: 100%;
-  padding: 8px 30px 8px 12px;
+  padding: 6px 6px 6px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px;
-  appearance: none;
+  font-size: 7px; /* Strict Requirement from Reference */
   background-color: white;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #800000;
-  box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+  border-color: #42b883;
 }
 
 .select-arrow {
   position: absolute;
-  right: 10px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
-  color: #666;
+  font-size: 8px;
+  color: #888;
   pointer-events: none;
 }
 
 .summary-badge {
-  background-color: #fff;
-  padding: 5px 12px;
-  border-radius: 15px;
-  font-size: 12px;
-  border: 1px solid #ddd;
-  color: #555;
+  background-color: #e8f8f5;
+  color: #2c3e50;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 10px;
+  border: 1px solid #42b883;
+  font-weight: bold;
 }
 
 /* --- Table Styles --- */
@@ -326,26 +314,27 @@ const getPercentageColor = (percentage) => {
 .report-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 7px; /* Strict Requirement from Reference */
+  min-width: 800px;
 }
 
 .report-table th,
 .report-table td {
-  padding: 12px 15px;
+  text-align: left;
+  padding: 8px;
   border-bottom: 1px solid #eee;
+  color: #2c3e50;
+  vertical-align: top;
 }
 
 .report-table th {
-  background-color: #f3f3f3;
-  color: #333;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .report-table tbody tr:hover {
-  background-color: #fdfdfd;
+  background-color: #f9f9f9;
 }
 
 .report-table tfoot {
@@ -358,26 +347,32 @@ const getPercentageColor = (percentage) => {
 .text-right { text-align: right; }
 .fw-bold { font-weight: 600; }
 
-.text-blue { color: #2980b9; font-weight: 600; }
-.text-red { color: #c0392b; font-weight: 600; }
-.text-green { color: #27ae60; font-weight: 600; }
-.text-orange { color: #f39c12; font-weight: 600; }
-
 .amount-col {
-  font-family: 'Consolas', 'Monaco', monospace; /* Monospace for numbers alignment */
+  font-family: sans-serif;
+  font-weight: 500;
 }
 
-/* --- Progress Bar --- */
+/* Colors for Amounts/Status */
+.text-blue { color: #2980b9; }
+.text-red { color: #c0392b; }
+.text-green { color: #27ae60; }
+.text-orange { color: #f39c12; }
+
+/* --- Progress Bar (Scaled down for small table) --- */
 .percentage-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
+}
+
+.percentage-text {
+    font-weight: bold;
 }
 
 .progress-bar-bg {
-  width: 80px;
-  height: 4px;
+  width: 60px;
+  height: 3px;
   background-color: #eee;
   border-radius: 2px;
   overflow: hidden;
@@ -391,18 +386,20 @@ const getPercentageColor = (percentage) => {
 /* --- Loading & Empty States --- */
 .loading-state {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: 20px;
+  font-size: 10px;
+  color: #42b883;
+  font-weight: bold;
 }
 
 .spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #800000;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #42b883;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 15px;
+  height: 15px;
   animation: spin 1s linear infinite;
-  margin: 0 auto 10px;
+  margin: 0 auto 5px;
 }
 
 @keyframes spin {
@@ -412,8 +409,9 @@ const getPercentageColor = (percentage) => {
 
 .empty-state {
   text-align: center;
-  padding: 30px;
+  padding: 20px;
   color: #888;
   font-style: italic;
+  font-size: 10px;
 }
 </style>

@@ -2,12 +2,13 @@
 import { ref, onMounted, watch } from 'vue';
 import axios from 'axios';
 
-// Projects තියාගන්න Array එක
+// Projects State
 const projects = ref([]);
 
+// Add Form State
 const projectName = ref('');
 const projectCode = ref('');
-const projectNumber = ref(''); // 1. අලුත් variable එක
+const projectNumber = ref('');
 const users = ref('');
 const searchQuery = ref('');
 const sortBy = ref('name_asc');
@@ -18,16 +19,16 @@ const showEditModal = ref(false);
 const editForm = ref({
   name: '',
   code: '',
-  number: ''
+  number: '',
+  status: 'Active'
 });
 const editingId = ref(null);
 
-// Page එක Load වෙනකොටම Data ටික Backend එකෙන් ගන්නවා
+// Load Data
 onMounted(async () => {
   const userData = JSON.parse(sessionStorage.getItem('userData'));
   
   if (userData && (userData.sabha || userData.sabha_code)) {
-    // Session එකෙන් Sabha Code එක ගන්නවා
     currentSabha.value = userData.sabha || userData.sabha_code;
     await fetchProjects(); 
   } else {
@@ -35,10 +36,8 @@ onMounted(async () => {
   }
 });
 
-// Debounce Timer
-let debounceTimer = null;
-
 // Watchers
+let debounceTimer = null;
 watch(searchQuery, () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
@@ -50,7 +49,7 @@ watch(sortBy, () => {
   fetchProjects();
 });
 
-// Projects ගෙන්වා ගන්නා Function එක
+// Fetch Projects
 const fetchProjects = async () => {
   try {
     const response = await axios.get(`/water-projects/${currentSabha.value}`, {
@@ -65,16 +64,19 @@ const fetchProjects = async () => {
   }
 };
 
-// අලුත් Project එකක් Add කරන Function එක
+// Add Project
 const addProject = async () => {
-  // 2. Validation එකට projectNumber එකත් එකතු කළා
   if (projectName.value.trim() && projectCode.value.trim() && projectNumber.value.trim()) {
+    
+    // Get User ID for creation (optional)
+    const userData = JSON.parse(sessionStorage.getItem('userData'));
     
     const payload = {
       name: projectName.value,
       code: projectCode.value,
-      number: projectNumber.value, // 3. Backend එකට 'number' නමින් යවනවා
-      sabha_code: currentSabha.value
+      number: projectNumber.value,
+      sabha_code: currentSabha.value,
+      created_by: userData ? userData.id : null
     };
 
     try {
@@ -83,10 +85,9 @@ const addProject = async () => {
       if(response.data.status === "success") {
         projects.value.unshift(response.data.data); 
         
-        // Form එක හිස් කරනවා
         projectName.value = '';
         projectCode.value = '';
-        projectNumber.value = ''; // 4. Reset කරනවා
+        projectNumber.value = '';
         users.value = '';
         
         alert("Project Saved Successfully!");
@@ -100,14 +101,17 @@ const addProject = async () => {
   }
 };
 
-// Edit Modal Functions
+// --- Edit Modal Functions ---
+
 const openEditModal = (project) => {
   editingId.value = project.id;
-  // Copy data to reactive object to avoid direct mutation of table data
+  
   editForm.value = {
     name: project.name,
     code: project.code,
-    number: project.number
+    number: project.number,
+    // ✅ 1 නම් Active, නැත්නම් Inactive ලෙස set කරන්න
+    status: project.status === 1 ? 'Active' : 'Inactive'
   };
   showEditModal.value = true;
 };
@@ -115,20 +119,36 @@ const openEditModal = (project) => {
 const closeEditModal = () => {
   showEditModal.value = false;
   editingId.value = null;
-  editForm.value = { name: '', code: '', number: '' };
+  editForm.value = { name: '', code: '', number: '', status: 'Active' };
 };
 
+// ✅ UPDATE PROJECT FUNCTION (User ID එක Session එකෙන් ගන්න විදිය)
 const updateProject = async () => {
-  if (editForm.value.name.trim() && editForm.value.code.trim() && editForm.value.number.trim()) {
+  if (editForm.value.name.trim() && editForm.value.code.trim() && String(editForm.value.number).trim()) {
+    
     if (confirm("Are you sure you want to update this project?")) {
       try {
-        const payload = { ...editForm.value, sabha_code: currentSabha.value };
+        const userDataString = sessionStorage.getItem('userData');
+        if (!userDataString) return alert("Session Expired.");
+
+        const userData = JSON.parse(userDataString);
+        const userId = userData.nic; 
+        if (!userId) return alert("User NIC not found.");
+
+        const payload = { 
+            ...editForm.value, 
+            sabha_code: currentSabha.value,
+            userId: userId,
+            // ✅ "Active" නම් 1, නැත්නම් 0 ලෙස යවන්න
+            status: editForm.value.status === 'Active' ? 1 : 0
+        };
+
         const response = await axios.put(`/water-projects/${editingId.value}`, payload);
         
         if (response.data.status === "success") {
           alert("Project Updated Successfully!");
           closeEditModal();
-          fetchProjects(); // Refresh the list to show changes
+          fetchProjects(); 
         }
       } catch (error) {
         console.error("Error updating:", error);
@@ -195,7 +215,7 @@ const updateProject = async () => {
               <th>Project Name</th>
               <th>Project Code</th>
               <th>Project Number</th>
-              <th>Users</th>
+              <th>Status</th> <th>Users</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -204,6 +224,11 @@ const updateProject = async () => {
               <td>{{ project.name }}</td>
               <td>{{ project.code }}</td>
               <td>{{ project.number }}</td>
+              <td>
+                <span :class="project.status === 1 ? 'status-active' : 'status-inactive'">
+                  {{ project.status === 1 ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
               <td>{{ project.users }}</td>
               <td>
                 <button class="action-btn" @click="openEditModal(project)">Edit</button>
@@ -214,7 +239,6 @@ const updateProject = async () => {
       </div>
     </div>
 
-    <!-- Edit Modal -->
     <div v-if="showEditModal" class="modal-overlay">
       <div class="modal-content">
         <h4>Edit Project</h4>
@@ -231,6 +255,15 @@ const updateProject = async () => {
             <label>Project Number</label>
             <input v-model="editForm.number" type="text" required />
           </div>
+          
+          <div class="form-group">
+            <label>Status</label>
+            <select v-model="editForm.status" class="status-select" required>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="closeEditModal">Cancel</button>
             <button type="submit" class="save-btn">Save Changes</button>
@@ -242,6 +275,44 @@ const updateProject = async () => {
 </template>
 
 <style scoped>
+.manage-projects-container { padding: 20px; max-width: 1000px; margin: 0 auto; font-family: sans-serif; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
+.back-link { color: #42b883; text-decoration: none; font-weight: bold; }
+.content-area { display: flex; flex-direction: column; gap: 30px; }
+.card { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+h4 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #42b883; display: inline-block; padding-bottom: 5px; margin-bottom: 20px; }
+.project-form { display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; font-size: 12px; } /* Increased font size slightly for readability */
+label { font-weight: 600; color: #2c3e50; }
+input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;} /* Added select styles */
+input:focus, select:focus { outline: none; border-color: #42b883; }
+.submit-btn { background-color: #42b883; color: white; border: none; padding: 8px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; height: 35px; }
+.submit-btn:hover { background-color: #3aa876; }
+.project-table { width: 100%; margin: 0 auto; border-collapse: collapse; font-size: 12px; }
+.project-table th, .project-table td { text-align: center; padding: 12px; border-bottom: 1px solid #eee; color: #2c3e50; }
+.project-table th { background-color: #f8f9fa; font-weight: 600; }
+.action-btn { background: transparent; border: 1px solid #42b883; color: #42b883; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.action-btn:hover { background: #42b883; color: white; }
+.controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+.search-wrapper, .sort-wrapper { position: relative; flex: 1; min-width: 200px; }
+.search-input, .sort-select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+
+/* Status Styles */
+.status-active { color: #27ae60; font-weight: bold; }
+.status-inactive { color: #e74c3c; font-weight: bold; }
+.status-select { background-color: white; }
+
+/* Modal Styles */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
+.modal-content { background: white; padding: 25px; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideUp 0.3s ease; }
+.edit-form { display: flex; flex-direction: column; gap: 15px; } /* Stack inputs in modal */
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.cancel-btn { background: #f1f1f1; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.save-btn { background: #42b883; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
 .manage-projects-container {
   padding: 20px;
   max-width: 1000px;

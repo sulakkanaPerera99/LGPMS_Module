@@ -7,7 +7,8 @@ export const insertProject = (data, callback) => {
 };
 
 export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
-    let query = `SELECT p.id, p.sabha_code, p.name, p.code, p.number, COUNT(c.id) as registered_users FROM water_projects p LEFT JOIN water_customer_accounts c ON c.project_code = p.code AND c.sabha_code = p.sabha_code WHERE p.sabha_code = ?`;
+    // ✅ 1. p.status මෙතනට එකතු කළා
+    let query = `SELECT p.id, p.sabha_code, p.name, p.code, p.number, p.status, COUNT(c.id) as registered_users FROM water_projects p LEFT JOIN water_customer_accounts c ON c.project_code = p.code AND c.sabha_code = p.sabha_code WHERE p.sabha_code = ?`;
     const queryParams = [sabhaCode];
 
     if (search) {
@@ -15,7 +16,8 @@ export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
         queryParams.push(`%${search}%`, `%${search}%`);
     }
 
-    query += ' GROUP BY p.id, p.sabha_code, p.name, p.code, p.number';
+    // ✅ 2. p.status මෙතනටත් (GROUP BY) එකතු කළා
+    query += ' GROUP BY p.id, p.sabha_code, p.name, p.code, p.number, p.status';
 
     if (sort) {
         let field = sort;
@@ -36,7 +38,7 @@ export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
 };
 
 export const getProjectList = (sabhaCode, callback) => {
-    const query = 'SELECT name, code FROM water_projects WHERE sabha_code = ?';
+    const query = "SELECT code, name FROM water_projects WHERE sabha_code = ? AND status = 1";
     db.query(query, [sabhaCode], callback);
 };
 
@@ -59,7 +61,23 @@ export const getProjectNumberByCode = (projectCode, sabhaCode) => {
 };
 
 export const updateProjectModel = (id, data, callback) => {
-    const query = 'UPDATE water_projects SET ? WHERE id = ?';
-    // 'data' කියන object එකේ තියෙන field names, database column names එක්ක සමාන වෙන්න ඕනේ
-    db.query(query, [data, id], callback);
+    // ✅ updated_at = NOW() කියන කොටස අලුතින් එකතු කළා.
+    // එවිට update වෙන වෙලාව ස්වයංක්‍රීයව save වෙනවා.
+    const query = `
+        UPDATE water_projects 
+        SET name = ?, code = ?, number = ?, status = ?, updated_by = ?, updated_at = NOW() 
+        WHERE id = ?
+    `;
+
+    // Parameters (data.updated_by එකට පස්සේ id එක එන්න ඕන)
+    db.query(
+        query, 
+        [data.name, data.code, data.number, data.status, data.updated_by, id], 
+        (err, results) => {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, results);
+        }
+    );
 };

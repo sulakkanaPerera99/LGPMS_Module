@@ -75,8 +75,8 @@ export const getProjectList = (req, res) => {
 
 // --- Edit/Update Water Project ---
 export const editWaterProject = (req, res) => {
-    const id = req.params.id; // URL එකෙන් ID එක ගන්නවා
-    const { name, code, number } = req.body; // Frontend එකෙන් එවන data
+    const id = req.params.id;
+    const { name, code, number, status, userId } = req.body; 
 
     // Validation
     if (!id) {
@@ -87,11 +87,12 @@ export const editWaterProject = (req, res) => {
         return res.status(400).json({ status: "error", message: "All fields (Name, Code, Number) are required!" });
     }
 
-    // Update කරන්න ඕන Data ටික object එකක් විදියට හදාගන්නවා
     const updateData = {
         name: name,
         code: code,
-        number: number
+        number: number,
+        status: status,
+        updated_by: userId
     };
 
     updateProjectModel(id, updateData, (err, results) => {
@@ -113,6 +114,8 @@ export const editWaterProject = (req, res) => {
         return res.json({
             status: "success",
             message: "Project updated successfully",
+            // මෙතනින් දැනට වෙලාව යවන්න අමාරුයි මොකද අපි SQL එක ඇතුලෙමයි NOW() ගැහුවේ.
+            // ඒක ප්‍රශ්නයක් නෑ, Frontend එකේ කොහොමත් Refresh වෙන නිසා අලුත් Data එනවා.
             data: { id, ...updateData }
         });
     });
