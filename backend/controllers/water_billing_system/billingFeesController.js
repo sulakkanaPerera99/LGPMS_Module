@@ -1,6 +1,6 @@
 // controllers/water_billing_system/BillingfeesController.js
 
-import * as BillingFeesModel from '../../models/water_billing_system/BillingfeesModel.js';
+import * as BillingFeesModel from '../../models/water_Billing_System/billingFeesModel.js';
 
 export const addConfig = async (req, res) => {
     try {
@@ -93,5 +93,43 @@ export const getConfigs = async (req, res) => {
             status: 'error', 
             message: 'Internal Server Error' 
         });
+    }
+};
+
+export const updateConfig = async (req, res) => {
+    try {
+        const { id } = req.params; // මෙය පරණ ID එකයි
+        const { 
+            projectCode, connectionType, isMetered, isSamurdhi, 
+            fixedRate, unitRanges, otherCharges, discounts, 
+            sabha_code, user_nic 
+        } = req.body;
+
+        // Validation
+        if (!id || !connectionType || fixedRate === null) {
+            return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+        }
+
+        // Model එකට යැවීම (දැන් මෙය අලුත් පේළියක් සාදයි)
+        await BillingFeesModel.updateBillingConfig(id, {
+            projectCode,
+            connectionType,
+            isMetered,
+            isSamurdhi,
+            fixedRate,
+            unitRanges,
+            otherCharges,
+            discounts,
+            sabha_code
+        }, user_nic);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Configuration updated with new version successfully.' // Message updated
+        });
+
+    } catch (error) {
+        console.error("Error updating billing config:", error);
+        return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 };

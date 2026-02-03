@@ -48,3 +48,60 @@ export const getBillingConfigs = (sabha_code) => {
         });
     });
 };
+
+export const updateBillingConfig = (oldId, data, userNic) => {
+    return new Promise((resolve, reject) => {
+        db.beginTransaction((err) => {
+            if (err) return reject(err);
+
+            // පියවර 1: පරණ Record එක Deactivate කිරීම (Expire කිරීම)
+            const deactivateQuery = `
+                UPDATE billing_configurations 
+                SET 
+                    status = 0, 
+                    effective_to = NOW() 
+                WHERE id = ?
+            `;
+
+            db.query(deactivateQuery, [oldId], (err, result) => {
+                if (err) {
+                    return db.rollback(() => reject(err));
+                }
+
+                // පියවර 2: අලුත් මිල ගණන් අලුත් පේළියක් ලෙස ඇතුලත් කිරීම (New Version)
+                const insertQuery = `
+                    INSERT INTO billing_configurations 
+                    (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
+                `;
+
+                const values = [
+                    data.projectCode,
+                    data.connectionType,
+                    data.isMetered ? 1 : 0,
+                    data.isSamurdhi ? 1 : 0,
+                    data.fixedRate,
+                    JSON.stringify(data.unitRanges || []),
+                    JSON.stringify(data.otherCharges || []),
+                    JSON.stringify(data.discounts || []),
+                    userNic,     // Edited User's NIC
+                    data.sabha_code
+                ];
+
+                db.query(insertQuery, values, (err, insertResult) => {
+                    if (err) {
+                        return db.rollback(() => reject(err));
+                    }
+
+                    // සාර්ථක නම් Commit කරන්න
+                    db.commit((err) => {
+                        if (err) {
+                            return db.rollback(() => reject(err));
+                        }
+                        resolve(insertResult);
+                    });
+                });
+            });
+        });
+    });
+};
