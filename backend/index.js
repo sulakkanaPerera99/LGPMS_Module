@@ -15,8 +15,8 @@ import waterCustomerRoutes from './routes/water_billing_system/waterCustomerAcco
 import waterReadingsRoutes from './routes/water_billing_system/waterReadingsRoutes.js';
 import waterBillPaymentRoutes from './routes/water_billing_system/waterBillPaymentRoutes.js';
 import paymentRoutes from './routes/water_billing_system/paymentRoutes.js';
-import paymentHistoryRoutes from './routes/water_billing_system/customerRoutes.js';
-import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes.js'; // Path fixed (removed ../backend)
+import paymentHistoryRoutes from './routes/water_billing_system/paymentHistoryRoutes.js';
+import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes.js';
 
 // *** 1. නිවැරදි කළ Import Path එක ***
 import waterBillRoutes from "./routes/water_billing_system/BillTemplateRoutes.js"; 

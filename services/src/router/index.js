@@ -14,7 +14,6 @@ import Vote from '../views/Vote.vue';
 //////////////////////////////////////////////////////////
 import OfficerDashboard from '../views/water billing/OfficerDashboard.vue'
 import AddAndManageWaterProjects from '../views/water billing/AddAndManageWaterProjects.vue'
-import EditAndManageBillingFees from '../views/water billing/EditAndManageBillingFees.vue'
 import AddCustomer from '../views/water billing/AddCustomer.vue'
 import ManageWaterAccounts from '../views/water billing/ManageWaterAccounts.vue'
 import BillPayment from '../views/water billing/BillPayment.vue'
@@ -39,6 +38,8 @@ import StreetLineReportGeneration from '@/views/certificate issuing/Street Line/
 import AddReadings from "@/views/water billing/AddReadings.vue";
 import BillTemplate from '@/views/water billing/BillTemplate.vue'
 import PaymentInterface from "../views/water billing/PaymentInterface.vue";
+import ManageBillingFees from "../views/water billing/ManageBillingFees.vue";
+import AddBillingFees from "@/views/water billing/AddBillingFees.vue";
 
 //UnderDevelopment 
 
@@ -125,7 +126,12 @@ const routes = [
       {
         path: '/edit-billing-fees',
         name: 'edit-billing-fees',
-        component: EditAndManageBillingFees
+        component: ManageBillingFees
+      },
+      {
+        path: '/add-billing-fees',
+        name: 'add-billing-fees',
+        component: AddBillingFees
       },
       {
         path: '/add-customer',

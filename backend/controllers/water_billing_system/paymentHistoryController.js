@@ -1,4 +1,4 @@
-import { getCustomersHistoryBySabha } from '../../models/water_billing_system/paymentHistoryModel.js';
+import { getCustomersHistoryBySabha1 } from '../../models/water_billing_system/paymentHistoryModel.js';
 
 export const getAllCustomers = async (req, res) => {
     try {
@@ -69,7 +69,7 @@ export const getAllCustomers = async (req, res) => {
 
         // 4. Model එක Call කිරීම (දත්ත ලබා ගැනීම)
         // **වැදගත්:** මෙය තිබිය යුත්තේ Response එක යවන්න කලින්.
-        const customers = await getCustomersHistoryBySabha(sabha_code, projectCode, filters);
+        const customers = await getCustomersHistoryBySabha1(sabha_code, projectCode, filters);
 
         // 5. Debugging (Console එකේ බලාගැනීමට)
         if (customers.length > 0) {

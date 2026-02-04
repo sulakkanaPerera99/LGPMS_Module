@@ -1,7 +1,6 @@
 import db from '../../config/database.js';
 
-
-export const getCustomersHistoryBySabha = (sabhaCode, projectCode, filters = {}) => {
+export const getCustomersHistoryBySabha1 = (sabhaCode, projectCode, filters = {}) => {
     return new Promise((resolve, reject) => {
         let query = `
             SELECT 
@@ -17,26 +16,22 @@ export const getCustomersHistoryBySabha = (sabhaCode, projectCode, filters = {})
                 wca.samurdhi_number AS samurdhiNumber,
                 wca.is_metered AS isMetered,
                 wca.status AS status,
-                
-                -- ✅ FIX 1: current_balance NULL නම් 0 ලෙස එවන්න
-                COALESCE(wca.current_balance, 0) AS currentBalance,
+                wca.current_balance AS currentBalance,
 
                 -- ✅ FIX 2: Last Paid Date
                 (
                     SELECT paid_date 
                     FROM water_bills wb 
                     WHERE wb.account_id = wca.id 
-                    AND wb.paid_amount > 0 
                     ORDER BY wb.paid_date DESC 
                     LIMIT 1
                 ) AS lastPaidDate,
 
-                -- ✅ FIX 3: Last Paid Amount NULL නම් 0 ලෙස එවන්න
+                -- ✅ FIX 3: Last Paid Amount (Fixed syntax error here)
                 COALESCE((
                     SELECT paid_amount 
                     FROM water_bills wb 
-                    WHERE wb.account_id = wca.id 
-                    AND wb.paid_amount > 0 
+                    WHERE wb.account_id = wca.id
                     ORDER BY wb.paid_date DESC 
                     LIMIT 1
                 ), 0) AS lastPaidAmount
@@ -55,7 +50,6 @@ export const getCustomersHistoryBySabha = (sabhaCode, projectCode, filters = {})
         const conditions = [];
 
         if (filters.search) {
-            // wca alias එක එකතු කරන ලදි
             conditions.push(`(wca.full_name LIKE ? OR wca.nic LIKE ? OR wca.old_bill_number LIKE ? OR wca.new_bill_number LIKE ? OR wca.project_code LIKE ?)`);
             const searchTerm = `%${filters.search}%`;
             params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);

@@ -51,7 +51,7 @@ const fetchAccounts = async () => {
     if (activeFilters.metered?.length) params.metered = activeFilters.metered.join(',');
     if (activeFilters.status?.length) params.status = activeFilters.status.join(',');
 
-    const response = await axios.get(`/water-customers/${currentSabha.value}`, { params });
+    const response = await axios.get(`/payment-history/${currentSabha.value}`, { params });
     accounts.value = response.data;
   } catch (error) {
     console.error("Error fetching accounts:", error);
