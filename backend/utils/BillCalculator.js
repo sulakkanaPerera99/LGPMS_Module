@@ -1,14 +1,22 @@
-// utils/BillCalculator.js
-
 const calculateSlabAmount = (units, slabList) => {
     let remainingUnits = units;
     let totalUsageCharge = 0;
-    // Sort slabs just in case logic
+    
+    // Sort slabs by min value
     const sortedSlabs = slabList.sort((a, b) => a.min - b.min);
 
     for (const slab of sortedSlabs) {
         if (remainingUnits <= 0) break;
-        let rangeSize = slab.max - slab.min + 1;
+
+        let rangeSize;
+
+        // FIX: Check if max is 0. If 0, it means "Infinite" or "Rest of the units"
+        if (slab.max === 0) {
+            rangeSize = Infinity; 
+        } else {
+            rangeSize = slab.max - slab.min + 1;
+        }
+
         let unitsForThisSlab = Math.min(remainingUnits, rangeSize);
         totalUsageCharge += unitsForThisSlab * parseFloat(slab.rate);
         remainingUnits -= unitsForThisSlab;

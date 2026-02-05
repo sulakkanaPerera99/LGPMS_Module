@@ -35,12 +35,46 @@ export const insertBillingConfig = (data) => {
 };
 
 // 2. Data ලබා ගැනීමේ Function එක
-export const getBillingConfigs = (sabha_code) => {
+export const getBillingConfigs = (sabha_code, search, sort) => {
     return new Promise((resolve, reject) => {
-        // Select all configs (Active and Inactive) for the admin view
-        const query = "SELECT * FROM billing_configurations WHERE sabha_code = ? ORDER BY id DESC";
         
-        db.query(query, [sabha_code], (err, results) => {
+        // 1. Base Query
+        let query = "SELECT * FROM billing_configurations WHERE sabha_code = ?";
+        let params = [sabha_code];
+
+        // 2. Dynamic Search Logic (SQL Injection Safe)
+        if (search) {
+            // Search in project_code OR connection_type
+            query += " AND (project_code LIKE ? OR connection_type LIKE ?)";
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm);
+        }
+
+        // 3. Dynamic Sorting Logic (Whitelist Approach)
+        // We use a switch statement to prevent SQL injection via ORDER BY
+        if (sort) {
+            switch (sort) {
+                case 'code_asc':
+                    query += " ORDER BY project_code ASC";
+                    break;
+                case 'code_desc':
+                    query += " ORDER BY project_code DESC";
+                    break;
+                case 'type_asc':
+                    query += " ORDER BY connection_type ASC";
+                    break;
+                case 'type_desc':
+                    query += " ORDER BY connection_type DESC";
+                    break;
+                default:
+                    query += " ORDER BY id DESC"; // Default fallback
+            }
+        } else {
+            query += " ORDER BY id DESC"; // Default if no sort provided
+        }
+
+        // 4. Execute Query
+        db.query(query, params, (err, results) => {
             if (err) {
                 return reject(err);
             }

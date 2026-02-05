@@ -17,18 +17,39 @@ const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])
 
 const availableProjectCodes = ref([])
 
+// 2. Page එක Load වෙනකොටම Session Check කරලා Project Codes ගෙන්වා ගැනීම
 onMounted(async () => {
-  try {
-    const userData = JSON.parse(sessionStorage.getItem('userData'))
-    if (userData && userData.sabha) {
-      currentSabha.value = userData.sabha
-      // Fetch Project Codes
-      availableProjectCodes.value = [{code: 'WP001', name: 'Main Water'}, {code: 'WP002', name: 'Rural Scheme'}] 
+  const userDataString = sessionStorage.getItem('userData');
+  
+  if (userDataString) {
+    const userData = JSON.parse(userDataString);
+    
+    // Sabha Code එක ගන්නවා
+    currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
+
+    if (!currentSabha.value) {
+      alert("Session Error: Sabha Code not found. Please login again.");
+    } else {
+      console.log("Current Sabha Code:", currentSabha.value); 
+      // සභා කෝඩ් එක හරි නම්, Project List එක ගෙන්වා ගන්නවා
+      await fetchProjectCodes();
     }
-  } catch (error) {
-    console.error("Error init:", error)
+  } else {
+    alert("Session Expired. Please login again.");
   }
-})
+});
+
+// 3. Backend එකෙන් Project List එක ගෙන්වා ගන්නා Function එක (අලුතෙන් එකතු කළේ)
+const fetchProjectCodes = async () => {
+  try {
+    // Backend Route: /api/water-projects-list/:sabha_code
+    const response = await axios.get(`/water-project-list/${currentSabha.value}`);
+    availableProjectCodes.value = response.data; 
+    console.log("Projects Loaded:", availableProjectCodes.value);
+  } catch (error) {
+    console.error("Error fetching project codes:", error);
+  }
+};
 
 // Add Form Helpers
 const addUnitRange = () => unitRanges.value.push({ min: 0, max: 0, rate: 0 })
@@ -174,200 +195,211 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
+/* --- Page Layout --- */
 .billing-container {
-  padding: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-  font-family: sans-serif;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    font-family: sans-serif;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
 }
 
 .back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 12px;
+    color: #42b883;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px; /* Increased from 12px */
 }
 
 .content-area {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 h4 {
-  margin-top: 0;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  margin-bottom: 20px;
-  font-size: 14px;
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #42b883;
+    display: inline-block;
+    padding-bottom: 5px;
+    margin-bottom: 20px;
+    font-size: 16px; /* Increased from 14px */
 }
 
 .section-header {
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #2c3e50;
-  font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 14px; /* Increased from 10px */
 }
 
 /* --- FORM ELEMENTS --- */
 .billing-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex: 1;
-  min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 150px;
 }
 
 label {
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 13px; /* Increased from 10px */
 }
 
 input,
 select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 10px;
+    padding: 10px; /* Increased padding */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px; /* Increased from 10px */
+    width: 100%; /* Ensure inputs take full width of container */
+    box-sizing: border-box;
 }
 
 input:focus,
 select:focus {
-  outline: none;
-  border-color: #42b883;
+    outline: none;
+    border-color: #42b883;
 }
 
 .checkbox-row {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  align-items: center;
-  padding-top: 15px;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    align-items: center;
+    padding-top: 15px;
 }
 
 .checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 13px; /* Increased for label text next to checkbox */
+}
+
+.checkbox-item input {
+    width: auto; /* Reset width for checkboxes */
 }
 
 /* --- DYNAMIC SECTIONS (Ranges, Charges) --- */
 .header-labels01 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 50px;
-  gap: 10px;
-  font-size: 9px;
-  font-weight: bold;
-  margin-bottom: 5px;
-  color: #666;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 50px;
+    gap: 10px;
+    font-size: 13px; /* Increased from 9px */
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #666;
 }
 
 .header-labels01 span {
-  text-align: center;
+    text-align: center;
 }
 
 .dynamic-section,
 .dynamic-section01 {
-  border: 1px solid #eee;
-  padding: 15px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
 }
 
 .discount-section {
-  border-color: #a8e6cf;
-  background-color: #f0fff4;
+    border-color: #a8e6cf;
+    background-color: #f0fff4;
 }
 
 .dynamic-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 10px;
-  margin-bottom: 8px;
-  align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: center;
 }
 
 .dynamic-section:not(:first-of-type) .dynamic-row {
-  grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr auto;
 }
 
 .small-input {
-  width: 100%;
+    width: 100%;
 }
 
 .small-select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 10px;
+    padding: 10px; /* Increased padding */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px; /* Increased from 10px */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* --- BUTTONS --- */
 .add-btn,
 .remove-btn {
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 10px;
+    border: none;
+    padding: 6px 12px; /* Adjusted padding */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px; /* Increased from 10px */
 }
 
 .add-btn {
-  background-color: #2c3e50;
-  color: white;
+    background-color: #2c3e50;
+    color: white;
 }
 
 .remove-btn {
-  background-color: #e74c3c;
-  color: white;
+    background-color: #e74c3c;
+    color: white;
 }
 
 .submit-btn {
-  background-color: #42b883;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  align-self: flex-start;
-  font-size: 10px;
+    background-color: #42b883;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    align-self: flex-start;
+    font-size: 13px; /* Increased from 10px */
+    height: 38px; /* Consistent height */
 }
 
 .submit-btn:hover {
-  background-color: #3aa876;
+    background-color: #3aa876;
 }
 </style>

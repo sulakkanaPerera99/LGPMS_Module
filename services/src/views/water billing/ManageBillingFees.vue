@@ -1,10 +1,14 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 
 const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
 const currentSabha = ref('')
 const currentUserNIC = ref('') 
+
+// --- Search & Sort State
+const searchQuery = ref('')
+const sortBy = ref('code_asc') // Default sort by Project Code
 
 // Edit Form State
 const showEditModal = ref(false)
@@ -31,7 +35,7 @@ onMounted(async () => {
       currentSabha.value = userData.sabha
       currentUserNIC.value = userData.nic || 'UNKNOWN_USER'
       
-      // Fetch Project Codes
+      // Fetch Project Codes (Mock or API)
       availableProjectCodes.value = [{code: 'WP001', name: 'Main Water'}, {code: 'WP002', name: 'Rural Scheme'}] 
 
       await fetchBillingConfigs()
@@ -41,11 +45,35 @@ onMounted(async () => {
   }
 })
 
+// --- Watchers for Search & Sort
+// Debounce search slightly to prevent too many API calls while typing
+let debounceTimeout = null;
+watch(searchQuery, () => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+        fetchBillingConfigs();
+    }, 400);
+});
+
+watch(sortBy, () => fetchBillingConfigs(), { immediate: false });
+
 // --- Methods ---
 
 const fetchBillingConfigs = async () => {
   try {
-    const response = await axios.get(`/billing-fees/${currentSabha.value}`)
+    // Construct Query Params
+    const params = {};
+    
+    if (searchQuery.value && searchQuery.value.trim() !== '') {
+        params.search = searchQuery.value.trim();
+    }
+    
+    if (sortBy.value) {
+        params.sort = sortBy.value;
+    }
+
+    // Call API with Params
+    const response = await axios.get(`/billing-fees/${currentSabha.value}`, { params })
     billingFeesList.value = response.data.data || response.data
   } catch (error) {
     console.error("Error fetching configs:", error)
@@ -115,11 +143,27 @@ const updateForm = async () => {
 
     <div class="content-area">
       <div style="display:flex; justify-content:flex-end;">
-         <router-link to="/add-billing-fees" class="submit-btn" style="text-decoration:none;">+ Add New Fee</router-link>
+         <router-link to="/add-billing-fees" class="submit-btn" style="text-decoration:none; display:inline-flex; align-items:center;">+ Add New Fee</router-link>
       </div>
 
       <div class="card table-card">
         <h4>Existing Configurations</h4>
+
+        <div class="controls-row">
+            <div class="search-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" v-model="searchQuery" placeholder="Search by Project Code or Type..." class="search-input" />
+            </div>
+            <div class="sort-wrapper">
+              <select v-model="sortBy" class="sort-select">
+                <option value="code_asc">Project Code (Asc)</option>
+                <option value="code_desc">Project Code (Desc)</option>
+                <option value="type_asc">Connection Type (A-Z)</option>
+                <option value="type_desc">Connection Type (Z-A)</option>
+              </select>
+            </div>
+        </div>
+
         <table class="billing-table">
           <thead>
             <tr>
@@ -134,7 +178,7 @@ const updateForm = async () => {
           </thead>
           <tbody>
             <tr v-if="billingFeesList.length === 0">
-              <td colspan="8" style="text-align: center; padding: 20px;">No configurations added yet.</td>
+              <td colspan="8" style="text-align: center; padding: 20px;">No configurations found.</td>
             </tr>
             <tr v-for="config in billingFeesList" :key="config.id">
               <td>{{ config.projectCode }}</td>
@@ -258,298 +302,372 @@ const updateForm = async () => {
 </template>
 
 <style scoped>
-/* --- MODAL STYLES --- */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #42b883;
-  padding-bottom: 10px;
-}
-
-.modal-header h4 {
-  margin: 0;
-  border: none;
-  padding: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #888;
-}
-
-.close-btn:hover {
-  color: #e74c3c;
-}
-
-/* --- FORM & INPUT STYLES --- */
-.read-only-input {
-  background-color: #e9ecef;
-  color: #495057;
-  cursor: not-allowed;
-  font-weight: bold;
-  border: 1px solid #ced4da;
-}
-
-/* --- PAGE LAYOUT --- */
+/* --- Page Layout --- */
 .billing-container {
-  padding: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
-  font-family: sans-serif;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    font-family: sans-serif;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
 }
 
 .back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 12px;
+    color: #42b883;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px; /* Increased */
 }
 
 .content-area {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 h4 {
-  margin-top: 0;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  margin-bottom: 20px;
-  font-size: 14px;
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #42b883;
+    display: inline-block;
+    padding-bottom: 5px;
+    margin-bottom: 20px;
+    font-size: 16px; /* Increased */
 }
 
 .section-header {
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #2c3e50;
-  font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 14px; /* Increased */
 }
 
 /* --- FORM ELEMENTS --- */
 .billing-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex: 1;
-  min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 150px;
 }
 
 label {
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 13px; /* Increased */
 }
 
 input,
 select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 10px;
+    padding: 10px; /* Increased padding */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px; /* Increased */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 input:focus,
 select:focus {
-  outline: none;
-  border-color: #42b883;
+    outline: none;
+    border-color: #42b883;
 }
 
 .checkbox-row {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  align-items: center;
-  padding-top: 15px;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    align-items: center;
+    padding-top: 15px;
 }
 
 .checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 13px; /* Increased */
 }
 
-/* --- DYNAMIC SECTIONS (Ranges, Charges) --- */
+.checkbox-item input {
+    width: auto;
+}
+
+/* --- SEARCH & SORT CONTROLS --- */
+.controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.sort-wrapper {
+    position: relative;
+    width: auto; 
+    min-width: 150px;
+    flex-grow: 0;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #888;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 10px 10px 30px; /* Padding for icon */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.sort-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: white;
+    cursor: pointer;
+}
+
+/* --- DYNAMIC SECTIONS --- */
 .header-labels01 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 50px;
-  gap: 10px;
-  font-size: 9px;
-  font-weight: bold;
-  margin-bottom: 5px;
-  color: #666;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 50px;
+    gap: 10px;
+    font-size: 13px; /* Increased */
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #666;
 }
 
 .header-labels01 span {
-  text-align: center;
+    text-align: center;
 }
 
 .dynamic-section,
 .dynamic-section01 {
-  border: 1px solid #eee;
-  padding: 15px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
 }
 
 .discount-section {
-  border-color: #a8e6cf;
-  background-color: #f0fff4;
+    border-color: #a8e6cf;
+    background-color: #f0fff4;
 }
 
 .dynamic-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 10px;
-  margin-bottom: 8px;
-  align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: center;
 }
 
 .dynamic-section:not(:first-of-type) .dynamic-row {
-  grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr auto;
 }
 
 .small-input {
-  width: 100%;
+    width: 100%;
 }
 
 .small-select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* --- BUTTONS --- */
 .add-btn,
 .remove-btn {
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 10px;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
 }
 
 .add-btn {
-  background-color: #2c3e50;
-  color: white;
+    background-color: #2c3e50;
+    color: white;
 }
 
 .remove-btn {
-  background-color: #e74c3c;
-  color: white;
+    background-color: #e74c3c;
+    color: white;
 }
 
 .submit-btn {
-  background-color: #42b883;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  align-self: flex-start;
-  font-size: 10px;
+    background-color: #42b883;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px; /* Increased */
+    height: 38px;
 }
 
 .submit-btn:hover {
-  background-color: #3aa876;
+    background-color: #3aa876;
 }
 
 /* --- TABLE STYLES --- */
 .billing-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 9px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px; /* Increased */
 }
 
 .billing-table th,
 .billing-table td {
-  text-align: left;
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
-  vertical-align: top;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    color: #2c3e50;
+    vertical-align: top;
 }
 
 .billing-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
+    background-color: #f8f9fa;
+    font-weight: 600;
 }
 
 .action-btn {
-  background: transparent;
-  border: 1px solid #42b883;
-  color: #42b883;
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 9px;
+    background: transparent;
+    border: 1px solid #42b883;
+    color: #42b883;
+    padding: 6px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
 }
 
 .action-btn:hover {
-  background: #42b883;
-  color: white;
+    background: #42b883;
+    color: white;
+}
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #42b883;
+    padding-bottom: 10px;
+}
+
+.modal-header h4 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    font-size: 16px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #888;
+}
+
+.close-btn:hover {
+    color: #e74c3c;
+}
+
+.read-only-input {
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: not-allowed;
+    font-weight: bold;
+    border: 1px solid #ced4da;
+}
+
+/* --- Animations --- */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 </style>

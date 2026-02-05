@@ -198,34 +198,34 @@ const getPercentageColor = (percentage) => {
   font-family: sans-serif;
 }
 
-/* --- Header Styles (Matched to Reference) --- */
+/* --- Header Styles --- */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 10px;
+  padding-bottom: 15px;
 }
 
 .page-header h2 {
   margin: 0;
-  color: #2c3e50; /* Matched Color */
-  font-size: 20px; /* Slightly larger for main title */
+  color: #2c3e50;
+  font-size: 24px; /* Increased for main title */
   font-weight: 700;
 }
 
 .subtitle {
-  margin: 2px 0 0;
+  margin: 5px 0 0;
   color: #666;
-  font-size: 10px; /* Small font */
+  font-size: 14px; /* Increased from 10px */
 }
 
 .back-link {
   color: #42b883; /* Green Theme */
   text-decoration: none;
   font-weight: bold;
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
 }
 
 /* --- Card Styles --- */
@@ -233,16 +233,16 @@ const getPercentageColor = (percentage) => {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 15px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 /* --- Filter Section --- */
 .filter-card {
   background-color: #ffffff;
   border-left: 4px solid #42b883; /* Green Border */
-  padding: 15px;
+  padding: 20px; /* Increased padding */
 }
 
 .filter-row {
@@ -250,32 +250,32 @@ const getPercentageColor = (percentage) => {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 20px;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 
 .filter-group label {
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
   font-weight: bold;
   color: #2c3e50;
 }
 
 .select-wrapper {
   position: relative;
-  width: 200px;
+  width: 250px; /* Slightly wider */
 }
 
 .filter-select {
   width: 100%;
-  padding: 6px 6px 6px 10px;
+  padding: 10px 10px 10px 15px; /* Increased padding */
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 7px; /* Strict Requirement from Reference */
+  font-size: 13px; /* Increased from 7px */
   background-color: white;
   cursor: pointer;
   box-sizing: border-box;
@@ -288,10 +288,10 @@ const getPercentageColor = (percentage) => {
 
 .select-arrow {
   position: absolute;
-  right: 8px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 8px;
+  font-size: 12px; /* Increased from 8px */
   color: #888;
   pointer-events: none;
 }
@@ -299,9 +299,9 @@ const getPercentageColor = (percentage) => {
 .summary-badge {
   background-color: #e8f8f5;
   color: #2c3e50;
-  padding: 6px 12px;
+  padding: 8px 16px; /* Increased padding */
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 13px; /* Increased from 10px */
   border: 1px solid #42b883;
   font-weight: bold;
 }
@@ -314,14 +314,14 @@ const getPercentageColor = (percentage) => {
 .report-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 7px; /* Strict Requirement from Reference */
+  font-size: 13px; /* Increased from 7px */
   min-width: 800px;
 }
 
 .report-table th,
 .report-table td {
   text-align: left;
-  padding: 8px;
+  padding: 12px; /* Increased padding */
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
@@ -358,48 +358,49 @@ const getPercentageColor = (percentage) => {
 .text-green { color: #27ae60; }
 .text-orange { color: #f39c12; }
 
-/* --- Progress Bar (Scaled down for small table) --- */
+/* --- Progress Bar --- */
 .percentage-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
 }
 
 .percentage-text {
-    font-weight: bold;
+  font-weight: bold;
+  font-size: 12px; /* Explicit size */
 }
 
 .progress-bar-bg {
-  width: 60px;
-  height: 3px;
+  width: 80px; /* Slightly wider */
+  height: 6px; /* Thicker */
   background-color: #eee;
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 /* --- Loading & Empty States --- */
 .loading-state {
   text-align: center;
-  padding: 20px;
-  font-size: 10px;
+  padding: 30px;
+  font-size: 14px; /* Increased from 10px */
   color: #42b883;
   font-weight: bold;
 }
 
 .spinner {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #42b883;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #42b883;
   border-radius: 50%;
-  width: 15px;
-  height: 15px;
+  width: 24px; /* Larger spinner */
+  height: 24px;
   animation: spin 1s linear infinite;
-  margin: 0 auto 5px;
+  margin: 0 auto 10px;
 }
 
 @keyframes spin {
@@ -409,9 +410,9 @@ const getPercentageColor = (percentage) => {
 
 .empty-state {
   text-align: center;
-  padding: 20px;
+  padding: 30px;
   color: #888;
   font-style: italic;
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
 }
 </style>

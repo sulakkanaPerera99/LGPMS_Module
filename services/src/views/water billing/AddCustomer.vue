@@ -202,119 +202,128 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
+/* --- Page Layout --- */
 .page-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-  font-family: sans-serif;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: sans-serif;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
 }
 
 .back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 10px;
+    color: #42b883;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px; /* Increased from 10px */
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 h4 {
-  margin-top: 0;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  margin-bottom: 20px;
-  font-size: 14px;
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #42b883;
+    display: inline-block;
+    padding-bottom: 5px;
+    margin-bottom: 20px;
+    font-size: 16px; /* Increased from 14px */
 }
 
+/* --- Form Layout --- */
 .customer-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .form-row {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex: 1;
-  min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 150px;
 }
 
 .checkbox-row {
-  align-items: center;
+    align-items: center;
 }
 
 .checkbox-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
 }
 
 .checkbox-group input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-  padding: 0;
+    width: auto;
+    margin: 0;
+    padding: 0;
 }
 
+/* --- Form Elements --- */
 label {
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 7px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 13px; /* Increased from 7px */
 }
 
-input, select, textarea {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 7px;
-  width: 100%;
-  box-sizing: border-box;
+input, 
+select, 
+textarea {
+    padding: 10px; /* Increased padding */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px; /* Increased from 7px */
+    width: 100%;
+    box-sizing: border-box;
 }
 
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: #42b883;
+input:focus, 
+select:focus, 
+textarea:focus {
+    outline: none;
+    border-color: #42b883;
 }
 
+/* --- Buttons --- */
 .submit-btn {
-  background-color: #42b883;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  align-self: flex-start;
-  font-size: 7px;
-  margin-top: 10px;
+    background-color: #42b883;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    align-self: flex-start;
+    font-size: 13px; /* Increased from 7px */
+    margin-top: 10px;
+    height: 38px;
 }
 
 .submit-btn:hover {
-  background-color: #3aa876;
+    background-color: #3aa876;
 }
 </style>

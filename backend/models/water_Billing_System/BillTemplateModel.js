@@ -1,3 +1,5 @@
+//temporary bill Payment page
+
 import db from "../../config/database.js";
 
 // ID එක මගින් බිල්පතේ විස්තර ලබා ගැනීම (For Bill Template)

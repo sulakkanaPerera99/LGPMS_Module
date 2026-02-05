@@ -330,87 +330,7 @@ const saveCustomer = async () => {
 </template>
 
 <style scoped>
-
-.edit-modal {
-  width: 400px; /* Slightly wider */
-}
-
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.form-group label {
-  font-size: 10px;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.form-group input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 11px;
-}
-
-.warning-input {
-  border-color: #f39c12 !important; /* Orange border to warn about ownership change */
-  background-color: #fef9e7;
-}
-
-.checkbox-row {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Reusing your existing modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: white; padding: 20px; border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.modal-btn {
-  padding: 6px 12px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 4px; font-size: 10px;
-}
-.modal-btn.primary {
-  background: #42b883; color: white; border-color: #42b883;
-}
-.status-active { color: green; font-weight: bold; }
-.status-inactive { color: red; font-weight: bold; }
-
-
-/* Highlighting the bill numbers slightly */
-.new-bill {
-  font-weight: bold;
-  color: #2c3e50;
-}
-.old-bill {
-  color: #666;
-  font-style: italic;
-}
-
-.loading-state {
-    text-align: center;
-    padding: 20px;
-    font-size: 10px;
-    color: #42b883;
-    font-weight: bold;
-}
-
+/* --- Page Layout --- */
 .page-container {
   padding: 20px;
   max-width: 1200px;
@@ -424,25 +344,25 @@ const saveCustomer = async () => {
   align-items: center;
   margin-bottom: 20px;
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 10px;
+  padding-bottom: 15px;
 }
-
 
 .back-link {
   color: #42b883;
   text-decoration: none;
   font-weight: bold;
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
 }
 
 .card {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 15px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* --- Controls Row (Search & Filters) --- */
 .controls-row {
   display: flex;
   justify-content: space-between;
@@ -460,28 +380,28 @@ const saveCustomer = async () => {
 
 .search-icon {
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 14px; /* Increased */
   color: #888;
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 6px 6px 6px 25px;
+  padding: 10px 10px 10px 30px; /* Adjusted padding for larger icon/text */
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 7px; /* Strict Requirement */
+  font-size: 13px; /* Increased from 7px */
   box-sizing: border-box;
 }
 
 .sort-select {
-  padding: 6px;
+  padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 7px; /* Strict Requirement */
+  font-size: 13px; /* Increased from 7px */
   background-color: white;
   cursor: pointer;
 }
@@ -490,13 +410,14 @@ const saveCustomer = async () => {
   background-color: #2c3e50;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 10px 15px;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 7px; /* Strict Requirement */
+  font-size: 13px; /* Increased from 7px */
 }
 
+/* --- Table Styles --- */
 .table-responsive {
   overflow-x: auto;
 }
@@ -504,14 +425,14 @@ const saveCustomer = async () => {
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 7px; /* Strict Requirement */
+  font-size: 13px; /* Increased from 7px */
   min-width: 800px;
 }
 
 .accounts-table th,
 .accounts-table td {
   text-align: left;
-  padding: 8px;
+  padding: 12px; /* Increased padding */
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
@@ -531,10 +452,10 @@ const saveCustomer = async () => {
   background: transparent;
   border: 1px solid #42b883;
   color: #42b883;
-  padding: 5px 15px;
+  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 7px;
+  font-size: 12px; /* Increased */
 }
 
 .action-btn:hover {
@@ -542,14 +463,49 @@ const saveCustomer = async () => {
   color: white;
 }
 
-/* Modal Styles */
+/* --- Status Badges --- */
+.status-active {
+  color: #27ae60;
+  font-weight: bold;
+  background-color: #eafaf1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.status-inactive {
+  color: #c0392b;
+  font-weight: bold;
+  background-color: #fdedec;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.new-bill {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.old-bill {
+  color: #666;
+  font-style: italic;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  font-size: 14px; /* Increased */
+  color: #42b883;
+  font-weight: bold;
+}
+
+/* --- Modal Styles --- */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -558,10 +514,14 @@ const saveCustomer = async () => {
 
 .modal-content {
   background: white;
-  padding: 20px;
+  padding: 25px;
   border-radius: 8px;
-  width: 300px;
+  width: 350px; /* Slightly wider default */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.edit-modal {
+  width: 450px; /* Wider for edit form */
 }
 
 .modal-content h4 {
@@ -571,16 +531,54 @@ const saveCustomer = async () => {
   border-bottom: 2px solid #42b883;
   display: inline-block;
   padding-bottom: 5px;
-  font-size: 14px; /* Consistent with other headings */
+  font-size: 16px; /* Increased from 14px */
 }
 
+/* --- Forms Inside Modal --- */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 13px; /* Increased from 10px */
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.form-group input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px; /* Increased from 11px */
+}
+
+.warning-input {
+  border-color: #f39c12 !important;
+  background-color: #fef9e7;
+}
+
+.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --- Filter Section --- */
 .filter-section {
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
 .filter-section h5 {
-  margin: 0 0 5px 0;
-  font-size: 7px; /* Strict Requirement */
+  margin: 0 0 8px 0;
+  font-size: 13px; /* Increased from 7px */
   color: #2c3e50;
   text-transform: uppercase;
   font-weight: bold;
@@ -589,57 +587,41 @@ const saveCustomer = async () => {
 .checkbox-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 7px; /* Strict Requirement */
+  gap: 8px;
+  font-size: 13px; /* Increased from 7px */
   color: #2c3e50;
   cursor: pointer;
 }
 
+/* --- Modal Actions --- */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
   border-top: 1px solid #eee;
-  padding-top: 10px;
+  padding-top: 15px;
 }
 
 .modal-btn {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: 1px solid #ccc;
-  border-radius: 4px;
   background: white;
   cursor: pointer;
-  font-size: 7px; /* Strict Requirement */
+  border-radius: 4px;
+  font-size: 13px; /* Increased from 10px */
   font-weight: bold;
 }
 
 .modal-btn.primary {
-  background-color: #42b883;
+  background: #42b883;
   color: white;
   border-color: #42b883;
 }
-
-.status-active {
-  color: #27ae60; /* Green */
-  font-weight: bold;
-  background-color: #eafaf1;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.status-inactive {
-  color: #c0392b; /* Red */
-  font-weight: bold;
-  background-color: #fdedec;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
 </style>

@@ -54,6 +54,9 @@ export const addConfig = async (req, res) => {
 export const getConfigs = async (req, res) => {
     try {
         const { sabha_code } = req.params;
+        
+        // --- NEW: Extract Query Parameters ---
+        const { search, sort } = req.query;
 
         if (!sabha_code) {
             return res.status(400).json({ 
@@ -62,7 +65,8 @@ export const getConfigs = async (req, res) => {
             });
         }
 
-        const configs = await BillingFeesModel.getBillingConfigs(sabha_code);
+        // --- NEW: Pass search & sort to Model ---
+        const configs = await BillingFeesModel.getBillingConfigs(sabha_code, search, sort);
 
         // Data Mapping (snake_case DB fields -> camelCase Frontend fields)
         const processedConfigs = configs.map(config => ({
@@ -70,15 +74,15 @@ export const getConfigs = async (req, res) => {
             projectCode: config.project_code,
             connectionType: config.connection_type,
             isMetered: Boolean(config.is_metered),
-            isSamurdhi: Boolean(config.is_samurdhi), // <--- NEW
+            isSamurdhi: Boolean(config.is_samurdhi),
             fixedRate: config.fixed_rate,
             
-            // JSON Parsing checks
+            // JSON Parsing checks (Handling DB stored JSON strings)
             unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : config.unit_ranges,
             otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : config.other_charges,
-            discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []), // <--- NEW
+            discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []),
             
-            status: config.status, // <--- NEW
+            status: config.status,
             createdAt: config.created_at
         }));
 

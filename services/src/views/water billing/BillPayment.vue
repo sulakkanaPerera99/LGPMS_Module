@@ -260,7 +260,7 @@ const openPaymentModal = (account) => {
   color: #42b883;
   text-decoration: none;
   font-weight: bold;
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
 }
 
 .card {
@@ -289,28 +289,28 @@ const openPaymentModal = (account) => {
 
 .search-icon {
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 14px; /* Increased from 10px */
   color: #888;
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 6px 6px 6px 25px;
+  padding: 10px 10px 10px 30px; /* Increased padding */
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 7px;
+  font-size: 13px; /* Increased from 7px */
   box-sizing: border-box;
 }
 
 .sort-select {
-  padding: 6px;
+  padding: 10px; /* Increased padding */
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 7px;
+  font-size: 13px; /* Increased from 7px */
   background-color: white;
   cursor: pointer;
 }
@@ -319,11 +319,11 @@ const openPaymentModal = (account) => {
   background-color: #2c3e50;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 10px 16px; /* Increased padding */
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 7px;
+  font-size: 13px; /* Increased from 7px */
 }
 
 .table-responsive {
@@ -333,14 +333,14 @@ const openPaymentModal = (account) => {
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 7px;
+  font-size: 13px; /* Increased from 7px */
   min-width: 600px;
 }
 
 .accounts-table th,
 .accounts-table td {
   text-align: left;
-  padding: 8px;
+  padding: 12px; /* Increased padding */
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
@@ -360,10 +360,10 @@ const openPaymentModal = (account) => {
   background: transparent;
   border: 1px solid #42b883;
   color: #42b883;
-  padding: 5px 15px;
+  padding: 6px 12px; /* Increased padding */
   border-radius: 4px;
   cursor: pointer;
-  font-size: 7px;
+  font-size: 12px; /* Increased from 7px */
 }
 
 .action-btn:hover {
@@ -387,9 +387,9 @@ const openPaymentModal = (account) => {
 
 .modal-content {
   background: white;
-  padding: 20px;
+  padding: 25px; /* Increased padding */
   border-radius: 8px;
-  width: 300px;
+  width: 350px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -400,16 +400,16 @@ const openPaymentModal = (account) => {
   border-bottom: 2px solid #42b883;
   display: inline-block;
   padding-bottom: 5px;
-  font-size: 14px;
+  font-size: 16px; /* Increased from 14px */
 }
 
 .filter-section {
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
 .filter-section h5 {
-  margin: 0 0 5px 0;
-  font-size: 7px;
+  margin: 0 0 8px 0;
+  font-size: 13px; /* Increased from 7px */
   color: #2c3e50;
   text-transform: uppercase;
   font-weight: bold;
@@ -418,14 +418,14 @@ const openPaymentModal = (account) => {
 .checkbox-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 7px;
+  gap: 8px;
+  font-size: 13px; /* Increased from 7px */
   color: #2c3e50;
   cursor: pointer;
 }
@@ -434,18 +434,18 @@ const openPaymentModal = (account) => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 25px;
   border-top: 1px solid #eee;
-  padding-top: 10px;
+  padding-top: 15px;
 }
 
 .modal-btn {
-  padding: 6px 12px;
+  padding: 8px 16px; /* Increased padding */
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
   cursor: pointer;
-  font-size: 7px;
+  font-size: 13px; /* Increased from 7px */
   font-weight: bold;
 }
 
@@ -456,17 +456,17 @@ const openPaymentModal = (account) => {
 }
 
 .loading-state {
-    text-align: center;
-    padding: 20px;
-    font-size: 10px;
-    color: #42b883;
+  text-align: center;
+  padding: 20px;
+  font-size: 14px; /* Increased from 10px */
+  color: #42b883;
 }
 
 .status-active {
   color: #27ae60; /* Green */
   font-weight: bold;
   background-color: #eafaf1;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
@@ -474,8 +474,7 @@ const openPaymentModal = (account) => {
   color: #c0392b; /* Red */
   font-weight: bold;
   background-color: #fdedec;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
-
 </style>

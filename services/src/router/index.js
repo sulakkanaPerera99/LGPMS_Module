@@ -40,6 +40,8 @@ import BillTemplate from '@/views/water billing/BillTemplate.vue'
 import PaymentInterface from "../views/water billing/PaymentInterface.vue";
 import ManageBillingFees from "../views/water billing/ManageBillingFees.vue";
 import AddBillingFees from "@/views/water billing/AddBillingFees.vue";
+import fetchCustomerHistory from "../views/water billing/CustomerPaymentHistory.vue";
+
 
 //UnderDevelopment 
 
@@ -254,12 +256,17 @@ const routes = [
         component: PaymentInterface,
         props: true
       },
-      // Backward compatibility for existing links using the old route name and param
       {
         path: '/pay-bill-legacy/:accountId',
         name: 'WaterBillPayment',
         component: PaymentInterface,
         props: (route) => ({ billNumber: route.params.accountId })
+      },
+      {
+        path: '/payment-history-view/:id',
+        name: 'PaymentHistoryView',
+        component: fetchCustomerHistory,
+        props: true
       }
 ];
 
