@@ -6,6 +6,7 @@ export const registerCustomer = async (req, res) => {
         const {
             customerType,
             oldBillNumber,
+            currentReading,
             fullName,
             nic,
             propertyAddress,
@@ -56,6 +57,7 @@ export const registerCustomer = async (req, res) => {
         const customerData = {
             customer_type: customerType,
             old_bill_number: oldBillNumber,
+            current_reading: currentReading,
             new_bill_number: newBillNumber,
             full_name: fullName,
             nic: nic,

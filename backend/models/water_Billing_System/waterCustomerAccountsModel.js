@@ -77,6 +77,7 @@ export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
                 id,
                 nic,
                 old_bill_number AS oldBillNumber,
+                current_reading AS currentReading,
                 new_bill_number AS newBillNumber,
                 full_name AS fullName,
                 property_address AS propertyAddress,

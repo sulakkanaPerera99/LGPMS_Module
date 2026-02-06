@@ -123,11 +123,10 @@ const fetchProjects = async () => {
   }
 };
 
-// Add Project
+// --- Add Project Function ---
 const addProject = async () => {
   if (projectName.value.trim() && projectCode.value.trim() && projectNumber.value.trim()) {
     
-    // Get User ID for creation (optional)
     const userData = JSON.parse(sessionStorage.getItem('userData'));
     
     const payload = {
@@ -153,7 +152,14 @@ const addProject = async () => {
       }
     } catch (error) {
       console.error("Error saving:", error);
-      alert("Failed to save project.");
+      
+      // ✅ Handle Duplicate Error Message
+      if (error.response && error.response.data) {
+        // Backend එකෙන් එවන message එක කෙලින්ම පෙන්වන්න
+        alert("Save Failed: " + error.response.data.message);
+      } else {
+        alert("Failed to save project due to a server error.");
+      }
     }
   } else {
     alert("Please fill in the required fields.");
@@ -181,7 +187,7 @@ const closeEditModal = () => {
   editForm.value = { name: '', code: '', number: '', status: 'Active' };
 };
 
-// ✅ UPDATE PROJECT FUNCTION (User ID එක Session එකෙන් ගන්න විදිය)
+// --- Update Project Function ---
 const updateProject = async () => {
   if (editForm.value.name.trim() && editForm.value.code.trim() && String(editForm.value.number).trim()) {
     
@@ -198,7 +204,6 @@ const updateProject = async () => {
             ...editForm.value, 
             sabha_code: currentSabha.value,
             userId: userId,
-            // ✅ "Active" නම් 1, නැත්නම් 0 ලෙස යවන්න
             status: editForm.value.status === 'Active' ? 1 : 0
         };
 
@@ -211,7 +216,14 @@ const updateProject = async () => {
         }
       } catch (error) {
         console.error("Error updating:", error);
-        alert("Failed to update project.");
+
+        // ✅ Handle Duplicate Error Message for Updates
+        if (error.response && error.response.data) {
+            // Backend එකෙන් එවන message එක කෙලින්ම පෙන්වන්න
+            alert("Update Failed: " + error.response.data.message);
+        } else {
+            alert("Failed to update project due to a server error.");
+        }
       }
     }
   } else {

@@ -130,7 +130,7 @@ export const fetchPendingBillDetails = async (identifier) => {
             c.new_bill_number as account_number
         FROM water_bills b
         INNER JOIN water_customer_accounts c ON b.account_id = c.id
-        WHERE (b.bill_number = ? OR b.account_id = ?) AND b.payment_status = 'Pending'
+        WHERE (b.bill_number = ? OR b.account_id = ?) AND b.payment_status = 'Pending' OR b.payment_status = 'Partial'
     `;
     try {
         const [rows] = await db.promise().query(query, [identifier, identifier]);

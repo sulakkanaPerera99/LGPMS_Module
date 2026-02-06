@@ -1,11 +1,15 @@
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 
 // 1. Data Storage
-const accounts = ref([])
+const accounts = ref([]) // Stores ALL fetched accounts
 const currentSabha = ref('')
 const isLoading = ref(false)
+
+// --- NEW: Pagination State ---
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 // 2. Search & Sort State
 const searchQuery = ref('')
@@ -20,7 +24,7 @@ const activeFilters = reactive({
   status: []
 })
 
-// --- NEW: Edit Modal State ---
+// Edit Modal State
 const isEditDialogOpen = ref(false)
 const isSaving = ref(false)
 const editForm = reactive({
@@ -48,9 +52,15 @@ onMounted(async () => {
   }
 });
 
+// Watchers
 watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
+
+// --- NEW: Reset to Page 1 when data changes ---
+watch(accounts, () => {
+    currentPage.value = 1;
+});
 
 const fetchAccounts = async () => {
   isLoading.value = true;
@@ -73,6 +83,29 @@ const fetchAccounts = async () => {
   }
 };
 
+// --- NEW: Pagination Logic (Computed Properties) ---
+const totalPages = computed(() => {
+    return Math.ceil(accounts.value.length / itemsPerPage) || 1;
+});
+
+const paginatedAccounts = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return accounts.value.slice(start, end);
+});
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+    }
+};
+
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--;
+    }
+};
+
 const applyFilters = () => { isFilterDialogOpen.value = false }
 const clearFilters = () => {
   activeFilters.connectionTypes = []
@@ -81,24 +114,19 @@ const clearFilters = () => {
   activeFilters.status = []
 }
 
-// --- NEW: Edit Functions ---
-
+// Edit Functions (Unchanged)
 const openEditModal = (acc) => {
-  // Populate form with existing data
   editForm.id = acc.id
   editForm.fullName = acc.fullName
   editForm.nic = acc.nic
   editForm.contactInfo = acc.contactInfo
-  // Handle boolean conversion correctly (DB might send 1/0)
   editForm.isSamurdhi = Boolean(acc.isSamurdhi)
   editForm.samurdhiNumber = acc.samurdhiNumber || ''
-  
   isEditDialogOpen.value = true
 }
 
 const closeEditModal = () => {
   isEditDialogOpen.value = false
-  // Clear form
   editForm.id = null
   editForm.fullName = ''
   editForm.nic = ''
@@ -110,7 +138,6 @@ const closeEditModal = () => {
 const saveCustomer = async () => {
   if (!editForm.id) return
   isSaving.value = true
-  
   try {
     const payload = {
       fullName: editForm.fullName,
@@ -119,14 +146,11 @@ const saveCustomer = async () => {
       isSamurdhi: editForm.isSamurdhi,
       samurdhiNumber: editForm.samurdhiNumber
     }
-
-    // Call the PUT API
     const response = await axios.put(`/update-customer/${editForm.id}`, payload)
-    
     if (response.status === 200) {
       alert(response.data.message || "Customer updated successfully")
       closeEditModal()
-      await fetchAccounts() // Refresh list
+      await fetchAccounts() 
     }
   } catch (error) {
     console.error("Error updating customer:", error)
@@ -135,7 +159,6 @@ const saveCustomer = async () => {
     isSaving.value = false
   }
 }
-
 </script>
 
 <template>
@@ -180,7 +203,7 @@ const saveCustomer = async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="acc in accounts" :key="acc.id">
+            <tr v-for="acc in paginatedAccounts" :key="acc.id">
               <td>{{ acc.oldBillNumber }}</td>
               <td class="new-bill">{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
@@ -198,86 +221,67 @@ const saveCustomer = async () => {
               </td>
             </tr>
             <tr v-if="accounts.length === 0">
-                <td colspan="8" style="text-align:center; padding: 20px;">No customers found.</td>
+                <td colspan="9" style="text-align:center; padding: 20px;">No customers found.</td>
             </tr>
           </tbody>
         </table>
+
+        <div v-if="accounts.length > 0" class="pagination-container">
+            <button 
+                class="pagination-btn" 
+                @click="prevPage" 
+                :disabled="currentPage === 1"
+            >
+                « Previous
+            </button>
+            
+            <span class="page-info">
+                Page <b>{{ currentPage }}</b> of <b>{{ totalPages }}</b>
+            </span>
+            
+            <button 
+                class="pagination-btn" 
+                @click="nextPage" 
+                :disabled="currentPage === totalPages"
+            >
+                Next »
+            </button>
+        </div>
+
       </div>
     </div>
 
     <div v-if="isFilterDialogOpen" class="modal-overlay">
-      <div class="modal-content">
+       <div class="modal-content">
         <h4>Filter Accounts</h4>
-         <div class="filter-section">
-
+          <div class="filter-section">
           <h5>Account Status</h5>
-
           <div class="checkbox-list">
-
-            <label class="checkbox-item">
-
-            <input type="checkbox" value="Active" v-model="activeFilters.status"> Active
-
-            </label>
-
-            <label class="checkbox-item">
-
-            <input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive
-
-            </label>
-
+            <label class="checkbox-item"><input type="checkbox" value="Active" v-model="activeFilters.status"> Active</label>
+            <label class="checkbox-item"><input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive</label>
           </div>
-
         </div>
-
-
-
         <div class="filter-section">
-
           <h5>Connection Type</h5>
-
           <div class="checkbox-list">
-
             <label class="checkbox-item"><input type="checkbox" value="Industrial/Construction" v-model="activeFilters.connectionTypes"> Industrial/Construction</label>
-
             <label class="checkbox-item"><input type="checkbox" value="Domestic" v-model="activeFilters.connectionTypes"> Domestic</label>
-
             <label class="checkbox-item"><input type="checkbox" value="Commercial" v-model="activeFilters.connectionTypes"> Commercial</label>
-
           </div>
-
         </div>
-
-
-
         <div class="filter-section">
-
           <h5>Samurdhi Status</h5>
-
           <div class="checkbox-list">
-
             <label class="checkbox-item"><input type="checkbox" value="Samurdhi" v-model="activeFilters.samurdhi"> Samurdhi</label>
-
             <label class="checkbox-item"><input type="checkbox" value="Not Samurdhi" v-model="activeFilters.samurdhi"> Not Samurdhi</label>
-
           </div>
-
         </div>
-
-
-
         <div class="filter-section">
-
           <h5>Metered Status</h5>
-
           <div class="checkbox-list">
-
             <label class="checkbox-item"><input type="checkbox" value="Metered" v-model="activeFilters.metered"> Metered</label>
-
             <label class="checkbox-item"><input type="checkbox" value="Not Metered" v-model="activeFilters.metered"> Not Metered</label>
-
           </div>
-
         </div>
         <div class="modal-actions">
           <button class="modal-btn" @click="clearFilters">Clear All</button>
@@ -287,35 +291,29 @@ const saveCustomer = async () => {
     </div>
 
     <div v-if="isEditDialogOpen" class="modal-overlay">
-      <div class="modal-content edit-modal">
+        <div class="modal-content edit-modal">
         <h4>Edit Customer Details</h4>
-        
         <form @submit.prevent="saveCustomer" class="edit-form">
            <div class="form-group">
               <label>Full Name</label>
               <input type="text" v-model="editForm.fullName" required />
            </div>
-           
            <div class="form-group">
               <label>NIC (Changing this will transfer ownership)</label>
               <input type="text" v-model="editForm.nic" required class="warning-input" />
            </div>
-
            <div class="form-group">
               <label>Contact Info</label>
               <input type="text" v-model="editForm.contactInfo" />
            </div>
-
            <div class="form-group checkbox-row">
               <input type="checkbox" id="editSamurdhi" v-model="editForm.isSamurdhi" />
               <label for="editSamurdhi">Samurdhi Beneficiary</label>
            </div>
-
            <div class="form-group" v-if="editForm.isSamurdhi">
               <label>Samurdhi Number</label>
               <input type="text" v-model="editForm.samurdhiNumber" />
            </div>
-
            <div class="modal-actions">
              <button type="button" class="modal-btn" @click="closeEditModal" :disabled="isSaving">Cancel</button>
              <button type="submit" class="modal-btn primary" :disabled="isSaving">
@@ -351,7 +349,7 @@ const saveCustomer = async () => {
   color: #42b883;
   text-decoration: none;
   font-weight: bold;
-  font-size: 14px; /* Increased from 10px */
+  font-size: 14px;
 }
 
 .card {
@@ -362,7 +360,7 @@ const saveCustomer = async () => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* --- Controls Row (Search & Filters) --- */
+/* --- Controls Row --- */
 .controls-row {
   display: flex;
   justify-content: space-between;
@@ -383,17 +381,17 @@ const saveCustomer = async () => {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px; /* Increased */
+  font-size: 14px;
   color: #888;
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 10px 10px 30px; /* Adjusted padding for larger icon/text */
+  padding: 10px 10px 10px 30px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   box-sizing: border-box;
 }
 
@@ -401,7 +399,7 @@ const saveCustomer = async () => {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   background-color: white;
   cursor: pointer;
 }
@@ -414,7 +412,7 @@ const saveCustomer = async () => {
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
 }
 
 /* --- Table Styles --- */
@@ -425,14 +423,15 @@ const saveCustomer = async () => {
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   min-width: 800px;
+  margin-bottom: 15px; /* Added margin for pagination */
 }
 
 .accounts-table th,
 .accounts-table td {
   text-align: left;
-  padding: 12px; /* Increased padding */
+  padding: 12px;
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
@@ -455,7 +454,7 @@ const saveCustomer = async () => {
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px; /* Increased */
+  font-size: 12px;
 }
 
 .action-btn:hover {
@@ -480,148 +479,83 @@ const saveCustomer = async () => {
   border-radius: 4px;
 }
 
-.new-bill {
-  font-weight: bold;
-  color: #2c3e50;
+.new-bill { font-weight: bold; color: #2c3e50; }
+.loading-state { text-align: center; padding: 20px; font-size: 14px; color: #42b883; font-weight: bold; }
+
+/* --- NEW: Pagination Styles (Matches Reference Image) --- */
+.pagination-container {
+    display: flex;
+    justify-content: flex-end; /* Aligns to right like the screenshot */
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+    gap: 10px;
 }
 
-.old-bill {
-  color: #666;
-  font-style: italic;
+.pagination-btn {
+    background-color: #ffffff;
+    border: 1px solid #dcdcdc;
+    color: #333;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
-.loading-state {
-  text-align: center;
-  padding: 20px;
-  font-size: 14px; /* Increased */
-  color: #42b883;
-  font-weight: bold;
+.pagination-btn:hover:not(:disabled) {
+    background-color: #f1f1f1;
+    border-color: #bbb;
 }
 
-/* --- Modal Styles --- */
+.pagination-btn:disabled {
+    color: #ccc;
+    background-color: #f9f9f9;
+    cursor: not-allowed;
+    border-color: #eee;
+}
+
+.page-info {
+    font-size: 13px;
+    color: #555;
+    margin: 0 10px;
+}
+
+/* --- Modal Styles (Same as before) --- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: flex; justify-content: center; align-items: center;
   z-index: 1000;
 }
-
 .modal-content {
-  background: white;
-  padding: 25px;
-  border-radius: 8px;
-  width: 350px; /* Slightly wider default */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: white; padding: 25px; border-radius: 8px;
+  width: 350px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
-.edit-modal {
-  width: 450px; /* Wider for edit form */
-}
-
+.edit-modal { width: 450px; }
 .modal-content h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  font-size: 16px; /* Increased from 14px */
+  margin-top: 0; margin-bottom: 15px; color: #2c3e50;
+  border-bottom: 2px solid #42b883; display: inline-block; padding-bottom: 5px; font-size: 16px;
 }
-
-/* --- Forms Inside Modal --- */
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.form-group label {
-  font-size: 13px; /* Increased from 10px */
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.form-group input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px; /* Increased from 11px */
-}
-
-.warning-input {
-  border-color: #f39c12 !important;
-  background-color: #fef9e7;
-}
-
-.checkbox-row {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-}
-
-/* --- Filter Section --- */
-.filter-section {
-  margin-bottom: 15px;
-}
-
-.filter-section h5 {
-  margin: 0 0 8px 0;
-  font-size: 13px; /* Increased from 7px */
-  color: #2c3e50;
-  text-transform: uppercase;
-  font-weight: bold;
-}
-
-.checkbox-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px; /* Increased from 7px */
-  color: #2c3e50;
-  cursor: pointer;
-}
-
-/* --- Modal Actions --- */
+.edit-form { display: flex; flex-direction: column; gap: 15px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 13px; font-weight: bold; color: #2c3e50; }
+.form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+.warning-input { border-color: #f39c12 !important; background-color: #fef9e7; }
+.checkbox-row { flex-direction: row; align-items: center; gap: 10px; }
+.filter-section { margin-bottom: 15px; }
+.filter-section h5 { margin: 0 0 8px 0; font-size: 13px; color: #2c3e50; text-transform: uppercase; font-weight: bold; }
+.checkbox-list { display: flex; flex-direction: column; gap: 6px; }
+.checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #2c3e50; cursor: pointer; }
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  border-top: 1px solid #eee;
-  padding-top: 15px;
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;
 }
-
 .modal-btn {
-  padding: 8px 16px;
-  border: 1px solid #ccc;
-  background: white;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 13px; /* Increased from 10px */
-  font-weight: bold;
+  padding: 8px 16px; border: 1px solid #ccc; background: white;
+  cursor: pointer; border-radius: 4px; font-size: 13px; font-weight: bold;
 }
-
-.modal-btn.primary {
-  background: #42b883;
-  color: white;
-  border-color: #42b883;
-}
+.modal-btn.primary { background: #42b883; color: white; border-color: #42b883; }
 </style>

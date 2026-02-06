@@ -1,5 +1,5 @@
 import db from '../../config/database.js';
-import * as paymentModel from '../../models/water_billing_system/paymentModel.js';
+import * as paymentModel from '../../models/water_Billing_System/paymentModel.js';
 
 export const processPayment = async (req, res) => {
     // Input: Receive bill_id, account_id, payment_amount, and apply_discount

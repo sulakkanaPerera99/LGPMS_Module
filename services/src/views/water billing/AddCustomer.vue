@@ -12,6 +12,7 @@ const availableProjectCodes = ref([]);
 const form = reactive({
   customerType: 'New Customer',
   oldBillNumber: '', 
+  currentReading:'',
   newBillNumber: '',
   fullName: '',
   nic: '',
@@ -83,6 +84,7 @@ const submitForm = async () => {
       Object.assign(form, {
         customerType: 'New Customer',
         oldBillNumber: '',
+        currentReading: '',
         newBillNumber: '',
         fullName: '',
         nic: '',
@@ -130,6 +132,10 @@ const submitForm = async () => {
           <div class="form-group">
             <label for="oldBillNo">Old Bill Number</label>
             <input id="oldBillNo" v-model="form.oldBillNumber" type="text" placeholder="Enter existing bill number" />
+          </div>
+          <div class="form-group">
+            <label for="currReading">Current Reading</label>
+            <input id="currReading" v-model="form.currentReading" type="number" placeholder="Enter current meter reading" />
           </div>
         </div>
 
