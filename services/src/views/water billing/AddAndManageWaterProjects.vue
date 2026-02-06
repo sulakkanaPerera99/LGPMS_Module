@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import axios from 'axios';
+import Swal from 'sweetalert2'; // ✅ SweetAlert2 Import කළා
 
 // Projects State
 const projects = ref([]);
@@ -32,23 +33,25 @@ onMounted(async () => {
     currentSabha.value = userData.sabha || userData.sabha_code;
     await fetchProjects(); 
   } else {
-    alert("Session Error: Please login again.");
+    // ❌ Error Alert (Session Error)
+    Swal.fire({
+      icon: 'error',
+      title: 'Session Expired',
+      text: 'Please login again.',
+      confirmButtonColor: '#d33'
+    });
   }
 });
 
 // --- Pagination State ---
-const currentPage = ref(1); // දැනට සිටින පිටුව
-const itemsPerPage = 10;    // එක පිටුවක පෙන්වන පේළි ගණන
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 // --- Pagination Computed Properties ---
-import { computed } from 'vue'; // මෙය උඩින්ම import කරන්න
-
-// මුළු පිටු ගණන ගණනය කිරීම
 const totalPages = computed(() => {
   return Math.ceil(projects.value.length / itemsPerPage);
 });
 
-// වත්මන් පිටුවට අදාළ දත්ත පමණක් තෝරා ගැනීම (Slice කිරීම)
 const paginatedProjects = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   const end = start + itemsPerPage;
@@ -68,13 +71,12 @@ const prevPage = () => {
   }
 };
 
-// Search කරනකොට හෝ Sort කරනකොට මුල් පිටුවට යන්න ඕන නිසා මෙය Watcher එකට දාන්න
+// Watchers
 watch([searchQuery, sortBy], () => {
   currentPage.value = 1;
   fetchProjects();
 });
 
-// Watchers
 let debounceTimer = null;
 watch(searchQuery, () => {
   clearTimeout(debounceTimer);
@@ -88,34 +90,26 @@ watch(sortBy, () => {
 });
 
 // Fetch Projects
-// Fetch Projects
 const fetchProjects = async () => {
   try {
     const response = await axios.get(`/water-projects/${currentSabha.value}`, {
       params: { search: searchQuery.value, sort: sortBy.value }
     });
 
-    // 1. මුලින්ම Backend එකෙන් එන දත්ත ටික සකසා ගන්න (Map Users)
     let processedData = response.data.map(project => ({
       ...project,
       users: project.registered_users
     }));
 
-    // 2. ✅ CUSTOM SORTING LOGIC (Drop down එකේ 'name_asc' තියෙනකොට විතරක් මෙය වැඩ කරයි)
     if (sortBy.value === 'name_asc') {
         processedData.sort((a, b) => {
-            // පියවර 1: Status එක බලන්න. (Active=1, Inactive=0)
-            // Active (1) ඒවා උඩට ගන්න නම්: b.status - a.status කරන්න.
             if (b.status !== a.status) {
                 return b.status - a.status; 
             }
-            
-            // පියවර 2: Status සමාන නම්, නම අනුව A-Z පිළිවෙලට හදන්න
             return a.name.localeCompare(b.name);
         });
     }
 
-    // 3. සකස් කරගත් දත්ත ටික projects variable එකට දාන්න
     projects.value = processedData;
 
   } catch (error) {
@@ -148,26 +142,43 @@ const addProject = async () => {
         projectNumber.value = '';
         users.value = '';
         
-        alert("Project Saved Successfully!");
+        // ✅ Success Alert
+        Swal.fire({
+          icon: 'success',
+          title: 'Project Saved!',
+          text: 'New water project has been added successfully.',
+          timer: 2000, // 2 seconds walin auto close wenawa
+          showConfirmButton: false
+        });
       }
     } catch (error) {
       console.error("Error saving:", error);
       
-      // ✅ Handle Duplicate Error Message
+      // ❌ Error Alert with Specific Message
+      let errorMsg = "Failed to save project due to a server error.";
       if (error.response && error.response.data) {
-        // Backend එකෙන් එවන message එක කෙලින්ම පෙන්වන්න
-        alert("Save Failed: " + error.response.data.message);
-      } else {
-        alert("Failed to save project due to a server error.");
+        errorMsg = error.response.data.message;
       }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: errorMsg,
+        confirmButtonColor: '#d33'
+      });
     }
   } else {
-    alert("Please fill in the required fields.");
+    // ⚠️ Validation Alert
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Fields',
+      text: 'Please fill in all required fields.',
+      confirmButtonColor: '#f39c12'
+    });
   }
 };
 
 // --- Edit Modal Functions ---
-
 const openEditModal = (project) => {
   editingId.value = project.id;
   
@@ -175,7 +186,6 @@ const openEditModal = (project) => {
     name: project.name,
     code: project.code,
     number: project.number,
-    // ✅ 1 නම් Active, නැත්නම් Inactive ලෙස set කරන්න
     status: project.status === 1 ? 'Active' : 'Inactive'
   };
   showEditModal.value = true;
@@ -191,14 +201,31 @@ const closeEditModal = () => {
 const updateProject = async () => {
   if (editForm.value.name.trim() && editForm.value.code.trim() && String(editForm.value.number).trim()) {
     
-    if (confirm("Are you sure you want to update this project?")) {
+    // ❓ Confirmation Dialog
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to update this project details?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#42b883',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, Update it!'
+    });
+
+    if (result.isConfirmed) {
       try {
         const userDataString = sessionStorage.getItem('userData');
-        if (!userDataString) return alert("Session Expired.");
+        if (!userDataString) {
+             Swal.fire('Error', 'Session Expired', 'error');
+             return;
+        }
 
         const userData = JSON.parse(userDataString);
         const userId = userData.nic; 
-        if (!userId) return alert("User NIC not found.");
+        if (!userId) {
+            Swal.fire('Error', 'User NIC not found', 'error');
+            return;
+        }
 
         const payload = { 
             ...editForm.value, 
@@ -210,24 +237,42 @@ const updateProject = async () => {
         const response = await axios.put(`/water-projects/${editingId.value}`, payload);
         
         if (response.data.status === "success") {
-          alert("Project Updated Successfully!");
+          // ✅ Success Alert
+          Swal.fire({
+            icon: 'success',
+            title: 'Updated!',
+            text: 'Project details have been updated.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+
           closeEditModal();
           fetchProjects(); 
         }
       } catch (error) {
         console.error("Error updating:", error);
 
-        // ✅ Handle Duplicate Error Message for Updates
+        // ❌ Error Alert
+        let errorMsg = "Failed to update project.";
         if (error.response && error.response.data) {
-            // Backend එකෙන් එවන message එක කෙලින්ම පෙන්වන්න
-            alert("Update Failed: " + error.response.data.message);
-        } else {
-            alert("Failed to update project due to a server error.");
+            errorMsg = error.response.data.message;
         }
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: errorMsg,
+          confirmButtonColor: '#d33'
+        });
       }
     }
   } else {
-    alert("Please fill in all required fields.");
+    Swal.fire({
+      icon: 'warning',
+      title: 'Incomplete Data',
+      text: 'Please fill in all required fields.',
+      confirmButtonColor: '#f39c12'
+    });
   }
 };
 </script>
@@ -308,25 +353,25 @@ const updateProject = async () => {
           </tbody>
         </table>
         <div class="pagination-controls" v-if="projects.length > itemsPerPage">
-           <button 
-             class="page-btn" 
-             @click="prevPage" 
-             :disabled="currentPage === 1"
-           >
-             &laquo; Previous
-           </button>
-           
-           <span class="page-info">
-             Page {{ currentPage }} of {{ totalPages }}
-           </span>
-           
-           <button 
-             class="page-btn" 
-             @click="nextPage" 
-             :disabled="currentPage === totalPages"
-           >
-             Next &raquo;
-           </button>
+            <button 
+              class="page-btn" 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+            >
+              &laquo; Previous
+            </button>
+            
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            
+            <button 
+              class="page-btn" 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+            >
+              Next &raquo;
+            </button>
         </div>
       </div>
     </div>
@@ -367,6 +412,7 @@ const updateProject = async () => {
 </template>
 
 <style scoped>
+/* ඔයාගේ පරණ CSS ටික ඒ විදිහටම තියන්න */
 /* --- Page Layout --- */
 .manage-projects-container {
     padding: 20px;
@@ -388,7 +434,7 @@ const updateProject = async () => {
     color: #42b883;
     text-decoration: none;
     font-weight: bold;
-    font-size: 14px; /* Increased from default */
+    font-size: 14px; 
 }
 
 .content-area {
@@ -412,7 +458,7 @@ h4 {
     display: inline-block;
     padding-bottom: 5px;
     margin-bottom: 20px;
-    font-size: 16px; /* Increased */
+    font-size: 16px; 
 }
 
 /* --- Forms & Inputs --- */
@@ -429,13 +475,13 @@ h4 {
     gap: 8px;
     flex: 1;
     min-width: 200px;
-    font-size: 14px; /* Increased from 7px/12px */
+    font-size: 14px; 
 }
 
 label {
     font-weight: 600;
     color: #2c3e50;
-    font-size: 13px; /* Increased */
+    font-size: 13px; 
 }
 
 input,
@@ -443,7 +489,7 @@ select {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
     width: 100%;
     box-sizing: border-box;
 }
@@ -462,8 +508,8 @@ select:focus {
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
-    height: 38px; /* Slightly taller */
-    font-size: 13px; /* Increased */
+    height: 38px; 
+    font-size: 13px; 
 }
 
 .submit-btn:hover {
@@ -475,7 +521,7 @@ select:focus {
     width: 100%;
     margin: 0 auto;
     border-collapse: collapse;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
 }
 
 .project-table th,
@@ -498,7 +544,7 @@ select:focus {
     padding: 6px 15px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px; /* Increased from 7px/11px */
+    font-size: 12px; 
 }
 
 .action-btn:hover {
@@ -528,17 +574,17 @@ select:focus {
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 14px; /* Increased */
+    font-size: 14px; 
     color: #888;
     pointer-events: none;
 }
 
 .search-input {
     width: 100%;
-    padding: 8px 8px 8px 30px; /* Adjusted padding for larger icon */
+    padding: 8px 8px 8px 30px; 
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
     box-sizing: border-box;
 }
 
@@ -547,7 +593,7 @@ select:focus {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
     background-color: white;
     cursor: pointer;
 }
@@ -586,7 +632,7 @@ select:focus {
     background: white;
     padding: 25px;
     border-radius: 12px;
-    width: 450px; /* Slightly wider */
+    width: 450px; 
     max-width: 90%;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.3s ease;
@@ -611,7 +657,7 @@ select:focus {
     padding: 8px 15px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 13px; /* Increased */
+    font-size: 13px; 
 }
 
 .save-btn {
@@ -621,12 +667,12 @@ select:focus {
     padding: 8px 15px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 13px; /* Increased */
+    font-size: 13px; 
 }
 
 .pagination-controls {
   display: flex;
-  justify-content: flex-end; /* දකුණු පැත්තට ගන්න */
+  justify-content: flex-end; 
   align-items: center;
   margin-top: 15px;
   gap: 15px;

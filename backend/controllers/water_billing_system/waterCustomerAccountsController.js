@@ -1,5 +1,5 @@
 import { getProjectNumberByCode } from '../../models/water_billing_system/waterprojectsModel.js';
-import { getCustomerCountBySabhaAndProject, insertCustomer, getCustomersBySabha, updateCustomer } from '../../models/water_billing_system/waterCustomerAccountsModel.js';
+import { getCustomerCountBySabhaAndProject, insertCustomer, getCustomersBySabha, updateCustomer ,getSabhaCustomerByNIC , insertSabhaCustomer } from '../../models/water_billing_system/waterCustomerAccountsModel.js';
 
 export const registerCustomer = async (req, res) => {
     try {
@@ -17,14 +17,15 @@ export const registerCustomer = async (req, res) => {
             isSamurdhi,
             samurdhiNumber,
             isMetered,
-            sabha_code
+            sabha_code,
+            sabhaCustomerId // Frontend එකෙන් එන ID එක (තියෙනවා නම්)
         } = req.body;
 
         if (!sabha_code) {
             return res.status(400).json({ success: false, message: "Sabha Code is required" });
         }
 
-        // Bill Number Generation Logic
+        // --- 1. Bill Number Generation Logic ---
         const sabhaSuffix = String(sabha_code).slice(-3);
 
         let projectNum = '00';
@@ -54,6 +55,30 @@ export const registerCustomer = async (req, res) => {
 
         const newBillNumber = `${sabhaSuffix}${projectNum}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
+
+        // --- 2. ✅ Sabha Customer ID Setup Logic (New Part) ---
+        let finalSabhaCustomerId = sabhaCustomerId;
+
+        // ID එකක් Frontend එකෙන් ආවේ නැත්නම්, අලුතෙන් Sabha Customer කෙනෙක් හදන්න ඕනේ
+        if (!finalSabhaCustomerId) {
+            const newSabhaData = {
+                sabha_code: sabha_code,
+                cus_nic: nic,
+                cus_name: fullName,
+                cus_address: mailingAddress,
+                cus_contact: contactInfo
+            };
+
+            // Model එකට යවලා Save කරනවා (Await කරන්න ඕනේ)
+            const sabhaResult = await insertSabhaCustomer(newSabhaData);
+            
+            // අලුතෙන් ලැබුණ ID එක ගන්නවා
+            finalSabhaCustomerId = sabhaResult.insertId;
+            console.log("New Sabha Customer Created with ID:", finalSabhaCustomerId);
+        }
+
+
+        // --- 3. Prepare Water Account Data ---
         const customerData = {
             customer_type: customerType,
             old_bill_number: oldBillNumber,
@@ -70,10 +95,12 @@ export const registerCustomer = async (req, res) => {
             samurdhi_number: samurdhiNumber,
             is_metered: isMeteredBool ? 1 : 0,
             sabha_code: sabha_code,
-            status: 1 
+            status: 1,
+            // ✅ මෙතනට දාන්නේ අපි උඩදී තීරණය කරපු Final ID එක
+            sabha_customer_id: finalSabhaCustomerId 
         };
 
-        // Insert into DB (This now triggers the Transaction in Model)
+        // Insert into DB
         await insertCustomer(customerData);
 
         return res.status(201).json({
@@ -175,5 +202,36 @@ export const editCustomerDetails = async (req, res) => {
     } catch (error) {
         console.error("Error updating customer:", error);
         return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+    }
+};
+
+
+export const checkSabhaCustomer = async (req, res) => {
+    try {
+        const { nic } = req.params;
+        
+        if (!nic) {
+            return res.status(400).json({ success: false, message: "NIC is required" });
+        }
+
+        const customer = await getSabhaCustomerByNIC(nic);
+
+        if (customer) {
+            // Data හමු වුනා
+            return res.status(200).json({
+                success: true,
+                data: customer 
+            });
+        } else {
+            // Data හමු වුනේ නෑ (නමුත් මෙය error එකක් නෙවෙයි)
+            return res.status(200).json({
+                success: false,
+                message: "No existing sabha customer found"
+            });
+        }
+
+    } catch (error) {
+        console.error("Error fetching sabha customer:", error);
+        return res.status(500).json({ success: false, message: "Server Error" });
     }
 };

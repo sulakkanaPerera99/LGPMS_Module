@@ -1,6 +1,7 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue' 
+import { reactive, ref, onMounted, watch } from 'vue' 
 import axios from 'axios'
+import { convertToNewNic } from '../../utils/nicValidation.js';
 
 const customerTypes = ['New Customer', 'Existing Customer']
 const connectionTypes = ['Domestic', 'Commercial', 'Industrial/Construction']
@@ -23,7 +24,8 @@ const form = reactive({
   projectCode: '', // User තෝරන Code එක මෙතනට එනවා
   isSamurdhi: false,
   samurdhiNumber: '',
-  isMetered: false
+  isMetered: false,
+  sabhaCustomerId: null
 })
 
 // 2. Page එක Load වෙනකොටම Session Check කරලා Project Codes ගෙන්වා ගැනීම
@@ -60,6 +62,56 @@ const fetchProjectCodes = async () => {
   }
 };
 
+// NIC එක වෙනස් වෙනකොට බලන් ඉන්න Watcher එකක්
+watch(() => form.nic, async (newNic) => {
+    
+    // NIC එකේ දිග 10 හෝ 12 නෙවෙයි නම්, ෆෝම් එක Clear කරන්න
+    if (!newNic || (newNic.length !== 10 && newNic.length !== 12)) {
+        clearAutoFilledFields();
+        return; // එතනින් නවතින්න, API එකට යන්න එපා
+    }
+
+    // දිග හරියටම 10 හෝ 12 නම් විතරක් දත්ත ගන්න යන්න
+    if (newNic.length === 10 || newNic.length === 12) {
+        await fetchSabhaCustomerDetails(newNic);
+    }
+});
+
+const fetchSabhaCustomerDetails = async (nic) => {
+    try {
+        const response = await axios.get(`/check-sabha-customer/${nic}`);
+        
+        if (response.data.success && response.data.data) {
+            // Data හමු වුනා - ෆෝම් එක පුරවන්න
+            const data = response.data.data;
+            form.fullName = data.cus_name || ''; 
+            form.mailingAddress = data.cus_address || '';
+            form.contactInfo = data.cus_contact || '';
+            form.sabhaCustomerId = data.id;
+
+            console.log("Data Found & Filled!");
+        } else {
+            // ⚠️ වැදගත්ම තැන: NIC එක හරි වුනත්, Sabha Table එකේ දත්ත නැත්නම් Fields Clear කරන්න ඕනේ.
+            // නැත්නම් කලින් ගැහපු NIC එකේ විස්තර ඉතුරු වෙලා තියෙන්න පුළුවන්.
+            clearAutoFilledFields();
+            console.log("NIC valid but no Sabha record found. Fields cleared.");
+        }
+    } catch (error) {
+        console.error("Auto-fill error:", error);
+        // Error එකක් ආවත් fields clear කරන එක ආරක්ෂිතයි
+        clearAutoFilledFields();
+    }
+};
+
+const clearAutoFilledFields = () => {
+    form.fullName = '';
+    form.mailingAddress = '';
+    form.contactInfo = '';
+    form.sabhaCustomerId = null;
+    // Property Address එකත් Sabha Table එකෙන් එනවා නම් ඒකත් මෙතන Clear කරන්න
+    // form.propertyAddress = ''; 
+};
+
 // 4. දත්ත යවන Function එක
 const submitForm = async () => {
   try {
@@ -68,8 +120,11 @@ const submitForm = async () => {
       return;
     }
 
+    const finalNic = convertToNewNic(form.nic);
+
     const payload = {
       ...form, 
+      nic: finalNic,
       sabha_code: currentSabha.value 
     };
 
@@ -141,12 +196,12 @@ const submitForm = async () => {
 
         <div class="form-row">
           <div class="form-group">
-            <label for="fName">Full Name</label>
-            <input id="fName" v-model="form.fullName" type="text" placeholder="Enter full name" required />
-          </div>
-          <div class="form-group">
             <label for="nic">NIC</label>
             <input id="nic" v-model="form.nic" type="text" placeholder="National Identity Card No" required />
+          </div>
+          <div class="form-group">
+            <label for="fName">Full Name</label>
+            <input id="fName" v-model="form.fullName" type="text" placeholder="Enter full name" required />
           </div>
         </div>
 

@@ -69,6 +69,31 @@ export const insertCustomer = (data) => {
     });
 };
 
+export const insertSabhaCustomer = (data) => {
+    return new Promise((resolve, reject) => { // ✅ Promise එකක් Return කරන්න ඕනේ
+        const query = `
+            INSERT INTO sbha_cutomers 
+            (sabha_code, cus_nic, cus_name, cus_address, cus_contact, cus_date) 
+            VALUES (?, ?, ?, ?, ?, NOW())
+        `;
+        
+        const values = [
+            data.sabha_code,
+            data.cus_nic,
+            data.cus_name,
+            data.cus_address,
+            data.cus_contact
+        ];
+
+        db.query(query, values, (err, result) => {
+            if (err) {
+                return reject(err); // Error ආවොත් Reject කරනවා
+            }
+            resolve(result); // ✅ Result එක (insertId එක්ක) Controller එකට යවනවා
+        });
+    });
+};
+
 // 3. Get All Customers (No Change)
 export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
     return new Promise((resolve, reject) => {
@@ -244,6 +269,22 @@ export const updateCustomer = (customerId, data) => {
                     }
                 });
             });
+        });
+    });
+};
+
+//water customer adding process
+export const getSabhaCustomerByNIC = (nic) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT cus_name, cus_address, cus_contact, id 
+            FROM sbha_cutomers 
+            WHERE cus_nic = ? 
+            LIMIT 1
+        `;
+        db.query(query, [nic], (err, results) => {
+            if (err) return reject(err);
+            resolve(results[0]); // පලමු result එක හෝ undefined යවන්න
         });
     });
 };

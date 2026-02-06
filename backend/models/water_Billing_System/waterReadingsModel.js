@@ -9,14 +9,18 @@ export const getPendingCustomers = (sabhaCode, projectCode, month, year) => {
                 c.full_name,
                 c.sabha_code,
                 c.project_code,
-                COALESCE((
-                    SELECT current_reading
-                    FROM water_meter_readings
-                    WHERE account_id = c.id
-                    AND reading_status = 1
-                    ORDER BY reading_date DESC, id DESC
-                    LIMIT 1
-                ), 0) as last_reading
+                COALESCE(
+                    (
+                        SELECT current_reading
+                        FROM water_meter_readings
+                        WHERE account_id = c.id
+                        AND reading_status = 1
+                        ORDER BY reading_date DESC, id DESC
+                        LIMIT 1
+                    ), 
+                    c.current_reading, 
+                    0
+                ) as last_reading
             FROM water_customer_accounts c
             LEFT JOIN water_meter_readings r
                 ON c.id = r.account_id
@@ -38,7 +42,9 @@ export const getPendingCustomers = (sabhaCode, projectCode, month, year) => {
     });
 };
 
+// ... (අනිත් functions වල කිසිම වෙනසක් නැත) ...
 export const saveBatchReadings = (readings) => {
+    // ... existing code ...
     return new Promise((resolve, reject) => {
         if (readings.length === 0) {
             return resolve([]);
@@ -75,6 +81,7 @@ export const saveBatchReadings = (readings) => {
 };
 
 export const getProjectCodes = (sabhaCode) => {
+    // ... existing code ...
     return new Promise((resolve, reject) => {
         const query = 'SELECT code, name FROM water_projects WHERE sabha_code = ? ORDER BY name';
         db.query(query, [sabhaCode], (err, results) => {
