@@ -63,42 +63,42 @@ const fetchProjectCodes = async () => {
 };
 
 // NIC එක වෙනස් වෙනකොට බලන් ඉන්න Watcher එකක්
-watch(() => form.nic, async (newNic) => {
+// NIC Watcher Logic Update
+watch(() => form.nic, async (rawNic) => {
     
-    // NIC එකේ දිග 10 හෝ 12 නෙවෙයි නම්, ෆෝම් එක Clear කරන්න
-    if (!newNic || (newNic.length !== 10 && newNic.length !== 12)) {
+    // 1. මුලින්ම Check කරනවා Input එක Valid ද කියලා (හිස් ද? දිග මදිද?)
+    if (!rawNic || (rawNic.length !== 10 && rawNic.length !== 12)) {
         clearAutoFilledFields();
-        return; // එතනින් නවතින්න, API එකට යන්න එපා
+        return; 
     }
 
-    // දිග හරියටම 10 හෝ 12 නම් විතරක් දත්ත ගන්න යන්න
-    if (newNic.length === 10 || newNic.length === 12) {
-        await fetchSabhaCustomerDetails(newNic);
-    }
+    // 2. මෙතනදී Convert කරනවා (10 ක් නම් 12 වෙනවා, 12 නම් එහෙමම තියෙනවා)
+    const convertedNic = convertToNewNic(rawNic);
+
+    // 3. දැන් Convert වුනු NIC එක යවනවා Backend එකට
+    await fetchSabhaCustomerDetails(convertedNic);
 });
 
-const fetchSabhaCustomerDetails = async (nic) => {
+const fetchSabhaCustomerDetails = async (nicForCheck) => {
     try {
-        const response = await axios.get(`/check-sabha-customer/${nic}`);
+        // මෙතන යන්නේ අර Convert වුනු (12 digits) NIC එක
+        const response = await axios.get(`/check-sabha-customer/${nicForCheck}`);
         
         if (response.data.success && response.data.data) {
-            // Data හමු වුනා - ෆෝම් එක පුරවන්න
             const data = response.data.data;
+            
+            // අනිත් විස්තර පුරවන්න
             form.fullName = data.cus_name || ''; 
             form.mailingAddress = data.cus_address || '';
             form.contactInfo = data.cus_contact || '';
             form.sabhaCustomerId = data.id;
 
-            console.log("Data Found & Filled!");
+            console.log("Data Found for:", nicForCheck);
         } else {
-            // ⚠️ වැදගත්ම තැන: NIC එක හරි වුනත්, Sabha Table එකේ දත්ත නැත්නම් Fields Clear කරන්න ඕනේ.
-            // නැත්නම් කලින් ගැහපු NIC එකේ විස්තර ඉතුරු වෙලා තියෙන්න පුළුවන්.
             clearAutoFilledFields();
-            console.log("NIC valid but no Sabha record found. Fields cleared.");
         }
     } catch (error) {
         console.error("Auto-fill error:", error);
-        // Error එකක් ආවත් fields clear කරන එක ආරක්ෂිතයි
         clearAutoFilledFields();
     }
 };

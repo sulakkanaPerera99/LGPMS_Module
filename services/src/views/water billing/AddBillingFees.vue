@@ -11,27 +11,26 @@ const currentSabha = ref('')
 const isMetered = ref(false)
 const isSamurdhi = ref(false)
 const fixedRate = ref(null)
-const unitRanges = ref([{ min: 0, max: 0, rate: 0 }])
+
+// ✅ 1. Script Change: Added 'fixed_charge: 0' to default state
+const unitRanges = ref([{ min: 0, max: 0, rate: 0, fixed_charge: 0 }])
+
 const otherCharges = ref([{ name: '', amount: 0, type: 'fixed' }])
 const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])
 
 const availableProjectCodes = ref([])
 
-// 2. Page එක Load වෙනකොටම Session Check කරලා Project Codes ගෙන්වා ගැනීම
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
   
   if (userDataString) {
     const userData = JSON.parse(userDataString);
-    
-    // Sabha Code එක ගන්නවා
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
 
     if (!currentSabha.value) {
       alert("Session Error: Sabha Code not found. Please login again.");
     } else {
       console.log("Current Sabha Code:", currentSabha.value); 
-      // සභා කෝඩ් එක හරි නම්, Project List එක ගෙන්වා ගන්නවා
       await fetchProjectCodes();
     }
   } else {
@@ -39,10 +38,8 @@ onMounted(async () => {
   }
 });
 
-// 3. Backend එකෙන් Project List එක ගෙන්වා ගන්නා Function එක (අලුතෙන් එකතු කළේ)
 const fetchProjectCodes = async () => {
   try {
-    // Backend Route: /api/water-projects-list/:sabha_code
     const response = await axios.get(`/water-project-list/${currentSabha.value}`);
     availableProjectCodes.value = response.data; 
     console.log("Projects Loaded:", availableProjectCodes.value);
@@ -52,7 +49,9 @@ const fetchProjectCodes = async () => {
 };
 
 // Add Form Helpers
-const addUnitRange = () => unitRanges.value.push({ min: 0, max: 0, rate: 0 })
+// ✅ 2. Script Change: Added 'fixed_charge: 0' when adding new row
+const addUnitRange = () => unitRanges.value.push({ min: 0, max: 0, rate: 0, fixed_charge: 0 })
+
 const removeUnitRange = (index) => unitRanges.value.splice(index, 1)
 const addOtherCharge = () => otherCharges.value.push({ name: '', amount: 0, type: 'fixed' })
 const removeOtherCharge = (index) => otherCharges.value.splice(index, 1)
@@ -86,12 +85,9 @@ const submitForm = async () => {
       isMetered.value = false
       isSamurdhi.value = false
       fixedRate.value = null
-      unitRanges.value = [{ min: 0, max: 0, rate: 0 }]
+      unitRanges.value = [{ min: 0, max: 0, rate: 0, fixed_charge: 0 }]
       otherCharges.value = [{ name: '', amount: 0, type: 'fixed' }]
       discounts.value = [{ name: '', amount: 0, type: 'fixed' }]
-
-      // Optional: Save කළ පසු Manage Page එකට යැවීමට
-      // router.push('/manage-billing-fees') 
     }
   } catch (error) {
     console.error("Error saving:", error)
@@ -140,20 +136,28 @@ const submitForm = async () => {
             </div>
 
             <div class="form-group">
-              <label>Fixed Rate (Rs)</label>
+              <label>Fixed Rate (Default) (Rs)</label>
               <input v-model="fixedRate" type="number" placeholder="0.00" required />
+              <small style="color: gray; font-size: 11px;">This value will be used if no slab-specific fixed charge is found.</small>
             </div>
           </div>
 
           <div class="dynamic-section01">
-            <div class="section-header">Consumption Slabs (Unit Prices)</div>
+            <div class="section-header">Consumption Slabs (Unit Prices & Fixed Charges)</div>
+            
             <div class="header-labels01">
-                <span>Min Unit</span> <span>Max Unit</span> <span>Rate (Rs)</span> <span></span>
+                <span>Min Unit</span> 
+                <span>Max Unit</span> 
+                <span>Unit Price (Rs)</span> 
+                <span>Fixed Charge (Rs)</span> <span></span>
             </div>
+
             <div v-for="(item, index) in unitRanges" :key="index" class="dynamic-row">
               <input v-model="item.min" type="number" placeholder="Min" class="small-input" />
               <input v-model="item.max" type="number" placeholder="Max" class="small-input" />
-              <input v-model="item.rate" type="number" step="0.01" placeholder="Price" />
+              <input v-model="item.rate" type="number" step="0.01" placeholder="Rate" />
+              <input v-model="item.fixed_charge" type="number" step="0.01" placeholder="Fixed Rates Per Slab" />
+              
               <button type="button" @click="removeUnitRange(index)" class="remove-btn" v-if="unitRanges.length > 1">Remove</button>
             </div>
             <button type="button" @click="addUnitRange" class="add-btn">+ Add Slab</button>
@@ -161,7 +165,7 @@ const submitForm = async () => {
 
           <div class="dynamic-section">
             <div class="section-header">Taxes & Service Charges</div>
-            <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row">
+            <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row-other">
               <input v-model="item.name" type="text" placeholder="Charge Name" />
               <select v-model="item.type" class="small-select">
                  <option value="fixed">Fixed (Rs)</option>
@@ -175,7 +179,7 @@ const submitForm = async () => {
 
           <div class="dynamic-section discount-section">
             <div class="section-header">Discounts</div>
-            <div v-for="(item, index) in discounts" :key="index" class="dynamic-row">
+            <div v-for="(item, index) in discounts" :key="index" class="dynamic-row-other">
               <input v-model="item.name" type="text" placeholder="Discount Name" />
               <select v-model="item.type" class="small-select">
                  <option value="fixed">Fixed (Rs)</option>
@@ -216,7 +220,7 @@ const submitForm = async () => {
     color: #42b883;
     text-decoration: none;
     font-weight: bold;
-    font-size: 14px; /* Increased from 12px */
+    font-size: 14px; 
 }
 
 .content-area {
@@ -240,14 +244,14 @@ h4 {
     display: inline-block;
     padding-bottom: 5px;
     margin-bottom: 20px;
-    font-size: 16px; /* Increased from 14px */
+    font-size: 16px; 
 }
 
 .section-header {
     font-weight: bold;
     margin-bottom: 10px;
     color: #2c3e50;
-    font-size: 14px; /* Increased from 10px */
+    font-size: 14px; 
 }
 
 /* --- FORM ELEMENTS --- */
@@ -274,16 +278,16 @@ h4 {
 label {
     font-weight: 600;
     color: #2c3e50;
-    font-size: 13px; /* Increased from 10px */
+    font-size: 13px; 
 }
 
 input,
 select {
-    padding: 10px; /* Increased padding */
+    padding: 10px; 
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 10px */
-    width: 100%; /* Ensure inputs take full width of container */
+    font-size: 13px; 
+    width: 100%; 
     box-sizing: border-box;
 }
 
@@ -306,19 +310,20 @@ select:focus {
     align-items: center;
     gap: 5px;
     cursor: pointer;
-    font-size: 13px; /* Increased for label text next to checkbox */
+    font-size: 13px; 
 }
 
 .checkbox-item input {
-    width: auto; /* Reset width for checkboxes */
+    width: auto; 
 }
 
 /* --- DYNAMIC SECTIONS (Ranges, Charges) --- */
+/* ✅ 4. Style Change: Updated Grid to support 4 columns + button */
 .header-labels01 {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 50px;
+    grid-template-columns: 1fr 1fr 1fr 1fr 50px; /* Changed from 3 columns to 4 */
     gap: 10px;
-    font-size: 13px; /* Increased from 9px */
+    font-size: 13px; 
     font-weight: bold;
     margin-bottom: 5px;
     color: #666;
@@ -341,16 +346,22 @@ select:focus {
     background-color: #f0fff4;
 }
 
+/* Main Slab Row Style */
 .dynamic-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto; /* Changed from 3 columns to 4 */
     gap: 10px;
     margin-bottom: 8px;
     align-items: center;
 }
 
-.dynamic-section:not(:first-of-type) .dynamic-row {
+/* Taxes and Discounts Row Style (Keep old style for these) */
+.dynamic-row-other {
+    display: grid;
     grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: center;
 }
 
 .small-input {
@@ -358,10 +369,10 @@ select:focus {
 }
 
 .small-select {
-    padding: 10px; /* Increased padding */
+    padding: 10px; 
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 10px */
+    font-size: 13px; 
     width: 100%;
     box-sizing: border-box;
 }
@@ -370,10 +381,10 @@ select:focus {
 .add-btn,
 .remove-btn {
     border: none;
-    padding: 6px 12px; /* Adjusted padding */
+    padding: 6px 12px; 
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px; /* Increased from 10px */
+    font-size: 12px; 
 }
 
 .add-btn {
@@ -395,8 +406,8 @@ select:focus {
     cursor: pointer;
     font-weight: bold;
     align-self: flex-start;
-    font-size: 13px; /* Increased from 10px */
-    height: 38px; /* Consistent height */
+    font-size: 13px; 
+    height: 38px; 
 }
 
 .submit-btn:hover {
