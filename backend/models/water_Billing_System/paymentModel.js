@@ -1,46 +1,48 @@
 import db from '../../config/database.js';
 
-// Fetch bill details by ID
-export const getBillById = async (connection, billId) => {
+// 1. Get all pending bills for an account (Oldest First) - FIFO Logic
+export const getPendingBillsByAccount = async (connection, accountId) => {
     const query = `
-        SELECT id, tariff_id, total_amount, paid_amount, payment_status 
+        SELECT id, total_amount, paid_amount, payment_status 
         FROM water_bills 
-        WHERE id = ?
+        WHERE account_id = ? 
+        AND payment_status != 'Paid' 
+        ORDER BY billing_date ASC, id ASC
     `;
-    const [rows] = await connection.execute(query, [billId]);
-    return rows[0];
+    const [rows] = await connection.execute(query, [accountId]);
+    return rows;
 };
 
-// Fetch discount configuration by Tariff ID
-export const getDiscountByTariff = async (connection, tariffId) => {
-    const query = `
-        SELECT discounts 
-        FROM billing_configurations 
-        WHERE id = ?
-    `;
-    const [rows] = await connection.execute(query, [tariffId]);
-    return rows[0];
-};
-
-// Update water_bills table
-export const updateBillPayment = async (connection, billId, paidAmount, paymentStatus, discountAmount) => {
+// 2. Update a specific bill (Paid Amount & Status)
+export const updateBillPayment = async (connection, billId, newPaidAmount, newStatus) => {
     const query = `
         UPDATE water_bills 
         SET paid_amount = ?, 
             payment_status = ?, 
-            discounts = ?, 
             paid_date = NOW() 
         WHERE id = ?
     `;
-    await connection.execute(query, [paidAmount, paymentStatus, discountAmount, billId]);
+    await connection.execute(query, [newPaidAmount, newStatus, billId]);
 };
 
-// Update water_customer_accounts table
-export const updateCustomerBalance = async (connection, accountId, newBalance) => {
+// 3. Update Customer Master Balance
+// Industrial Standard: Balance decreases when payment is made
+export const updateCustomerBalance = async (connection, accountId, paymentAmount) => {
+    // We deduct the payment amount from the current balance
     const query = `
         UPDATE water_customer_accounts 
-        SET current_balance = ? 
+        SET current_balance = current_balance - ? 
         WHERE id = ?
     `;
-    await connection.execute(query, [newBalance, accountId]);
+    await connection.execute(query, [paymentAmount, accountId]);
+};
+
+// 4. (Optional) Log the Transaction
+export const logTransaction = async (connection, accountId, amount, type = 'PAYMENT') => {
+    const query = `
+        INSERT INTO payment_transactions (account_id, amount, transaction_type, date)
+        VALUES (?, ?, ?, NOW())
+    `;
+    // මේ Table එක ඔයාගේ DB එකේ තියෙනවා නම් විතරක් මේක පාවිච්චි කරන්න
+    // await connection.execute(query, [accountId, amount, type]);
 };
