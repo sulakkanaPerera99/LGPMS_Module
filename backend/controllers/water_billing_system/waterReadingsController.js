@@ -57,18 +57,18 @@ export const saveBatchReadingsController = async (req, res) => {
                 throw new Error(`Invalid Bill Number format: ${billRef}`);
             }
 
-            const typeCode = billRef.charAt(5);     
-            const samurdhiCode = billRef.charAt(6); 
-            const meteredCode = billRef.charAt(7);  
+            const typeCode = billRef.charAt(6);     
+            const samurdhiCode = billRef.charAt(7); 
+            const meteredCode = billRef.charAt(8);  
 
             // Mapping Logic
             let accountType = 'Domestic'; 
-            if (typeCode === '1') accountType = 'Domestic';
-            else if (typeCode === '2') accountType = 'Commercial';
-            else if (typeCode === '3') accountType = 'Construction/Industrial'; 
+            if (typeCode === 'D') accountType = 'Domestic';
+            else if (typeCode === 'C') accountType = 'Commercial';
+            else if (typeCode === 'I') accountType = 'Construction/Industrial'; 
             
-            const isSamurdhi = (samurdhiCode === '1') ? 1 : 0;
-            const isMetered = (meteredCode === '1') ? 1 : 0;
+            const isSamurdhi = (samurdhiCode === 'S') ? 1 : 0;
+            const isMetered = (meteredCode === 'M') ? 1 : 0;
 
             // =========================================================
             // 🟢 STEP 1.5: Get Customer History ID
