@@ -26,34 +26,39 @@ export const registerCustomer = async (req, res) => {
         }
 
         // --- 1. Bill Number Generation Logic ---
-        const sabhaSuffix = String(sabha_code).slice(-3);
+        // 1. Sabha Code (අග ඉලක්කම් 3)
+const sabhaSuffix = String(sabha_code).slice(-3);
+let projectPart = 'GEN'; // Project Code එකක් නැත්නම් Default අගයක්
+if (projectCode) {
+    // Project Code එක String එකක් බවට හරවා, Capital Akuru වලට හැරවීම (අවශ්‍ය නම්)
+    projectPart = String(projectCode).toUpperCase(); 
+}
 
-        let projectNum = '00';
-        if (projectCode) {
-            const fetchedProjectNum = await getProjectNumberByCode(projectCode, sabha_code);
-            if (fetchedProjectNum !== null && fetchedProjectNum !== undefined) {
-                projectNum = String(fetchedProjectNum).padStart(2, '0');
-            }
-        }
+// 3. Account Type Code (Domestic/Commercial...)
+let accountTypeCode = '1'; 
+if (connectionType) {
+    const type = connectionType.toLowerCase();
+    if (type === 'domestic') accountTypeCode = 'D';
+    else if (type === 'commercial') accountTypeCode = 'C';
+    else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = 'I';
+}
 
-        let accountTypeCode = '1'; 
-        if (connectionType) {
-            const type = connectionType.toLowerCase();
-            if (type === 'domestic') accountTypeCode = '1';
-            else if (type === 'commercial') accountTypeCode = '2';
-            else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = '3';
-        }
+// 4. Samurdhi Status (S or N) - ✅ වෙනස් කරන ලදි
+const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
+const samurdhiCode = isSamurdhiBool ? 'S' : 'N'; // True නම් 'S', නැත්නම් 'N'
 
-        const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
-        const samurdhiCode = isSamurdhiBool ? '1' : '0';
+// 5. Metered Status (M or N) - ✅ වෙනස් කරන ලදි
+const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
+const meteredCode = isMeteredBool ? 'M' : 'N'; // True නම් 'M', නැත්නම් 'N'
 
-        const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
-        const meteredCode = isMeteredBool ? '1' : '0';
+// 6. Serial Number (Count + 1)
+// මේ function එක අනිවාර්යයෙන්ම තිබිය යුතුයි.
+const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
+const serialNum = String(customerCount + 1).padStart(3, '0'); // ඉලක්කම් 3කට හැදීම (උදා: 001)
 
-        const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
-        const serialNum = String(customerCount + 1).padStart(3, '0');
-
-        const newBillNumber = `${sabhaSuffix}${projectNum}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
+// --- Final Bill Number ---
+// Format: [Sabha][ProjectCode][Type][Samurdhi][Metered][Serial]
+const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
 
         // --- 2. ✅ Sabha Customer ID Setup Logic (New Part) ---

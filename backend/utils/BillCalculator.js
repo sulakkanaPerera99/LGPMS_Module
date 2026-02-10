@@ -1,4 +1,4 @@
-// 1. Usage Charge Calculation (Telescopic Method) - මේකේ වෙනසක් නෑ
+// 1. Usage Charge Calculation (Telescopic Method) - No Changes
 const calculateSlabAmount = (units, slabList) => {
     let remainingUnits = units;
     let totalUsageCharge = 0;
@@ -11,31 +11,51 @@ const calculateSlabAmount = (units, slabList) => {
 
         let rangeSize;
 
-        // Max 0 means "Infinity" or "Rest of the units"
+        // Max 0 means "Infinity"
         if (slab.max === 0 || slab.max === null) {
             rangeSize = Infinity; 
         } else {
             rangeSize = slab.max - slab.min + 1;
         }
 
-        // Calculate units for this specific slab
         let unitsForThisSlab = Math.min(remainingUnits, rangeSize);
-        
-        // This calculates only the Usage Price (Rate * Units)
         totalUsageCharge += unitsForThisSlab * parseFloat(slab.rate);
         remainingUnits -= unitsForThisSlab;
     }
     return totalUsageCharge;
 };
 
-// 2. Calculate Other Charges - මේකෙත් වෙනසක් නෑ
-const calculateOtherCharges = (chargesList) => {
+/**
+ * 2. Dynamic Amount Calculation (Helper Function)
+ * Fixed සහ Percentage යන දෙකම මෙය හරහා ගණනය වේ.
+ * @param {Array} itemsList - Frontend එකෙන් එන Charges හෝ Discounts Array එක
+ * @param {Number} baseAmount - ප්‍රතිශතය ගණනය කිරීමට අදාල මූලික අගය (Sub Total)
+ */
+const calculateDynamicAmount = (itemsList, baseAmount = 0) => {
     let total = 0;
-    if (Array.isArray(chargesList)) {
-        chargesList.forEach(charge => {
-            total += parseFloat(charge.amount || charge.value || 0);
+
+    if (Array.isArray(itemsList)) {
+        itemsList.forEach(item => {
+            let itemAmount = 0;
+            // Frontend එකෙන් එන value එක (Rate එක හෝ Fixed Amount එක)
+            const rateOrValue = parseFloat(item.amount || item.value || 0);
+
+            // Type එක check කරනවා (fixed ද? percentage ද?)
+            const type = (item.type || 'fixed').toLowerCase().trim();
+
+            if (type === 'percentage' || type === '%') {
+                // ප්‍රතිශතයක් නම්: (Base Amount * Rate) / 100
+                // උදා: බිල රු. 1000 නම්, 10% බද්දක් සඳහා = (1000 * 10) / 100 = 100
+                itemAmount = (baseAmount * rateOrValue) / 100;
+            } else {
+                // ස්ථාවර මුදලක් නම් කෙලින්ම එකතු කරනවා
+                itemAmount = rateOrValue;
+            }
+
+            total += itemAmount;
         });
     }
+    
     return total;
 };
 
@@ -85,51 +105,66 @@ export const calculateBill = async (connection, data, previousDues = 0) => {
 
     const config = configs[0];
 
-    // C. Parsing JSON
+    // C. Parsing JSON Data
+    // DB එකේ JSON string එකක් විදියට තිබුනොත් parse කරනවා, නැත්නම් කෙලින්ම ගන්නවා
     const unitRanges = typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : config.unit_ranges;
-    const otherChargesList = typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : config.other_charges;
+    
+    const otherChargesList = typeof config.other_charges === 'string' 
+        ? JSON.parse(config.other_charges) 
+        : (config.other_charges || []);
+
+    const discountsList = typeof config.discounts === 'string' 
+        ? JSON.parse(config.discounts) 
+        : (config.discounts || []);
 
     // ---------------------------------------------------------
-    // D. Calculations (UPDATED LOGIC HERE)
+    // D. Calculations (UPDATED LOGIC)
     // ---------------------------------------------------------
 
-    // 1. Usage Charge (Telescopic)
+    // 1. Usage Charge (Water Consumption Charge)
     const waterCharge = calculateSlabAmount(unitsConsumed, unitRanges);
 
-    // 2. Fixed Charge Calculation ✅
-    // Step 1: Default to the global Fixed Rate (e.g., Officer set Electricity Bill base rate)
+    // 2. Fixed Charge Calculation
     let fixedCharge = parseFloat(config.fixed_rate) || 0;
 
-    // Step 2: Check if the current consumption falls into a Slab with a specific Fixed Charge
     if (Array.isArray(unitRanges)) {
-        // Find the specific slab that covers the Total Units Consumed
         const matchingSlab = unitRanges.find(slab => {
             const min = parseFloat(slab.min);
-            // Handle max=0 as Infinity
             const max = (slab.max === 0 || slab.max === null) ? Infinity : parseFloat(slab.max);
-            
             return unitsConsumed >= min && unitsConsumed <= max;
         });
 
-        // If a matching slab is found AND it has a specific fixed_charge defined
         if (matchingSlab && matchingSlab.fixed_charge && parseFloat(matchingSlab.fixed_charge) > 0) {
             fixedCharge = parseFloat(matchingSlab.fixed_charge);
-            // console.log(`Slab-based Fixed Charge Applied: ${fixedCharge} (Range: ${matchingSlab.min}-${matchingSlab.max})`);
         }
     }
 
-    // 3. Other Charges & Discount
-    const otherChargesTotal = calculateOtherCharges(otherChargesList);
-    const discountAmount = parseFloat(config.discounts) || 0;
+    // =========================================================
+    // 🟢 NEW: Base Amount for Percentage Calculations
+    // =========================================================
+    // වෙනත් ගාස්තු සහ වට්ටම් ප්‍රතිශතයක් ලෙස ගණනය කිරීමට මූලික අගය මෙයයි.
+    // Base Amount = Water Usage Charge + Fixed Charge
+    const subTotal = waterCharge + fixedCharge;
 
-    // 4. Final Totals
-    const monthlyTotal = (waterCharge + fixedCharge + otherChargesTotal) - discountAmount;
+    // 3. Other Charges Calculation (Using Helper Function)
+    // මෙතන subTotal එක pass කරනවා ප්‍රතිශත ගණනය කරන්න
+    const otherChargesTotal = calculateDynamicAmount(otherChargesList, subTotal);
+
+    // 4. Discounts Calculation (Using Helper Function)
+    // වට්ටම් ගණනය කරන්නෙත් subTotal (Bill Amount) එක මතයි
+    const discountAmount = calculateDynamicAmount(discountsList, subTotal);
+
+    // 5. Final Totals
+    // මාසික ගාස්තුව = (ජල ගාස්තුව + ස්ථාවර ගාස්තුව + වෙනත් ගාස්තු) - වට්ටම්
+    const monthlyTotal = (subTotal + otherChargesTotal) - discountAmount;
+    
+    // මුළු ගෙවිය යුතු මුදල = මාසික ගාස්තුව + හිඟ මුදල්
     const totalAmount = monthlyTotal + previousDues;
 
     return {
         units_consumed: unitsConsumed,
         water_consumption_charge: waterCharge.toFixed(2),
-        fixed_charge: fixedCharge.toFixed(2), // This will now reflect either Slab-based or Electricity-based
+        fixed_charge: fixedCharge.toFixed(2),
         other_charges: otherChargesTotal.toFixed(2),
         discounts: discountAmount.toFixed(2),
         monthly_charge: monthlyTotal.toFixed(2),

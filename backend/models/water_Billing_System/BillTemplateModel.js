@@ -1,26 +1,18 @@
-//temporary bill Payment page
-
 import db from "../../config/database.js";
 
-// ID එක මගින් බිල්පතේ විස්තර ලබා ගැනීම (For Bill Template)
+// 1. Get Specific Bill Details (For the Template) - (Existing Logic Improved)
 export const getBillById = (billId) => {
     return new Promise((resolve, reject) => {
-        // Controller එකට අවශ්‍ය සියලුම දත්ත මෙතනින් Select කර ඇත.
         const query = `
             SELECT 
                 wb.id, 
                 wb.bill_number,
-                
-                -- Account Details
-                wa.new_bill_number AS account_no, -- Customer Account Number එක
-                
-                -- Dates
+                wa.new_bill_number AS account_no,
                 wb.billing_date,
-                wb.period_from AS period_from,    -- DB column එක start_date විය හැක
-                wb.period_to AS period_to,        -- DB column එක end_date විය හැක
-
-                -- Customer Details (From History or Accounts)
-                -- Customer History එකෙන් හෝ Accounts Table එකෙන් නම ගන්න
+                wb.period_from,
+                wb.period_to,
+                
+                -- Customer Details
                 COALESCE(ch.full_name, wa.full_name) AS full_name, 
                 COALESCE(ch.nic, wa.nic) AS nic,
                 wa.mailing_address AS address,
@@ -28,36 +20,62 @@ export const getBillById = (billId) => {
                 -- Meter Readings
                 wb.previous_reading,
                 wb.current_reading,
-                wb.units_consumed AS units_consumed,      -- DB Column: units
+                wb.units_consumed,
                 
-                -- Charges Breakdown
-                wb.monthly_charge AS water_consumption_charge, 
+                -- Charges
+                wb.water_consumption_charge, 
                 wb.fixed_charge,
-
-                -- Other Financials
                 wb.other_charges,
-                wb.discounts AS discounts, 
-                wb.previous_dues AS previous_dues,     -- DB Column: arrears (හිඟ මුදල්)
-
-
-                -- Final Totals
+                wb.discounts, 
+                wb.previous_dues,
                 wb.total_amount,
-                wb.payment_status AS payment_status      -- DB Column: status
+                wb.payment_status,
+
+                -- ✅ ADDED: Pradeshiya Sabha Details (From pra_sabha table)
+                ps.sb_name_en,
+                ps.sb_address,
+                ps.sb_contact,
+                ps.fax,
+                ps.sb_email
 
             FROM water_bills wb
             LEFT JOIN water_customer_accounts wa ON wb.account_id = wa.id
             LEFT JOIN water_customer_history ch ON wb.customer_history_id = ch.id
             
-          
-            WHERE wb.account_id = ? ORDER BY wb.created_at DESC LIMIT 1
-        `;
+            -- ✅ ADDED: Join with pra_sabha table using sabha_code
+            LEFT JOIN pra_sabha ps ON wb.sabha_code = ps.sb_code
+            
+            WHERE wb.id = ? 
+        `; // Note: Changed to WHERE wb.id = ? to select specific bill
 
         db.query(query, [billId], (err, result) => {
-            if (err) {
-                return reject(err);
-            }
-            // Result එකක් නැත්නම් null යවන්න, එවිට Controller එකේ 404 හසු කරගත හැක
+            if (err) return reject(err);
             resolve(result[0] || null); 
+        });
+    });
+};
+
+// ✅ 2. NEW: Get Last 12 Bills List (For the Selection Modal)
+export const getLastTwelveBills = (accountId) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT 
+                id, 
+                bill_number, 
+                billing_date, 
+                period_from, 
+                period_to, 
+                monthly_charge,
+                payment_status
+            FROM water_bills 
+            WHERE account_id = ? 
+            ORDER BY billing_date DESC 
+            LIMIT 12
+        `;
+
+        db.query(query, [accountId], (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
         });
     });
 };

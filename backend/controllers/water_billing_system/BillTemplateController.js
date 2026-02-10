@@ -45,7 +45,14 @@ export const getBillDetails = async (req, res) => {
             
             // Final Totals
             totalAmount: bill.total_amount,
-            paymentStatus: bill.payment_status
+            paymentStatus: bill.payment_status,
+
+            //sabha details
+            sb_name_en: bill.sb_name_en,
+            sb_address: bill.sb_address,
+            sb_contact: bill.sb_contact,
+            fax: bill.fax,
+            sb_email: bill.sb_email
         };
 
         return res.status(200).json(formattedBill);
@@ -56,5 +63,27 @@ export const getBillDetails = async (req, res) => {
             status: 'error', 
             message: 'Internal Server Error' 
         });
+    }
+};
+
+// ✅ NEW: Get Last 12 Bills for Selection
+export const getBillHistory = async (req, res) => {
+    try {
+        const { accountId } = req.params;
+
+        if (!accountId) {
+            return res.status(400).json({ success: false, message: "Account ID is required" });
+        }
+
+        const bills = await WaterBillModel.getLastTwelveBills(accountId);
+
+        return res.status(200).json({
+            success: true,
+            data: bills
+        });
+
+    } catch (error) {
+        console.error("Error fetching bill history:", error);
+        return res.status(500).json({ success: false, message: "Server Error" });
     }
 };

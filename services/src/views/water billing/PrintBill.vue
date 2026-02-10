@@ -11,6 +11,12 @@ const availableProjectCodes = ref([]) // ✅ Projects ගබඩා කරගන�
 const currentSabha = ref('')
 const isLoading = ref(false)
 
+// ✅ 1.1 New State for Bill History Modal
+const isBillHistoryModalOpen = ref(false)
+const selectedAccountBills = ref([])
+const isHistoryLoading = ref(false)
+const selectedCustomerName = ref('')
+
 // 2. Search & Sort State
 const searchQuery = ref('')
 const sortBy = ref('name_asc')
@@ -37,7 +43,7 @@ onMounted(async () => {
       // ✅ Accounts සහ Projects දෙකම එකවර Load කරන්න
       await Promise.all([
         fetchAccounts(),
-        fetchProjects() // <--- මෙන්න මේ Function Call එක තමයි කලින් අඩු වෙලා තිබුණේ
+        fetchProjects()
       ]);
     } else {
       alert("Session Error: Sabha Code not found.");
@@ -52,16 +58,15 @@ watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 
-// --- 🆕 5.1 Fetch Projects Function (අලුතින් එකතු කළ කොටස) ---
+// --- 5.1 Fetch Projects Function ---
 const fetchProjects = async () => {
-    try {
-        // Backend Route: /water-project-list/:sabha_code
-        const response = await axios.get(`/water-project-list/${currentSabha.value}`);
-        availableProjectCodes.value = response.data;
-        // console.log("Projects Loaded:", availableProjectCodes.value);
-    } catch (error) {
-        console.error("Error loading projects:", error);
-    }
+  try {
+    // Backend Route: /water-project-list/:sabha_code
+    const response = await axios.get(`/water-project-list/${currentSabha.value}`);
+    availableProjectCodes.value = response.data;
+  } catch (error) {
+    console.error("Error loading projects:", error);
+  }
 };
 
 // 5. API Call Function (Fetch Accounts)
@@ -78,11 +83,9 @@ const fetchAccounts = async () => {
       params.sort = sortBy.value;
     }
 
-    // --- ✅ Project Filter එක API එකට යැවීම ---
-    // Backend Controller එකේ 'projectCode' හෝ 'project_code' බලාපොරොත්තු වන නම අනුව මෙය ගැලපෙන්න ඕන.
-    // සාමාන්‍යයෙන් query params වල camelCase භාවිතා වේ.
+    // --- Filters ---
     if (activeFilters.projectCode) {
-        params.projectCode = activeFilters.projectCode;
+      params.projectCode = activeFilters.projectCode;
     }
 
     if (activeFilters.connectionTypes && activeFilters.connectionTypes.length > 0) {
@@ -118,7 +121,7 @@ const applyFilters = () => {
 }
 
 const clearFilters = () => {
-  activeFilters.projectCode = '' // ✅ Project Filter එකත් Reset කරන්න
+  activeFilters.projectCode = ''
   activeFilters.connectionTypes = []
   activeFilters.samurdhi = []
   activeFilters.metered = []
@@ -126,12 +129,40 @@ const clearFilters = () => {
   fetchAccounts();
 }
 
-// 7. Navigation Logic
-const openBillTemplate = (account) => {
-    router.push({ 
-        name: 'BillTemplate', 
-        params: { id: account.id } 
-    });
+// 7. New Logic: Open Modal & Fetch Bill History
+const openBillSelectionModal = async (account) => {
+  selectedCustomerName.value = account.fullName;
+  isBillHistoryModalOpen.value = true;
+  isHistoryLoading.value = true;
+  selectedAccountBills.value = [];
+
+  try {
+    // Backend Route: /water-bill-history/:accountId
+    const response = await axios.get(`/water-bill-history/${account.id}`);
+    if (response.data.success) {
+      selectedAccountBills.value = response.data.data;
+    }
+  } catch (error) {
+    console.error("Error loading bill history:", error);
+    alert("Failed to load bill history.");
+  } finally {
+    isHistoryLoading.value = false;
+  }
+}
+
+// 8. Navigate to Template (Final Step)
+const selectBillAndPrint = (billId) => {
+  router.push({
+    name: 'BillTemplate',
+    params: { id: billId }
+  });
+}
+
+// Helper: Format Month/Year
+const formatBillingMonth = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleString('default', { month: 'long', year: 'numeric' });
 }
 </script>
 
@@ -175,16 +206,16 @@ const openBillTemplate = (account) => {
               <td>{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
               <td>
-               <span :class="{'status-active': acc.status === 1, 'status-inactive': acc.status === 0}">
+                <span :class="{'status-active': acc.status === 1, 'status-inactive': acc.status === 0}">
                   {{ acc.status === 1 ? 'Active' : 'Inactive' }}
                 </span>
               </td>
               <td>
-                <button class="action-btn" @click="openBillTemplate(acc)">Print Bill</button>
+                <button class="action-btn" @click="openBillSelectionModal(acc)">Print Bill</button>
               </td>
             </tr>
             <tr v-if="accounts.length === 0">
-                <td colspan="4" style="text-align:center; padding: 20px;">No customers found.</td>
+              <td colspan="4" style="text-align:center; padding: 20px;">No customers found.</td>
             </tr>
           </tbody>
         </table>
@@ -194,26 +225,22 @@ const openBillTemplate = (account) => {
     <div v-if="isFilterDialogOpen" class="modal-overlay">
       <div class="modal-content">
         <h4>Filter Accounts</h4>
-        
+
         <div class="filter-section">
-            <label for="pCode" style="display:block; margin-bottom:5px; font-weight:bold; font-size:10px; color:#2c3e50;">Water Project</label>
-            <select id="pCode" v-model="activeFilters.projectCode" style="width:100%; padding:5px; font-size:10px; border:1px solid #ccc; border-radius:4px;">
-              <option value="">All Projects</option>
-              <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
-                {{ project.code }} - {{ project.name }}
-              </option>
-            </select>
+          <label for="pCode" style="display:block; margin-bottom:5px; font-weight:bold; font-size:10px; color:#2c3e50;">Water Project</label>
+          <select id="pCode" v-model="activeFilters.projectCode" style="width:100%; padding:5px; font-size:10px; border:1px solid #ccc; border-radius:4px;">
+            <option value="">All Projects</option>
+            <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
+              {{ project.code }} - {{ project.name }}
+            </option>
+          </select>
         </div>
-        
+
         <div class="filter-section">
           <h5>Account Status</h5>
           <div class="checkbox-list">
-            <label class="checkbox-item">
-            <input type="checkbox" value="Active" v-model="activeFilters.status"> Active
-            </label>
-            <label class="checkbox-item">
-            <input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive
-            </label>
+            <label class="checkbox-item"><input type="checkbox" value="Active" v-model="activeFilters.status"> Active</label>
+            <label class="checkbox-item"><input type="checkbox" value="Inactive" v-model="activeFilters.status"> Inactive</label>
           </div>
         </div>
 
@@ -248,6 +275,45 @@ const openBillTemplate = (account) => {
         </div>
       </div>
     </div>
+
+    <div v-if="isBillHistoryModalOpen" class="modal-overlay">
+      <div class="modal-content bill-history-modal">
+        <h4>Select Bill to Print</h4>
+        <p class="customer-name-label">Customer: {{ selectedCustomerName }}</p>
+
+        <div v-if="isHistoryLoading" class="loading-state">Loading bills...</div>
+
+        <div v-else-if="selectedAccountBills.length === 0" class="empty-state">
+          No billing history found for this customer.
+        </div>
+
+        <div v-else class="bill-list-container">
+          <table class="bill-list-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Bill No</th>
+                <th>Amount (LKR)</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="bill in selectedAccountBills" :key="bill.id" @click="selectBillAndPrint(bill.id)" class="clickable-row">
+                <td><strong>{{ formatBillingMonth(bill.billing_date) }}</strong></td>
+                <td>{{ bill.bill_number }}</td>
+                <td>{{ bill.monthly_charge }}</td>
+                <td><span class="select-icon">➔</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-btn" @click="isBillHistoryModalOpen = false">Close</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -273,7 +339,7 @@ const openBillTemplate = (account) => {
   color: #42b883;
   text-decoration: none;
   font-weight: bold;
-  font-size: 14px; /* Increased from 10px */
+  font-size: 14px;
 }
 
 .card {
@@ -305,25 +371,25 @@ const openBillTemplate = (account) => {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 14px; /* Increased from 10px */
+  font-size: 14px;
   color: #888;
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 10px 10px 30px; /* Increased padding */
+  padding: 10px 10px 10px 30px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   box-sizing: border-box;
 }
 
 .sort-select {
-  padding: 10px; /* Increased padding */
+  padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   background-color: white;
   cursor: pointer;
 }
@@ -332,11 +398,11 @@ const openBillTemplate = (account) => {
   background-color: #2c3e50;
   color: white;
   border: none;
-  padding: 10px 16px; /* Increased padding */
+  padding: 10px 16px;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
 }
 
 .table-responsive {
@@ -346,14 +412,14 @@ const openBillTemplate = (account) => {
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   min-width: 600px;
 }
 
 .accounts-table th,
 .accounts-table td {
   text-align: left;
-  padding: 12px; /* Increased padding */
+  padding: 12px;
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
@@ -373,15 +439,31 @@ const openBillTemplate = (account) => {
   background: transparent;
   border: 1px solid #42b883;
   color: #42b883;
-  padding: 6px 12px; /* Increased padding */
+  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px; /* Increased from 7px */
+  font-size: 12px;
 }
 
 .action-btn:hover {
   background: #42b883;
   color: white;
+}
+
+.status-active {
+  color: #27ae60;
+  font-weight: bold;
+  background-color: #eafaf1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.status-inactive {
+  color: #c0392b;
+  font-weight: bold;
+  background-color: #fdedec;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 /* Modal Styles */
@@ -400,7 +482,7 @@ const openBillTemplate = (account) => {
 
 .modal-content {
   background: white;
-  padding: 25px; /* Increased padding */
+  padding: 25px;
   border-radius: 8px;
   width: 350px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -413,7 +495,7 @@ const openBillTemplate = (account) => {
   border-bottom: 2px solid #42b883;
   display: inline-block;
   padding-bottom: 5px;
-  font-size: 16px; /* Increased from 14px */
+  font-size: 16px;
 }
 
 .filter-section {
@@ -422,7 +504,7 @@ const openBillTemplate = (account) => {
 
 .filter-section h5 {
   margin: 0 0 8px 0;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   color: #2c3e50;
   text-transform: uppercase;
   font-weight: bold;
@@ -438,7 +520,7 @@ const openBillTemplate = (account) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   color: #2c3e50;
   cursor: pointer;
 }
@@ -453,12 +535,12 @@ const openBillTemplate = (account) => {
 }
 
 .modal-btn {
-  padding: 8px 16px; /* Increased padding */
+  padding: 8px 16px;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: white;
   cursor: pointer;
-  font-size: 13px; /* Increased from 7px */
+  font-size: 13px;
   font-weight: bold;
 }
 
@@ -471,23 +553,70 @@ const openBillTemplate = (account) => {
 .loading-state {
   text-align: center;
   padding: 20px;
-  font-size: 14px; /* Increased from 10px */
+  font-size: 14px;
   color: #42b883;
 }
 
-.status-active {
-  color: #27ae60; /* Green */
+/* ✅ NEW STYLES FOR BILL HISTORY MODAL */
+.bill-history-modal {
+  width: 600px;
+  max-width: 90%;
+}
+
+.customer-name-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
   font-weight: bold;
-  background-color: #eafaf1;
-  padding: 4px 8px;
+}
+
+.bill-list-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #eee;
   border-radius: 4px;
 }
 
-.status-inactive {
-  color: #c0392b; /* Red */
+.bill-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.bill-list-table th,
+.bill-list-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.bill-list-table th {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  color: #2c3e50;
   font-weight: bold;
-  background-color: #fdedec;
-  padding: 4px 8px;
-  border-radius: 4px;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clickable-row:hover {
+  background-color: #eafaf1;
+}
+
+.select-icon {
+  color: #42b883;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  font-style: italic;
 }
 </style>

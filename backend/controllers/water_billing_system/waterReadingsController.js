@@ -193,6 +193,11 @@ export const saveBatchReadingsController = async (req, res) => {
                 billData.total_amount, 
             ]);
 
+            await dbPromise.query(
+                `UPDATE water_customer_accounts SET current_balance = ? WHERE id = ?`,
+                [billData.total_amount, reading.account_id]
+            );
+
             processedCount++;
         }
 

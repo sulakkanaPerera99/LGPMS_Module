@@ -1,23 +1,27 @@
-
-
 <template>
   <div class="page-container">
     <div class="invoice-box" v-if="billDetails">
       
-      <header class="header-section">
-        <div class="logo-area">
-          <img src="/gov-logo.png" alt="Gov Logo" class="gov-logo" />
-        </div>
+      <header class="header-section relative-content">
         <div class="authority-details">
-          <h2>PRADESHIYA SABHA - [NAME]</h2>
+          <h2>PRADESHIYA SABHA - {{ billDetails.sb_name_en }}</h2>
           <h3>Water Supply Unit</h3>
-          <p>Address: Main Street, City, Sri Lanka | Tel: 011-2345678</p>
+          <p>
+            Address: {{ billDetails.sb_address }} 
+            <span class="separator">|</span> 
+            Tel: {{ billDetails.sb_contact }}
+          </p>
+          <p>
+            Email: {{ billDetails.sb_email }} 
+            <span class="separator">|</span> 
+            Fax: {{ billDetails.fax }}
+          </p>
         </div>
       </header>
 
-      <hr class="divider">
+      <hr class="divider relative-content">
 
-      <section class="bill-meta">
+      <section class="bill-meta relative-content">
         <div class="meta-row">
           <div><strong>Bill Number:</strong> {{ billDetails.billNumber }}</div>
           <div><strong>Billing Date:</strong> {{ formatDate(billDetails.billingDate) }}</div>
@@ -28,7 +32,7 @@
         </div>
       </section>
 
-      <section class="customer-box">
+      <section class="customer-box relative-content">
         <h4>CUSTOMER DETAILS</h4>
         <div class="customer-grid">
           <div class="label">Name:</div>
@@ -42,7 +46,7 @@
         </div>
       </section>
 
-      <section class="readings-box">
+      <section class="readings-box relative-content">
         <table class="data-table">
           <thead>
             <tr>
@@ -61,7 +65,7 @@
         </table>
       </section>
 
-      <section class="charges-box">
+      <section class="charges-box relative-content">
         <table class="sums-table">
           <tr>
             <td>Water Consumption Charges</td>
@@ -70,6 +74,14 @@
           <tr>
             <td>Fixed Charges</td>
             <td class="amount">LKR {{ formatCurrency(billDetails.fixedCharge) }}</td>
+          </tr>
+          <tr>
+            <td>Other Charges</td>
+            <td class="amount">LKR {{ formatCurrency(billDetails.otherCharges) }}</td>
+          </tr>
+          <tr>
+            <td>Discounts</td>
+            <td class="amount">LKR {{ formatCurrency(billDetails.discounts) }}</td>
           </tr>
           <tr class="sub-total">
             <td><strong>Charges for this Month</strong></td>
@@ -82,18 +94,25 @@
           </table>
       </section>
 
-      <section class="total-payable">
+      <section class="total-payable relative-content">
         <div class="total-label">TOTAL AMOUNT TO PAY</div>
         <div class="total-value">LKR {{ formatCurrency(calculateGrandTotal) }}</div>
       </section>
 
-      <footer class="bill-footer">
-        <p>Please make the payment within 14 days to avoid disconnection.</p>
+      <footer class="bill-footer relative-content">
         <p class="system-note">This is a system-generated bill. Signature not required.</p>
-        <div class="officer-signature">
-            <br><br>
-            --------------------------<br>
-            Revenue Officer
+        
+        <div class="footer-row">
+            
+            <div class="valid-till-box">
+                <strong>Valid Till:</strong> {{ validTillDate }}
+            </div>
+
+            <div class="officer-signature">
+                <br><br>
+                --------------------------<br>
+                Revenue Officer
+            </div>
         </div>
       </footer>
 
@@ -121,7 +140,9 @@ const billDetails = ref(null);
 const calculateMonthTotal = computed(() => {
   if (!billDetails.value) return 0;
   return (parseFloat(billDetails.value.waterConsumptionCharge) || 0) + 
-         (parseFloat(billDetails.value.fixedCharge) || 0);
+         (parseFloat(billDetails.value.fixedCharge) || 0)+
+         (parseFloat(billDetails.value.otherCharges) || 0) -
+         (parseFloat(billDetails.value.discounts) || 0);
 });
 
 const calculateGrandTotal = computed(() => {
@@ -139,30 +160,31 @@ const formatCurrency = (value) => {
 };
 
 const formatDate = (dateString) => {
-    if(!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-GB");
+   if(!dateString) return "";
+   return new Date(dateString).toLocaleDateString("en-GB");
 }
 
 const fetchBillDetails = async (id) => {
   try {
-    // *** වෙනස්කම: සම්පූර්ණ URL එක භාවිතා කිරීම (BaseURL ප්‍රශ්න මග හැරීමට) ***
-    // Backend එක දුවන්නේ Port 3000 න් නම් සහ Route prefix එක '/api' නම්:
     const response = await axios.get(`http://localhost:3000/api/water-bills/${id}`); 
-    
-    console.log("Bill Data Received:", response.data); // Debugging line
+    console.log("Bill Data Received:", response.data); 
     billDetails.value = response.data;
 
   } catch (error) {
     console.error('Error fetching bill:', error);
     if (error.response) {
-        // Server එකෙන් error එකක් ආවොත් (404, 500)
         console.error("Server Error:", error.response.data);
     } else if (error.request) {
-        // Server එකට connect වෙන්න බැරි නම්
         console.error("Network Error: Is the backend server running?");
     }
   }
 };
+
+const validTillDate = computed(() => {
+  const date = new Date(); // අද දිනය ගන්න
+  date.setMonth(date.getMonth() + 6); // මාස 6ක් එකතු කරන්න
+  return date.toLocaleDateString('en-GB'); // DD/MM/YYYY ෆෝමැට් එකට හරවන්න
+});
 
 const printBill = () => {
   window.print();
@@ -198,6 +220,44 @@ onMounted(() => {
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   font-family: 'Times New Roman', Times, serif; /* Official look */
   color: #333;
+  
+  /* ✅ Watermark Positioning Context */
+  position: relative; 
+  overflow: hidden; 
+}
+
+/* ✅ WATERMARK STYLES */
+.invoice-box::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  
+  /* Log eka methanata link karanna */
+  background-image: url('../../assets/images/Sri-Lanka-Government.png'); 
+  
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+  opacity: 0.08;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ✅ Ensure Text is ABOVE the watermark */
+.relative-content, 
+.header-section, 
+.bill-meta, 
+.customer-box, 
+.readings-box, 
+.charges-box, 
+.total-payable, 
+.bill-footer {
+  position: relative;
+  z-index: 1; 
 }
 
 /* --- Header --- */
@@ -208,10 +268,6 @@ onMounted(() => {
 }
 .logo-area {
   flex: 0 0 80px;
-}
-.gov-logo {
-  width: 70px;
-  height: auto;
 }
 .authority-details {
   flex: 1;
@@ -376,27 +432,59 @@ table {
   background: #004494;
 }
 
+.separator {
+  margin: 0 7px; 
+  font-weight: bold;
+  color: #555; 
+}
+
+/* --- PRINT MEDIA QUERIES --- */
 /* --- PRINT MEDIA QUERIES --- */
 @media print {
-  .no-print {
-    display: none;
+  /* 1. මුළු පිටුවේම තියෙන හැමදේම හංගන්න */
+  body * {
+    visibility: hidden;
   }
-  .page-container {
-    background: white;
-    padding: 0;
+
+  /* 2. Invoice Box එක සහ ඒක ඇතුලේ තියෙන දේවල් විතරක් පෙන්නන්න */
+  .invoice-box, .invoice-box * {
+    visibility: visible;
   }
+
+  /* 3. Invoice Box එක පිටුවේ උඩටම ගන්න (absolute positioning) */
   .invoice-box {
-    box-shadow: none;
-    border: none;
-    max-width: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
     padding: 10px;
+    box-shadow: none;
+    border: 2px solid #000; /* බෝඩර් එක තදින් පෙනෙන්න */
   }
-  .total-payable {
-    background: none !important;
-    border: 2px solid #000;
+
+  /* 4. Page Settings */
+  @page {
+    size: auto;   /* Auto size දාන්න, එතකොට content එක විතරක් ගනියි */
+    margin: 5mm;  /* වටේට පොඩි margin එකක් */
   }
-  body {
+
+  /* 5. අනවශ්‍ය බොත්තම් සම්පූර්ණයෙන්ම අයින් කරන්න */
+  .no-print {
+    display: none !important;
+  }
+
+  /* 6. Watermark සහ අනෙකුත් සැකසුම් */
+  .invoice-box::before {
+    opacity: 0.08 !important;
+    print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+    background-size: 80% !important;
+  }
+
+  .total-payable {
+    background: transparent !important; /* Watermark පෙනෙන්න */
+    border: 2px solid #000;
   }
 }
 </style>
