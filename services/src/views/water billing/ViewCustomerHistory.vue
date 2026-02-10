@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router' // Router import
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
@@ -72,15 +72,112 @@ const clearFilters = () => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'Not Paid';
+  if (!dateString) return '-';
   const date = new Date(dateString);
   return date.toLocaleDateString('en-CA'); 
 }
 
-// ✅ Navigate to New Page instead of opening Modal
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-LK', { 
+    style: 'currency', 
+    currency: 'LKR', 
+    minimumFractionDigits: 2 
+  }).format(amount || 0);
+};
+
 const navigateToHistory = (accountId) => {
   router.push({ name: 'PaymentHistoryView', params: { id: accountId } });
 }
+
+// ✅ 5. PRINT FUNCTION (Report Generation)
+const printReport = () => {
+  // Calculate Total Outstanding Balance for the footer
+  const totalBalance = accounts.value.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0);
+
+  const printWindow = window.open('', '_blank');
+  const sabhaName = `Pradeshiya Sabha (${currentSabha.value})`; 
+  const currentDate = new Date().toLocaleDateString('en-GB');
+
+  const htmlContent = `
+    <html>
+      <head>
+        <title>Customer Accounts Report</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          body { font-family: 'Times New Roman', serif; color: #000; padding: 10px; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+          .header h1 { margin: 0; font-size: 22px; text-transform: uppercase; }
+          .header h2 { margin: 5px 0; font-size: 18px; }
+          .meta-info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; font-weight: bold;}
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+          th, td { border: 1px solid #000; padding: 6px 4px; text-align: left; }
+          th { background-color: #f0f0f0; text-align: center; font-weight: bold; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .footer-totals { background-color: #f0f0f0; font-weight: bold; }
+          .signature-section { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; }
+          .sig-line { border-top: 1px dotted #000; width: 200px; margin: 0 auto 5px auto; }
+          .sig-box { width: 30%; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${sabhaName}</h1>
+          <h2>Customer Accounts Report</h2>
+        </div>
+        <div class="meta-info">
+          <span>Search/Filter: ${searchQuery.value ? searchQuery.value : 'All Records'}</span>
+          <span>Date: ${currentDate}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30px;">#</th>
+              <th>Bill No</th>
+              <th>Customer Name</th>
+              <th>NIC</th>
+              <th>Contact</th>
+              <th>Last Pay Date</th>
+              <th class="text-right">Balance (LKR)</th>
+              <th class="text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${accounts.value.map((row, index) => `
+              <tr>
+                <td class="text-center">${index + 1}</td>
+                <td>${row.newBillNumber || '-'}</td>
+                <td>${row.fullName}</td>
+                <td>${row.nic || '-'}</td>
+                <td>${row.contactInfo || '-'}</td>
+                <td class="text-center">${formatDate(row.lastPaidDate)}</td>
+                <td class="text-right">${formatCurrency(row.currentBalance).replace('LKR', '')}</td>
+                <td class="text-center">${row.status === 1 ? 'Active' : 'Inactive'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="footer-totals">
+              <td colspan="6" class="text-right">Total Outstanding Balance:</td>
+              <td class="text-right">${formatCurrency(totalBalance).replace('LKR', '')}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <div class="signature-section">
+          <div class="sig-box"><div class="sig-line"></div><p>Prepared By</p></div>
+          <div class="sig-box"><div class="sig-line"></div><p>Checked By</p></div>
+          <div class="sig-box"><div class="sig-line"></div><p>Authorized Officer</p></div>
+        </div>
+      </body>
+    </html>
+  `;
+  
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => { printWindow.print(); }, 500);
+};
 </script>
 
 <template>
@@ -154,10 +251,12 @@ const navigateToHistory = (accountId) => {
       </div>
     </div>
 
+    <button @click="printReport" class="print-btn">🖨️ Print Report</button>
+
     <div v-if="isFilterDialogOpen" class="modal-overlay">
       <div class="modal-content">
         <h4>Filter Accounts</h4>
-         <div class="filter-section">
+          <div class="filter-section">
           <h5>Account Status</h5>
           <div class="checkbox-list">
             <label class="checkbox-item"><input type="checkbox" value="Active" v-model="activeFilters.status"> Active</label>
@@ -175,267 +274,292 @@ const navigateToHistory = (accountId) => {
 </template>
 
 <style scoped>
-/* Copied styles, cleaned up to remove history modal specific CSS */
 .page-container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-    font-family: sans-serif;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: sans-serif;
 }
 
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
 }
 
 .back-link {
-    color: #42b883;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px;
+  color: #42b883;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 14px;
 }
 
 .card {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .controls-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    gap: 15px;
-    flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 15px;
+  flex-wrap: wrap;
 }
 
 .search-wrapper {
-    position: relative;
-    flex: 1;
-    min-width: 200px;
+  position: relative;
+  flex: 1;
+  min-width: 200px;
 }
 
 .search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
-    color: #888;
-    pointer-events: none;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #888;
+  pointer-events: none;
 }
 
 .search-input {
-    width: 100%;
-    padding: 10px 10px 10px 30px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px;
-    box-sizing: border-box;
+  width: 100%;
+  padding: 10px 10px 10px 30px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
 }
 
 .sort-select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px;
-    background-color: white;
-    cursor: pointer;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: white;
+  cursor: pointer;
 }
 
 .filter-btn {
-    background-color: #2c3e50;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 13px;
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
 }
 
 .table-responsive {
-    overflow-x: auto;
+  overflow-x: auto;
 }
 
 .accounts-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    min-width: 800px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 800px;
 }
 
 .accounts-table th,
 .accounts-table td {
-    text-align: left;
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    color: #2c3e50;
-    vertical-align: top;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  color: #2c3e50;
+  vertical-align: top;
 }
 
 .accounts-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    white-space: nowrap;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .accounts-table tr:hover {
-    background-color: #f9f9f9;
+  background-color: #f9f9f9;
 }
 
 .clickable-row {
-    cursor: pointer;
-    transition: background-color 0.2s;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .action-btn {
-    background: transparent;
-    border: 1px solid #42b883;
-    color: #42b883;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
+  background: transparent;
+  border: 1px solid #42b883;
+  color: #42b883;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
 }
 
 .action-btn:hover {
-    background: #42b883;
-    color: white;
+  background: #42b883;
+  color: white;
 }
 
 .status-active {
-    color: #27ae60;
-    font-weight: bold;
-    background-color: #eafaf1;
-    padding: 4px 8px;
-    border-radius: 4px;
+  color: #27ae60;
+  font-weight: bold;
+  background-color: #eafaf1;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .status-inactive {
-    color: #c0392b;
-    font-weight: bold;
-    background-color: #fdedec;
-    padding: 4px 8px;
-    border-radius: 4px;
+  color: #c0392b;
+  font-weight: bold;
+  background-color: #fdedec;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .new-bill {
-    font-weight: bold;
-    color: #2c3e50;
+  font-weight: bold;
+  color: #2c3e50;
 }
 
 .old-bill {
-    color: #666;
-    font-style: italic;
+  color: #666;
+  font-style: italic;
 }
 
 .loading-state {
-    text-align: center;
-    padding: 20px;
-    font-size: 14px;
-    color: #42b883;
-    font-weight: bold;
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+  color: #42b883;
+  font-weight: bold;
 }
 
 .text-green {
-    color: #27ae60;
-    font-weight: bold;
+  color: #27ae60;
+  font-weight: bold;
 }
 
 .text-red {
-    color: #c0392b;
-    font-weight: bold;
+  color: #c0392b;
+  font-weight: bold;
 }
 
 /* Modal Styles (Only for Filter) */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
 .modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    max-width: 30%;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 30%;
 }
 
 .modal-content h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #2c3e50;
-    border-bottom: 2px solid #42b883;
-    display: inline-block;
-    padding-bottom: 5px;
-    font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  border-bottom: 2px solid #42b883;
+  display: inline-block;
+  padding-bottom: 5px;
+  font-size: 16px;
 }
 
 .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
 }
 
 .modal-btn {
-    padding: 8px 16px;
-    border: 1px solid #ccc;
-    background: white;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: bold;
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
 }
 
 .modal-btn.primary {
-    background: #42b883;
-    color: white;
-    border-color: #42b883;
+  background: #42b883;
+  color: white;
+  border-color: #42b883;
 }
 
 .checkbox-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #2c3e50;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2c3e50;
+  cursor: pointer;
 }
 
 .filter-section {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 .filter-section h5 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    color: #2c3e50;
-    text-transform: uppercase;
-    font-weight: bold;
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #2c3e50;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+/* ✅ Print Button Styles */
+.print-btn {
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  
+  /* Centering Logic */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 30px auto; /* Centers the button horizontally */
+  width: fit-content;
+  
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.print-btn:hover {
+  background-color: #1a252f;
+  transform: translateY(-2px);
 }
 </style>

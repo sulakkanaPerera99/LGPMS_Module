@@ -10,9 +10,12 @@
     </div>
 
     <div v-else-if="accountDetails" class="bill-content">
-      <h2 class="mb-4">Account Payment (FIFO)</h2>
+      <div class="page-header">
+        <h2>Account Payment (FIFO)</h2>
+        <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
+      </div>
       
-      <div class="card mb-4">
+      <div class="card mb-4 mt-4">
         <div class="card-header bg-primary text-white">Customer Account Details</div>
         <div class="card-body">
           <div class="row">
@@ -177,4 +180,31 @@ export default {
 .payment-interface { max-width: 900px; margin: 20px auto; padding: 20px; }
 .loading-state, .error-state { text-align: center; padding: 50px; }
 .card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* ✅ NEW STYLES FROM REFERENCE */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
+}
+
+.page-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 24px;
+}
+
+.back-link {
+    color: #42b883;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px; 
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
 </style>
