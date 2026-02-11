@@ -18,8 +18,7 @@ import paymentRoutes from './routes/water_billing_system/paymentRoutes.js';
 import paymentHistoryRoutes from './routes/water_billing_system/paymentHistoryRoutes.js';
 import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes.js';
 import eachCustomerPaymentHistoryRoutes from './routes/water_billing_system/EachCustomerpaymentHistoryRoutes.js';
-
-// *** 1. නිවැරදි කළ Import Path එක ***
+import waterProgressRoutes from './routes/water_billing_system/meterReadingsProgressRoute.js';
 import waterBillRoutes from "./routes/water_billing_system/BillTemplateRoutes.js"; 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +55,7 @@ app.use('/api', paymentRoutes);
 app.use('/api', paymentHistoryRoutes);
 app.use('/api/reports', waterBillingReportRoutes);
 app.use('/api', eachCustomerPaymentHistoryRoutes);
+app.use('/api', waterProgressRoutes);
 
 app.get('/api/getserverdate', (req, res) => {
   const serverDate = new Date();

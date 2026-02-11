@@ -20,6 +20,10 @@ export default function Layout() {
           headerTitleStyle: { fontWeight: 'bold' },
         }} 
       />
+
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
+    
   );
 }
+

@@ -92,6 +92,7 @@
 
 <script>
 import axios from 'axios';
+import Swal from 'sweetalert2'; // ✅ SweetAlert2 Import කරන්න
 
 export default {
   name: 'PaymentInterface',
@@ -105,7 +106,7 @@ export default {
     };
   },
   async mounted() {
-    // We expect 'accountId' from the router
+    // URL එකෙන් accountId එක ගන්නවා
     const accountId = this.$route.params.accountId;
     if (accountId) {
       await this.fetchAccountDetails(accountId);
@@ -119,12 +120,13 @@ export default {
       try {
         this.loading = true;
         this.error = null;
-        // Make sure to update your Router to point to the new controller function
+        
+        // Backend URL එක ඔබේ Port එකට ගැලපෙන විදියට තියෙන්න ඕන
         const response = await axios.get(`http://localhost:3000/api/water-account-payment-details/${accountId}`);
         
         if (response.data.success) {
           this.accountDetails = response.data.data;
-          // Default to paying the full outstanding amount
+          // Default Payment එක විදියට Outstanding එක දානවා
           this.paymentAmount = this.accountDetails.totalOutstanding > 0 ? this.accountDetails.totalOutstanding : 0;
         } else {
           this.error = response.data.message;
@@ -143,31 +145,82 @@ export default {
     formatCurrency(value) {
         return parseFloat(value || 0).toFixed(2);
     },
+
+    // ✅ යාවත්කාලීන කළ Payment Function එක
     async proceedToPayment() {
+        // 1. Validation
         if (this.paymentAmount <= 0) {
-          alert("Please enter a valid amount.");
-          return;
+            Swal.fire('Invalid Amount', 'Please enter a valid payment amount.', 'warning');
+            return;
         }
 
-        if(!confirm(`Confirm payment of LKR ${this.formatCurrency(this.paymentAmount)}?`)) return;
+        // 2. Confirmation (SweetAlert2)
+        const result = await Swal.fire({
+            title: 'Confirm Payment?',
+            text: `Are you sure you want to process a payment of LKR ${this.formatCurrency(this.paymentAmount)}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#42b883',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, Process it!'
+        });
+
+        if (!result.isConfirmed) return;
 
         this.isProcessing = true;
+
         try {
+            // 3. Session එකෙන් Officer NIC එක ගැනීම (Frontend Logic)
+            const userDataString = sessionStorage.getItem('userData');
+            let sub_nic = "UNKNOWN";
+            
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                // Session එකේ NIC එක තියෙන නම අනුව මෙය වෙනස් වෙන්න පුළුවන් (nic, emp_nic, id)
+                sub_nic = userData.nic || userData.emp_nic || userData.id || "UNKNOWN";
+            }
+
+            // 4. Payload එක සකස් කිරීම
             const payload = {
                 account_id: this.accountDetails.accountId,
-                payment_amount: this.paymentAmount
+                payment_amount: this.paymentAmount,
+                sub_nic: sub_nic, // Officer NIC
+                paymonth: new Date().toISOString().slice(0, 7) // (Optional) Current Month
             };
 
+            // 5. Backend Call
             const response = await axios.post('http://localhost:3000/api/payments/process', payload);
 
             if (response.data.success) {
-                alert("Payment Successful!");
+                // Success Alert
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Payment Recorded!',
+                    text: 'Payment details have been saved to the temporary invoice.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 this.$router.push('/officer-dashboard'); 
             } else {
-                alert("Payment Failed: " + response.data.message);
+                throw new Error(response.data.message || "Payment failed");
             }
+
         } catch (error) {
-            alert("Error: " + (error.response?.data?.message || "Payment failed."));
+            console.error("Payment Error:", error);
+            let errorMessage = "An error occurred while processing the payment.";
+            
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            // Error Alert
+            Swal.fire({
+                icon: 'error',
+                title: 'Payment Failed',
+                text: errorMessage
+            });
         } finally {
             this.isProcessing = false;
         }

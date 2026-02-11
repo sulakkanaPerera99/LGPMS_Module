@@ -31,6 +31,9 @@ export const getPaymentHistory = async (req, res) => {
                 paidAmount: row.paid_amount,
                 paidDate: row.paid_date,
                 previousDues: row.previous_dues,
+                previousReading: row.previous_reading, 
+                currentReading: row.current_reading,
+                unitsConsumed: row.units_consumed,
                 currentBalance: row.current_balance
             }));
 

@@ -9,16 +9,15 @@ import {
   ActivityIndicator, 
   Alert, 
   KeyboardAvoidingView, 
-  Platform 
+  Platform,
+  Dimensions // Screen height එක ගන්න
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-// ✅ ඔයාගේ IP එක මෙතනට දාන්න (Backend එකේ /api prefix එක තියෙනවා නම් අගට /api එකතු කරන්න)
-// Vue code එකේ axios.get('/hashpass/...') තිබුන නිසා මම හිතනවා /api නැතුව ඇති කියලා.
-// එහෙම නැත්නම්: 'http://10.10.35.59:3000/api' ලෙස වෙනස් කරන්න.
 const API_BASE_URL = 'http://10.10.35.59:3000/api'; 
+const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,37 +26,32 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // --- 1. NIC Padding Logic (Vue Code එකෙන් ගත්තේ) ---
+  // --- Logic කොටස (වෙනසක් නෑ) ---
   const addZero = (num) => {
     num = num.toString();
-    // Example: 971234567V -> 199712345670
     return '19' + num.slice(0, 5) + '0' + num.slice(5, -1);
   };
 
   const addZeroPadding = () => {
-    // Check old NIC format (9 digits + V/X)
     if (nic && nic.length === 10 && (nic.charAt(9).toUpperCase() === 'V' || nic.charAt(9).toUpperCase() === 'X')) {
        return addZero(nic);
     }
-    // දැනටමත් ඉලක්කම් 12 නම් හෝ වෙනත් නම් එලෙසම යවන්න
     return nic;
   };
 
-  // --- 2. Handle Login ---
   const handleLogin = async () => {
-    setErrorMsg(''); // Reset errors
+    setErrorMsg(''); 
 
-    // Validation
     if (!nic) {
-      setErrorMsg("Entering a NIC is required");
+      setErrorMsg("NIC is required");
       return;
     }
-    // Vue එකේ Validation: Length 12 නොවේ නම් සහ අගට V/X නැත්නම් Error
+    
     const isOldNic = nic.length === 10 && (nic.toUpperCase().endsWith('V') || nic.toUpperCase().endsWith('X'));
     const isNewNic = nic.length === 12 && !isNaN(nic);
 
     if (!isOldNic && !isNewNic) {
-      setErrorMsg("NIC must be valid");
+      setErrorMsg("Invalid NIC Format");
       return;
     }
 
@@ -69,31 +63,22 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // 1. NIC එක Format කරගැනීම (Vue Logic: addZeroPadding)
       const formattedNic = addZeroPadding();
-      
       console.log(`Checking User: ${formattedNic}`);
 
-      // 2. API Call (Vue එකේ විදියටම)
       const response = await axios.get(`${API_BASE_URL}/hashpass/${formattedNic}/${password}`);
       const matchUser = response.data;
 
-      // 3. Response Check
       if (matchUser === 'error') {
-        setErrorMsg("Incorrect password!");
+        setErrorMsg("Incorrect Password!");
       } else if (matchUser === 'not') {
         setErrorMsg("User not Found!");
       } else {
-        // User Found
-        
-        // 4. Status Check
         if (matchUser.emp_status == 0) {
-          setErrorMsg("You are inactive");
+          setErrorMsg("Account is Inactive");
         } else {
-          // 5. User Level Check (Level 5 or 7)
           if (matchUser.user_level == 10 || matchUser.user_level == 5) {
             
-            // --- Save Data (Vue: sessionStorage -> React Native: AsyncStorage) ---
             const userData = {
               nic: matchUser.emp_nic,
               sabha: matchUser.emp_prs_code,
@@ -103,7 +88,6 @@ export default function LoginScreen() {
             };
             await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
-            // --- Fetch Property Data (Optional) ---
             if (matchUser.emp_pro_code) {
                try {
                  const proRes = await axios.get(`${API_BASE_URL}/probyid/${matchUser.emp_pro_code}`);
@@ -119,21 +103,18 @@ export default function LoginScreen() {
                }
             }
 
-            // --- Redirect ---
-            // Vue එකේ Dashboard දෙකක් තිබුනට, Mobile App එකේ දැනට අපි හදලා තියෙන්නේ Reading Page එක විතරයි.
-            // ඒ නිසා කවුරු ආවත් Reading Page එකට යවමු.
-            Alert.alert("Success", `Welcome ${matchUser.emp_name}!`);
-            router.replace('/reading'); 
+            Alert.alert("Success", `Welcome Back, ${matchUser.emp_name}!`);
+            router.replace('/(tabs)/progress'); 
 
           } else {
-            setErrorMsg("Access Denied. Only Officers can use this App.");
+            setErrorMsg("Access Denied: Officers Only.");
           }
         }
       }
 
     } catch (error) {
       console.error("Login API Error:", error);
-      setErrorMsg("Connection Failed. Check IP or Internet.");
+      setErrorMsg("Connection Error. Please check your internet.");
     } finally {
       setLoading(false);
     }
@@ -141,19 +122,24 @@ export default function LoginScreen() {
 
   return (
     <ImageBackground 
-      // ඔයාගේ Vue App එකේ තිබුන Background Image එකට සමාන පින්තූරයක්
-      source={{ uri: 'https://i.imgur.com/6X1Q6vN.jpeg' }} 
+      source={require('../assets/images/meter reading.png')} 
       style={styles.backgroundImage}
+      imageStyle={{ opacity: 0.8 }} // Image එක ටිකක් Dark කරලා පෙන්නන්න (optional)
     >
+      {/* Dark Overlay for better contrast */}
+      <View style={styles.overlay} />
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <View style={styles.loginBox}>
-          {/* Heading Section */}
+          
+          {/* Header Section */}
           <View style={styles.heading}>
-            <Text style={styles.mainTitle}>Local Government Payment Management System</Text>
-            <Text style={styles.subTitle}>LGPMS LOGIN</Text>
+            <Text style={styles.mainTitle}>Water Meter Readings</Text>
+            <Text style={styles.subTitle}>LGPMS System</Text>
+            <View style={styles.separator} />
           </View>
 
           {/* Error Message */}
@@ -164,34 +150,50 @@ export default function LoginScreen() {
           ) : null}
 
           {/* Input Fields */}
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your NIC"
-            placeholderTextColor="#666"
-            value={nic}
-            onChangeText={setNic}
-            autoCapitalize="characters" // V/X සඳහා Capital කිරීම
-          />
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>NIC Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 971234567V"
+              placeholderTextColor="#999"
+              value={nic}
+              onChangeText={setNic}
+              autoCapitalize="characters"
+            />
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#666"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
 
           {/* Login Button */}
-          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleLogin} 
+            activeOpacity={0.8}
+            disabled={loading}
+          >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.buttonText}>LOGIN NOW</Text>
+              <Text style={styles.buttonText}>Login</Text>
             )}
           </TouchableOpacity>
+
         </View>
+        
+        {/* Footer Text */}
+        <Text style={styles.footerText}>© Local Government Department</Text>
+
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -202,80 +204,126 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
-    justifyContent: "center",
-    alignItems: 'center'
+    resizeMode: 'cover',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Image එක උඩින් පොඩි කළු පාට Layer එකක් (Text කියවන්න ලේසි වෙන්න)
   },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    padding: 20,
   },
   loginBox: {
-    width: '85%',
-    maxWidth: 400,
-    backgroundColor: 'rgba(255, 249, 250, 0.9)', // #fff9faa8 (Vue style)
-    padding: 25,
-    borderRadius: 5, // Vue එකේ border-radius පොඩියි
+    width: '100%',
+    maxWidth: 380,
+    // ✅ Glassmorphism Effect: Transparency වැඩි කළා
+    backgroundColor: 'rgba(255, 255, 255,0.6)', 
+    paddingVertical: 40,
+    paddingHorizontal: 30,
+    // ✅ Corners රවුම් කළා
+    borderRadius: 25, 
+    // ✅ Shadow (3D Look)
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.2)'
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10, // Android Shadow
   },
   heading: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   mainTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#58071b', // Vue Primary Color
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#58071b', 
     textAlign: 'center',
-    marginBottom: 5,
+    letterSpacing: 1,
   },
   subTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#58071b',
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 5,
     textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  separator: {
+    height: 3,
+    width: 40,
+    backgroundColor: '#58071b',
+    marginTop: 15,
+    borderRadius: 2,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: '600',
+    marginLeft: 5,
   },
   input: {
-    backgroundColor: '#f7f7f7', // Vue Input Background
-    padding: 15,
-    borderRadius: 0, // Vue එකේ input border-radius නෑ වගේ
-    marginBottom: 15,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    // ✅ Input Fields රවුම් කළා
+    borderRadius: 15, 
     fontSize: 16,
-    color: '#130f40',
-    borderWidth: 0,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    // Input shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   button: {
-    backgroundColor: '#58071b', // Vue Button Color
-    padding: 15,
-    borderRadius: 0,
+    backgroundColor: '#58071b',
+    paddingVertical: 18,
+    // ✅ Button එක රවුම් කළා
+    borderRadius: 15, 
     alignItems: 'center',
-    marginTop: 10
+    marginTop: 20,
+    // Button Shadow
+    shadowColor: "#58071b",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
-    textTransform: 'uppercase' // lowercase "login now" -> "LOGIN NOW"
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   errorBox: {
-    backgroundColor: '#fff9fa',
-    borderColor: 'rgba(255, 66, 79, .2)',
-    borderWidth: 2,
-    padding: 10,
-    marginBottom: 15,
-    borderRadius: 2
+    backgroundColor: '#ffebee',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef5350',
+    padding: 12,
+    marginBottom: 20,
+    borderRadius: 8,
   },
   errorText: {
-    color: 'rgb(182, 0, 0)',
+    color: '#c62828',
     fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center'
+  },
+  footerText: {
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 30,
+    fontSize: 12,
+    fontWeight: '500'
   }
 });

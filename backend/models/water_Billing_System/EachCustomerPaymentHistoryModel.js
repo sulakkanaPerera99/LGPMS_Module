@@ -13,7 +13,10 @@ export const getCustomerPaymentHistory = (accountId) => {
                 wb.total_amount, 
                 wb.paid_amount, 
                 wb.paid_date, 
-                wb.previous_dues
+                wb.previous_dues,
+                wb.previous_reading,
+                wb.current_reading,
+                wb.units_consumed
             FROM water_customer_accounts wca
             LEFT JOIN water_bills wb ON wca.id = wb.account_id
             WHERE wca.id = ?

@@ -1,4 +1,4 @@
-import db from '../../config/database.js';
+/*import db from '../../config/database.js';
 import * as paymentModel from '../../models/water_Billing_System/paymentModel.js';
 
 export const processPayment = async (req, res) => {
@@ -85,4 +85,90 @@ export const processPayment = async (req, res) => {
     } 
     // වැදගත්: මෙතන 'finally' බ්ලොක් එකක් දාලා connection.release() කරන්නේ නෑ.
     // මොකද මේක Single Connection එකක් නිසා දිගටම Open වෙලා තියෙන්න ඕනේ.
+};
+*/
+import db from '../../config/database.js';
+import * as paymentModel from '../../models/water_Billing_System/paymentModel.js';
+
+export const processPayment = async (req, res) => {
+    try {
+        // 1. Input Validation
+        const account_id = req.body.account_id || req.body.accountId;
+        let payment_amount = Number(req.body.payment_amount || req.body.paymentAmount);
+        
+        // ---------------------------------------------------------
+        // ✅ UPDATE: Officer NIC ලබා ගැනීම (Frontend Support + Security)
+        // ---------------------------------------------------------
+        
+        let sub_nic = null;
+
+        // ක්‍රමය 1: Middleware (req.user) හරහා බලනවා (වඩා ආරක්ෂිතයි)
+        if (req.user) {
+            sub_nic = req.user.nic || req.user.emp_nic || req.user.id;
+        }
+
+        // ක්‍රමය 2: Middleware නැත්නම්, Frontend එකෙන් එවපු 'sub_nic' එක ගන්නවා
+        // (ඔබේ Vue App එකේ payload එකේ sub_nic එවපු නිසා මෙය වැඩ කරයි)
+        if (!sub_nic && req.body.sub_nic) {
+            sub_nic = req.body.sub_nic;
+        }
+
+        // NIC එක කොහොමවත් හොයාගන්න බැරි නම් Error එකක් යවනවා
+        if (!sub_nic) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Officer NIC (sub_nic) is missing. Please login again or check the request." 
+            });
+        }
+
+        console.log("Using Officer NIC:", sub_nic);
+
+        // ---------------------------------------------------------
+
+        // Pay Month (බිල්පතේ මාසය)
+        const paymonth = req.body.paymonth || new Date().toISOString().slice(0, 7); // YYYY-MM format
+
+        if (!account_id || payment_amount <= 0) {
+            return res.status(400).json({ success: false, message: "Invalid Input: Account ID and positive Amount required." });
+        }
+
+        // 2. Customer Details ලබා ගැනීම (DB එකෙන්)
+        const customerDetails = await paymentModel.getCustomerDetails(account_id);
+
+        if (!customerDetails) {
+            return res.status(404).json({ success: false, message: "Customer not found for this Account ID." });
+        }
+
+        // 3. Data Object එක සකස් කිරීම
+        const invoiceData = {
+            sabha_code: customerDetails.sabha_code,
+            cus_nic: customerDetails.nic_number,
+            cus_name: customerDetails.full_name,
+            cus_contact: customerDetails.contact_no || "",
+            cus_address: customerDetails.address,
+            sb_rate_head: customerDetails.rate_head || "WATER", // Model එකේ subquery එකෙන් එන අගය
+            description: "Water Bill Payment",
+            amount: payment_amount,
+            stamp: 0,              
+            discount: 0,           
+            shoptotalarrears: 0,   
+            paymonth: paymonth,
+            vat: 0,                
+            shopdid: 0,            
+            sub_nic: sub_nic,      // ✅ දැන් මෙය Frontend හෝ Backend දෙකෙන් ඕනෑම එකකින් ලැබුණු අගයයි
+        };
+
+        // 4. Save to tempory_invoice table
+        await paymentModel.saveTemporaryInvoice(invoiceData);
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment details saved to temporary invoice successfully.",
+            data: invoiceData
+        });
+
+    } catch (error) {
+        console.error("Temporary Invoice Save Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to save invoice", error: error.message });
+    }
 };
