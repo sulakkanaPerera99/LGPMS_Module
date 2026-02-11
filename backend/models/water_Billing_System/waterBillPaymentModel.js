@@ -1,6 +1,6 @@
 import db from "../../config/database.js";
 
-// Fetch customers list (මේකේ ලොකු වෙනසක් නෑ, කලින් එකමයි)
+// Fetch customers list
 export const fetchCustomersModel = async (sabha_code, filters) => {
     let query = `
         SELECT 
@@ -14,11 +14,6 @@ export const fetchCustomersModel = async (sabha_code, filters) => {
             a.sabha_code = ? 
             AND a.status = 1
     `;
-    // ... (Filter logic remains the same as your previous file) ...
-    // For brevity, assuming the rest of filtering logic is copied here
-    
-    // Add sorting/filtering logic back from your original file here if needed
-    // or just use the basic query above for now.
     
     const [rows] = await db.promise().query(query, [sabha_code]);
     return rows;

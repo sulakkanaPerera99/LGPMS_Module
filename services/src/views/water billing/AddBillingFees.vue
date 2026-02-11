@@ -321,7 +321,7 @@ select:focus {
 /* ✅ 4. Style Change: Updated Grid to support 4 columns + button */
 .header-labels01 {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 50px; /* Changed from 3 columns to 4 */
+    grid-template-columns: 1fr 1fr 1fr 1fr 50px; 
     gap: 10px;
     font-size: 13px; 
     font-weight: bold;
@@ -349,13 +349,13 @@ select:focus {
 /* Main Slab Row Style */
 .dynamic-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr auto; /* Changed from 3 columns to 4 */
+    grid-template-columns: 1fr 1fr 1fr 1fr auto; 
     gap: 10px;
     margin-bottom: 8px;
     align-items: center;
 }
 
-/* Taxes and Discounts Row Style (Keep old style for these) */
+/* Taxes and Discounts Row Style*/
 .dynamic-row-other {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr auto;

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2'; // ✅ SweetAlert2 Import කළා
+import Swal from 'sweetalert2'; 
 
 // Projects State
 const projects = ref([]);

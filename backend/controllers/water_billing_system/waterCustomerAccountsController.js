@@ -18,7 +18,7 @@ export const registerCustomer = async (req, res) => {
             samurdhiNumber,
             isMetered,
             sabha_code,
-            sabhaCustomerId // Frontend එකෙන් එන ID එක (තියෙනවා නම්)
+            sabhaCustomerId // Frontend එකෙන් එන ID එක
         } = req.body;
 
         if (!sabha_code) {
@@ -30,11 +30,11 @@ export const registerCustomer = async (req, res) => {
 const sabhaSuffix = String(sabha_code).slice(-3);
 let projectPart = 'GEN'; // Project Code එකක් නැත්නම් Default අගයක්
 if (projectCode) {
-    // Project Code එක String එකක් බවට හරවා, Capital Akuru වලට හැරවීම (අවශ්‍ය නම්)
+    // Project Code එක String එකක් බවට හරවා, Capital Akuru වලට හැරවීම
     projectPart = String(projectCode).toUpperCase(); 
 }
 
-// 3. Account Type Code (Domestic/Commercial...)
+// 3. Account Type Code
 let accountTypeCode = '1'; 
 if (connectionType) {
     const type = connectionType.toLowerCase();
@@ -43,28 +43,26 @@ if (connectionType) {
     else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = 'I';
 }
 
-// 4. Samurdhi Status (S or N) - ✅ වෙනස් කරන ලදි
+// 4. Samurdhi Status (S or N) 
 const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
 const samurdhiCode = isSamurdhiBool ? 'S' : 'N'; // True නම් 'S', නැත්නම් 'N'
 
-// 5. Metered Status (M or N) - ✅ වෙනස් කරන ලදි
+// 5. Metered Status (M or N)
 const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
 const meteredCode = isMeteredBool ? 'M' : 'N'; // True නම් 'M', නැත්නම් 'N'
 
 // 6. Serial Number (Count + 1)
-// මේ function එක අනිවාර්යයෙන්ම තිබිය යුතුයි.
 const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
 const serialNum = String(customerCount + 1).padStart(3, '0'); // ඉලක්කම් 3කට හැදීම (උදා: 001)
 
 // --- Final Bill Number ---
-// Format: [Sabha][ProjectCode][Type][Samurdhi][Metered][Serial]
 const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
 
         // --- 2. ✅ Sabha Customer ID Setup Logic (New Part) ---
         let finalSabhaCustomerId = sabhaCustomerId;
 
-        // ID එකක් Frontend එකෙන් ආවේ නැත්නම්, අලුතෙන් Sabha Customer කෙනෙක් හදන්න ඕනේ
+        // ID එකක් Frontend එකෙන් ආවේ නැත්නම්, අලුතෙන් Sabha Customer කෙනෙක් හදන්න
         if (!finalSabhaCustomerId) {
             const newSabhaData = {
                 sabha_code: sabha_code,
@@ -74,7 +72,7 @@ const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiC
                 cus_contact: contactInfo
             };
 
-            // Model එකට යවලා Save කරනවා (Await කරන්න ඕනේ)
+            // Model එකට යවලා Save කරනවා
             const sabhaResult = await insertSabhaCustomer(newSabhaData);
             
             // අලුතෙන් ලැබුණ ID එක ගන්නවා
@@ -101,7 +99,6 @@ const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiC
             is_metered: isMeteredBool ? 1 : 0,
             sabha_code: sabha_code,
             status: 1,
-            // ✅ මෙතනට දාන්නේ අපි උඩදී තීරණය කරපු Final ID එක
             sabha_customer_id: finalSabhaCustomerId 
         };
 
@@ -173,28 +170,26 @@ export const editCustomerDetails = async (req, res) => {
     try {
         const { id } = req.params; 
         
-        // 1. Frontend එකෙන් එවන Data වලට 'status' එකතු කරගන්නවා
         const {
             fullName,
             nic,
             contactInfo,
             isSamurdhi,
             samurdhiNumber,
-            status // ✅ අලුතින් එකතු කළ කොටස
+            status
         } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Customer ID is required" });
         }
 
-        // 2. Database එකට යවන Object එකට 'status' එක දානවා
         const updateData = {
             full_name: fullName,
             nic: nic,
             contact_info: contactInfo,
             is_samurdhi: (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1) ? 1 : 0,
             samurdhi_number: samurdhiNumber,
-            status: status // ✅ DB Column එකේ නම 'status' නම් කෙලින්ම මෙහෙම දාන්න පුළුවන්
+            status: status 
         };
 
         // Model එකට යවන්න
@@ -228,7 +223,7 @@ export const checkSabhaCustomer = async (req, res) => {
                 data: customer 
             });
         } else {
-            // Data හමු වුනේ නෑ (නමුත් මෙය error එකක් නෙවෙයි)
+            // Data හමු වුනේ නෑ (මෙය error එකක් නෙවෙයි)
             return res.status(200).json({
                 success: false,
                 message: "No existing sabha customer found"

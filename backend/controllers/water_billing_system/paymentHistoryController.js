@@ -68,17 +68,7 @@ export const getAllCustomers = async (req, res) => {
         }
 
         // 4. Model එක Call කිරීම (දත්ත ලබා ගැනීම)
-        // **වැදගත්:** මෙය තිබිය යුත්තේ Response එක යවන්න කලින්.
         const customers = await getCustomersHistoryBySabha1(sabha_code, projectCode, filters);
-
-        // 5. Debugging (Console එකේ බලාගැනීමට)
-        if (customers.length > 0) {
-            console.log(`✅ Controller: ${customers.length} records found.`);
-            // පළමු රෙකෝඩ් එකේ sample එකක් print කරන්න
-            // console.log("Sample:", customers[0]); 
-        } else {
-            console.log("⚠️ Controller: No customers found.");
-        }
 
         // 6. සාර්ථක ප්‍රතිචාරය යැවීම
         return res.status(200).json(customers);

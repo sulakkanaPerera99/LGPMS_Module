@@ -102,18 +102,17 @@ export const processPayment = async (req, res) => {
         
         let sub_nic = null;
 
-        // ක්‍රමය 1: Middleware (req.user) හරහා බලනවා (වඩා ආරක්ෂිතයි)
+        // ක්‍රමය 1: Middleware (req.user) හරහා බලනවා
         if (req.user) {
             sub_nic = req.user.nic || req.user.emp_nic || req.user.id;
         }
 
         // ක්‍රමය 2: Middleware නැත්නම්, Frontend එකෙන් එවපු 'sub_nic' එක ගන්නවා
-        // (ඔබේ Vue App එකේ payload එකේ sub_nic එවපු නිසා මෙය වැඩ කරයි)
         if (!sub_nic && req.body.sub_nic) {
             sub_nic = req.body.sub_nic;
         }
 
-        // NIC එක කොහොමවත් හොයාගන්න බැරි නම් Error එකක් යවනවා
+        // NIC එක හොයාගන්න බැරි නම් Error එකක් යවනවා
         if (!sub_nic) {
             return res.status(400).json({ 
                 success: false, 
@@ -125,14 +124,14 @@ export const processPayment = async (req, res) => {
 
         // ---------------------------------------------------------
 
-        // Pay Month (බිල්පතේ මාසය)
+        // Pay Month
         const paymonth = req.body.paymonth || new Date().toISOString().slice(0, 7); // YYYY-MM format
 
         if (!account_id || payment_amount <= 0) {
             return res.status(400).json({ success: false, message: "Invalid Input: Account ID and positive Amount required." });
         }
 
-        // 2. Customer Details ලබා ගැනීම (DB එකෙන්)
+        // 2. Customer Details ලබා ගැනීම
         const customerDetails = await paymentModel.getCustomerDetails(account_id);
 
         if (!customerDetails) {
@@ -155,7 +154,7 @@ export const processPayment = async (req, res) => {
             paymonth: paymonth,
             vat: 0,                
             shopdid: 0,            
-            sub_nic: sub_nic,      // ✅ දැන් මෙය Frontend හෝ Backend දෙකෙන් ඕනෑම එකකින් ලැබුණු අගයයි
+            sub_nic: sub_nic,      
         };
 
         // 4. Save to tempory_invoice table

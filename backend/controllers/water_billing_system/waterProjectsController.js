@@ -48,7 +48,7 @@ export const addWaterProject = (req, res) => {
     };
 
     insertProject(projectData, (err, results) => {
-        // ✅ NEW ERROR HANDLING
+        //ERROR HANDLING
         if (err) return handleDatabaseError(err, res);
         
         return res.status(201).json({
@@ -59,7 +59,7 @@ export const addWaterProject = (req, res) => {
     });
 };
 
-// --- Get All Projects (No changes needed) ---
+// --- Get All Projects
 export const getSabhaProjects = (req, res) => {
     const sabha_code = req.params.sabha_code;
     const { search, sort } = req.query;
@@ -72,7 +72,7 @@ export const getSabhaProjects = (req, res) => {
     });
 };
 
-// --- Get Project List (No changes needed) ---
+// --- Get Project List
 export const getProjectList = (req, res) => {
     const sabha_code = req.params.sabha_code;
     if (!sabha_code) return res.status(400).json({ message: "Sabha Code is missing" });
@@ -100,7 +100,7 @@ export const editWaterProject = (req, res) => {
     };
 
     updateProjectModel(id, updateData, (err, results) => {
-        // ✅ NEW ERROR HANDLING
+        //ERROR HANDLING
         if (err) return handleDatabaseError(err, res);
 
         if (results.affectedRows === 0) {

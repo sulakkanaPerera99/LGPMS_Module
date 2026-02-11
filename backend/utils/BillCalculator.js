@@ -106,7 +106,6 @@ export const calculateBill = async (connection, data, previousDues = 0) => {
     const config = configs[0];
 
     // C. Parsing JSON Data
-    // DB එකේ JSON string එකක් විදියට තිබුනොත් parse කරනවා, නැත්නම් කෙලින්ම ගන්නවා
     const unitRanges = typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : config.unit_ranges;
     
     const otherChargesList = typeof config.other_charges === 'string' 

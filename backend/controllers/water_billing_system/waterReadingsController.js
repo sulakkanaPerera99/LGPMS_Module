@@ -203,7 +203,7 @@ export const saveBatchReadingsController = async (req, res) => {
 
         await dbPromise.commit();
         
-        // ✅ FIX: added 'data: { insertedCount }' back
+        // FIX: added 'data: { insertedCount }' back
         res.json({ 
             status: 'success', 
             message: `Successfully saved ${processedCount} readings/bills.`,

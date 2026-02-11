@@ -1,7 +1,6 @@
 // routes/water_billing_system/billingFeesRoute.js
 
 import express from 'express';
-// Controller එක import කරන විට අගට .js දැමීම අනිවාර්යයි
 import * as billingFeesController from '../../controllers/water_billing_system/billingFeesController.js';
 
 const router = express.Router();

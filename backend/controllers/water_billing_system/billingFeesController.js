@@ -114,7 +114,7 @@ export const updateConfig = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Missing required fields' });
         }
 
-        // Model එකට යැවීම (දැන් මෙය අලුත් පේළියක් සාදයි)
+        // Model එකට යැවීම
         await BillingFeesModel.updateBillingConfig(id, {
             projectCode,
             connectionType,

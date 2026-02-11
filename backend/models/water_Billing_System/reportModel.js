@@ -38,7 +38,7 @@ export const getProjectCollectionReportModel = (sabhaCode, callback) => {
 
     db.query(query, [sabhaCode], (err, results) => {
         if (err) {
-            console.error("SQL Error in Report Model:", err); // Error එක Terminal එකේ පෙන්වයි
+            console.error("SQL Error in Report Model:", err);
             return callback(err, null);
         }
         return callback(null, results);

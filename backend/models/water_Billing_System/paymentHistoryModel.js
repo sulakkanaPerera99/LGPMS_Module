@@ -18,7 +18,7 @@ export const getCustomersHistoryBySabha1 = (sabhaCode, projectCode, filters = {}
                 wca.status AS status,
                 wca.current_balance AS currentBalance,
 
-                -- ✅ FIX 2: Last Paid Date
+               
                 (
                     SELECT paid_date 
                     FROM water_bills wb 
@@ -27,7 +27,7 @@ export const getCustomersHistoryBySabha1 = (sabhaCode, projectCode, filters = {}
                     LIMIT 1
                 ) AS lastPaidDate,
 
-                -- ✅ FIX 3: Last Paid Amount (Fixed syntax error here)
+                
                 COALESCE((
                     SELECT paid_amount 
                     FROM water_bills wb 

@@ -16,12 +16,12 @@ export const insertBillingConfig = (data) => {
             data.projectCode || 'General Config',
             data.connectionType,
             data.isMetered ? 1 : 0,
-            data.isSamurdhi ? 1 : 0,        // <--- NEW: Boolean -> TINYINT
+            data.isSamurdhi ? 1 : 0,        // <--- Boolean -> TINYINT
             data.fixedRate,
             JSON.stringify(data.unitRanges || []),
             JSON.stringify(data.otherCharges || []),
-            JSON.stringify(data.discounts || []), // <--- NEW: Array -> JSON String
-            1,                              // <--- NEW: Default Status is 1 (Active)
+            JSON.stringify(data.discounts || []), // <--- Array -> JSON String
+            1,                              // <--- Default Status is 1 (Active)
             data.sabha_code
         ];
 
@@ -51,7 +51,7 @@ export const getBillingConfigs = (sabha_code, search, sort) => {
         }
 
         // 3. Dynamic Sorting Logic (Whitelist Approach)
-        // We use a switch statement to prevent SQL injection via ORDER BY
+        //use a switch statement to prevent SQL injection via ORDER BY
         if (sort) {
             switch (sort) {
                 case 'code_asc':
@@ -88,7 +88,7 @@ export const updateBillingConfig = (oldId, data, userNic) => {
         db.beginTransaction((err) => {
             if (err) return reject(err);
 
-            // පියවර 1: පරණ Record එක Deactivate කිරීම (Expire කිරීම)
+            // පියවර 1: පරණ Record එක Deactivate කිරීම
             const deactivateQuery = `
                 UPDATE water_billing_configurations 
                 SET 
@@ -102,7 +102,7 @@ export const updateBillingConfig = (oldId, data, userNic) => {
                     return db.rollback(() => reject(err));
                 }
 
-                // පියවර 2: අලුත් මිල ගණන් අලුත් පේළියක් ලෙස ඇතුලත් කිරීම (New Version)
+                // පියවර 2: අලුත් මිල ගණන් අලුත් පේළියක් ලෙස ඇතුලත් කිරීම
                 const insertQuery = `
                     INSERT INTO water_billing_configurations 
                     (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 

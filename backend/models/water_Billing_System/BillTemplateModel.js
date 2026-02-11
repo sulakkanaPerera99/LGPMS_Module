@@ -1,6 +1,6 @@
 import db from "../../config/database.js";
 
-// 1. Get Specific Bill Details (For the Template) - (Existing Logic Improved)
+// 1. Get Specific Bill Details (For the Template)
 export const getBillById = (billId) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -31,7 +31,6 @@ export const getBillById = (billId) => {
                 wb.total_amount,
                 wb.payment_status,
 
-                -- ✅ ADDED: Pradeshiya Sabha Details (From pra_sabha table)
                 ps.sb_name_en,
                 ps.sb_address,
                 ps.sb_contact,
@@ -42,7 +41,7 @@ export const getBillById = (billId) => {
             LEFT JOIN water_customer_accounts wa ON wb.account_id = wa.id
             LEFT JOIN water_customer_history ch ON wb.customer_history_id = ch.id
             
-            -- ✅ ADDED: Join with pra_sabha table using sabha_code
+            
             LEFT JOIN pra_sabha ps ON wb.sabha_code = ps.sb_code
             
             WHERE wb.id = ? 

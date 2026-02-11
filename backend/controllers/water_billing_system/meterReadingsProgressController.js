@@ -29,7 +29,7 @@ export const getProjectProgressController = async (req, res) => {
             };
         });
 
-        // 4. Sorting Logic (ඔබ ඉල්ලූ පරිදි Progress හෝ Users අනුව පෙළගැස්වීම)
+        // 4. Sorting Logic
         // sort_by = 'progress' හෝ 'users'
         // order = 'asc' (ආරෝහණ) හෝ 'desc' (අවරෝහණ)
         if (sort_by) {

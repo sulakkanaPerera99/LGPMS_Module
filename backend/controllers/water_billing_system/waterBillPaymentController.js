@@ -2,8 +2,7 @@ import { fetchCustomersModel, fetchProjectsModel, fetchAccountPaymentDetails } f
 
 // List customers (Existing logic)
 export const getWaterCustomers = async (req, res) => {
-    // ... (Use your existing filtering logic here) ...
-    // For simplicity:
+
     try {
         const { sabha_code } = req.params;
         const customers = await fetchCustomersModel(sabha_code, req.query); // Pass query params for filtering
@@ -13,10 +12,10 @@ export const getWaterCustomers = async (req, res) => {
     }
 };
 
-// ✅ NEW: Get Details for Payment Page (By Account ID)
+// Get Details for Payment Page (By Account ID)
 export const getAccountDetailsForPayment = async (req, res) => {
     try {
-        const { account_id } = req.params; // We use Account ID now, not Bill ID
+        const { account_id } = req.params; // use Account ID 
 
         if (!account_id) {
             return res.status(400).json({ success: false, message: "Account ID is required" });
@@ -47,7 +46,6 @@ export const getAccountDetailsForPayment = async (req, res) => {
 };
 
 export const getProjectList = async (req, res) => {
-    // ... (Same as before) ...
     try {
         const projects = await fetchProjectsModel(req.params.sabha_code);
         return res.status(200).json(projects);

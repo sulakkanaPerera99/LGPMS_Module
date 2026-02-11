@@ -51,9 +51,6 @@ export const logTransaction = async (connection, accountId, amount, type = 'PAYM
 import db from '../../config/database.js';
 
 // 1. Get Customer Details by Account ID
-// tempory_invoice එක පුරවන්න ඕන කරන විස්තර ටික මෙතනින් ගන්නවා.
-// ඔයාගේ customer table එකේ column names (nic_number, full_name etc.) හරියටම බලලා වෙනස් කරගන්න.
-// 1. Get Customer Details by Account ID
 export const getCustomerDetails = async (accountId) => {
     const query = `
         SELECT 

@@ -7,7 +7,7 @@ export const insertProject = (data, callback) => {
 };
 
 export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
-    // ✅ 1. p.status මෙතනට එකතු කළා
+    
     let query = `SELECT p.id, p.sabha_code, p.name, p.code, p.number, p.status, COUNT(c.id) as registered_users FROM water_projects p LEFT JOIN water_customer_accounts c ON c.project_code = p.code AND c.sabha_code = p.sabha_code WHERE p.sabha_code = ?`;
     const queryParams = [sabhaCode];
 
@@ -16,7 +16,7 @@ export const getProjectsBySabha = (sabhaCode, search, sort, callback) => {
         queryParams.push(`%${search}%`, `%${search}%`);
     }
 
-    // ✅ 2. p.status මෙතනටත් (GROUP BY) එකතු කළා
+    
     query += ' GROUP BY p.id, p.sabha_code, p.name, p.code, p.number, p.status';
 
     if (sort) {
@@ -61,15 +61,14 @@ export const getProjectNumberByCode = (projectCode, sabhaCode) => {
 };
 
 export const updateProjectModel = (id, data, callback) => {
-    // ✅ updated_at = NOW() කියන කොටස අලුතින් එකතු කළා.
-    // එවිට update වෙන වෙලාව ස්වයංක්‍රීයව save වෙනවා.
+   
     const query = `
         UPDATE water_projects 
         SET name = ?, code = ?, number = ?, status = ?, updated_by = ?, updated_at = NOW() 
         WHERE id = ?
     `;
 
-    // Parameters (data.updated_by එකට පස්සේ id එක එන්න ඕන)
+   
     db.query(
         query, 
         [data.name, data.code, data.number, data.status, data.updated_by, id], 

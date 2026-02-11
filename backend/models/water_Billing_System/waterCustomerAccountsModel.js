@@ -1,6 +1,6 @@
 import db from '../../config/database.js';
 
-// 1. Get Customer Count (No Change)
+// 1. Get Customer Count
 export const getCustomerCountBySabhaAndProject = (sabhaCode, projectCode) => {
     return new Promise((resolve, reject) => {
         const query = 'SELECT COUNT(*) as count FROM water_customer_accounts WHERE sabha_code = ? AND project_code = ?';
@@ -70,7 +70,7 @@ export const insertCustomer = (data) => {
 };
 
 export const insertSabhaCustomer = (data) => {
-    return new Promise((resolve, reject) => { // ✅ Promise එකක් Return කරන්න ඕනේ
+    return new Promise((resolve, reject) => { 
         const query = `
             INSERT INTO sbha_cutomers 
             (sabha_code, cus_nic, cus_name, cus_address, cus_contact, cus_date) 
@@ -89,7 +89,7 @@ export const insertSabhaCustomer = (data) => {
             if (err) {
                 return reject(err); // Error ආවොත් Reject කරනවා
             }
-            resolve(result); // ✅ Result එක (insertId එක්ක) Controller එකට යවනවා
+            resolve(result); // Result එක (insertId එක්ක) Controller එකට යවනවා
         });
     });
 };
@@ -198,7 +198,6 @@ export const updateCustomer = (customerId, data) => {
                 const newNIC = data.nic;
 
                 // 2. Main Account Table එක Update කරන්න (නම, NIC, Contact, Samurdhi, Status)
-                // ✅ 'status' තීරුව update query එකට එකතු කළා
                 const updateAccountQuery = 'UPDATE water_customer_accounts SET ? WHERE id = ?';
                 
                 db.query(updateAccountQuery, [data, customerId], (err, result) => {
@@ -206,7 +205,7 @@ export const updateCustomer = (customerId, data) => {
                         return db.rollback(() => reject(err));
                     }
 
-                    // --- තීරණාත්මක මොහොත (Decision Logic) ---
+                    // --- (Decision Logic) ---
                     
                     if (currentNIC === newNIC) {
                         // SCENARIO 1: NIC එක සමානයි (Correction / Status Update Only)
@@ -284,7 +283,7 @@ export const getSabhaCustomerByNIC = (nic) => {
         `;
         db.query(query, [nic], (err, results) => {
             if (err) return reject(err);
-            resolve(results[0]); // පලමු result එක හෝ undefined යවන්න
+            resolve(results[0]); // පලමු result එක හෝ undefined
         });
     });
 };

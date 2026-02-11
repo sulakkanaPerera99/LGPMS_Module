@@ -1,7 +1,7 @@
 import { getProjectCollectionReportModel } from '../../models/water_Billing_System/reportModel.js';
 
 export const getProjectCollectionReport = (req, res) => {
-    // URL එකෙන් sabha_code එක ගන්නවා
+    
     const { sabha_code } = req.params;
 
     if (!sabha_code) {
@@ -32,7 +32,7 @@ export const getProjectCollectionReport = (req, res) => {
                 total_amount_to_collect: total,
                 collected_amount: collected,
                 due_amount: due,
-                percentage: percentage.toFixed(2) // දශම ස්ථාන 2ක් පමණි
+                percentage: percentage.toFixed(2)
             };
         });
 

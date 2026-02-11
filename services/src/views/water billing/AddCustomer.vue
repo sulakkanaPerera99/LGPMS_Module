@@ -81,7 +81,7 @@ watch(() => form.nic, async (rawNic) => {
 
 const fetchSabhaCustomerDetails = async (nicForCheck) => {
     try {
-        // මෙතන යන්නේ අර Convert වුනු (12 digits) NIC එක
+        // මෙතන යන්නේ Convert වුනු (12 digits) NIC එක
         const response = await axios.get(`/check-sabha-customer/${nicForCheck}`);
         
         if (response.data.success && response.data.data) {
@@ -284,7 +284,7 @@ const submitForm = async () => {
     color: #42b883;
     text-decoration: none;
     font-weight: bold;
-    font-size: 14px; /* Increased from 10px */
+    font-size: 14px; 
 }
 
 .card {
@@ -302,7 +302,7 @@ h4 {
     display: inline-block;
     padding-bottom: 5px;
     margin-bottom: 20px;
-    font-size: 16px; /* Increased from 14px */
+    font-size: 16px; 
 }
 
 /* --- Form Layout --- */
@@ -348,16 +348,16 @@ h4 {
 label {
     font-weight: 600;
     color: #2c3e50;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
 }
 
 input, 
 select, 
 textarea {
-    padding: 10px; /* Increased padding */
+    padding: 10px; 
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
     width: 100%;
     box-sizing: border-box;
 }
@@ -379,7 +379,7 @@ textarea:focus {
     cursor: pointer;
     font-weight: bold;
     align-self: flex-start;
-    font-size: 13px; /* Increased from 7px */
+    font-size: 13px; 
     margin-top: 10px;
     height: 38px;
 }

@@ -218,7 +218,7 @@ onMounted(() => {
   padding: 40px;
   border: 1px solid #ddd;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  font-family: 'Times New Roman', Times, serif; /* Official look */
+  font-family: 'Times New Roman', Times, serif;
   color: #333;
   
   /* ✅ Watermark Positioning Context */
@@ -247,7 +247,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* ✅ Ensure Text is ABOVE the watermark */
+/* Ensure Text is ABOVE the watermark */
 .relative-content, 
 .header-section, 
 .bill-meta, 
@@ -439,7 +439,6 @@ table {
 }
 
 /* --- PRINT MEDIA QUERIES --- */
-/* --- PRINT MEDIA QUERIES --- */
 @media print {
   /* 1. මුළු පිටුවේම තියෙන හැමදේම හංගන්න */
   body * {
@@ -466,7 +465,7 @@ table {
   /* 4. Page Settings */
   @page {
     size: auto;   /* Auto size දාන්න, එතකොට content එක විතරක් ගනියි */
-    margin: 5mm;  /* වටේට පොඩි margin එකක් */
+    margin: 5mm;  
   }
 
   /* 5. අනවශ්‍ය බොත්තම් සම්පූර්ණයෙන්ම අයින් කරන්න */
