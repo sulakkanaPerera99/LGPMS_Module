@@ -197,8 +197,8 @@ export const updateCustomer = (customerId, data) => {
                 const currentNIC = results[0].nic;
                 const newNIC = data.nic;
 
-                // 2. Main Account Table එක Update කරන්න (නම, NIC, Contact, Samurdhi විතරයි)
-                // මෙතන Address update වෙන්නේ නෑ, මොකද data object එකේ address නෑ.
+                // 2. Main Account Table එක Update කරන්න (නම, NIC, Contact, Samurdhi, Status)
+                // ✅ 'status' තීරුව update query එකට එකතු කළා
                 const updateAccountQuery = 'UPDATE water_customer_accounts SET ? WHERE id = ?';
                 
                 db.query(updateAccountQuery, [data, customerId], (err, result) => {
@@ -209,7 +209,7 @@ export const updateCustomer = (customerId, data) => {
                     // --- තීරණාත්මක මොහොත (Decision Logic) ---
                     
                     if (currentNIC === newNIC) {
-                        // SCENARIO 1: NIC එක සමානයි (Correction Only)
+                        // SCENARIO 1: NIC එක සමානයි (Correction / Status Update Only)
                         // අලුත් Row එකක් දාන්නේ නෑ. තියෙන History Row එකේ නම හදනවා.
                         
                         const updateHistoryQuery = `
@@ -217,7 +217,6 @@ export const updateCustomer = (customerId, data) => {
                             SET full_name = ?, is_samurdhi = ?
                             WHERE customer_id = ? AND is_active = 1
                         `;
-                        // Note: Contact Info History එකේ නැති නිසා Update කරන්න ඕන නෑ.
                         const historyParams = [data.full_name, data.is_samurdhi, customerId];
 
                         db.query(updateHistoryQuery, historyParams, (err) => {
@@ -225,13 +224,13 @@ export const updateCustomer = (customerId, data) => {
                             
                             db.commit((err) => {
                                 if (err) return db.rollback(() => reject(err));
-                                resolve({ message: "Customer details corrected successfully (Name/Contact Updated)" });
+                                resolve({ message: "Customer details updated successfully (Status/Info Updated)" });
                             });
                         });
 
                     } else {
                         // SCENARIO 2: NIC එක වෙනස් (Ownership Transfer)
-                        // පරණ History එක Close කරලා, අලුත් එකක් දාන්න ඕන.
+                        // පරණ History එක Close කරලා, අලුත් එකක් දාන්න.
                         
                         // A. පරණ Active Record එක Close කරන්න (valid_to දාන්න)
                         const closeHistoryQuery = `
@@ -244,6 +243,7 @@ export const updateCustomer = (customerId, data) => {
                             if (err) return db.rollback(() => reject(err));
 
                             // B. අලුත් History Record එකක් දාන්න
+                            // මෙතනදී අලුත් අයිතිකරු නිසා is_active = 1 විය යුතුයි (data.status මොකක් වුනත්)
                             const insertHistoryQuery = `
                                 INSERT INTO water_customer_history 
                                 (customer_id, full_name, nic, is_samurdhi, is_active, valid_from, valid_to) 

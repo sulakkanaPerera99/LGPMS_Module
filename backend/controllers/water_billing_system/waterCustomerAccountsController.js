@@ -173,27 +173,28 @@ export const editCustomerDetails = async (req, res) => {
     try {
         const { id } = req.params; 
         
-        // Frontend එකෙන් එන Data වලින් අපිට ඕන ටික විතරක් Destructure කරගන්නවා
+        // 1. Frontend එකෙන් එවන Data වලට 'status' එකතු කරගන්නවා
         const {
             fullName,
             nic,
             contactInfo,
-            isSamurdhi,      // අයිතිකරු මාරු වෙද්දි මේකත් වෙනස් වෙන්න පුළුවන් නිසා ගත්තා
-            samurdhiNumber
+            isSamurdhi,
+            samurdhiNumber,
+            status // ✅ අලුතින් එකතු කළ කොටස
         } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Customer ID is required" });
         }
 
-        // Database එකට යවන්න ඕන දත්ත ටික විතරක් Object එකක් විදිහට හදාගන්නවා.
-        // මෙතන Address නැති නිසා, Database එකේ Address වෙනස් වෙන්නේ නෑ.
+        // 2. Database එකට යවන Object එකට 'status' එක දානවා
         const updateData = {
             full_name: fullName,
             nic: nic,
             contact_info: contactInfo,
             is_samurdhi: (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1) ? 1 : 0,
-            samurdhi_number: samurdhiNumber
+            samurdhi_number: samurdhiNumber,
+            status: status // ✅ DB Column එකේ නම 'status' නම් කෙලින්ම මෙහෙම දාන්න පුළුවන්
         };
 
         // Model එකට යවන්න
@@ -209,7 +210,6 @@ export const editCustomerDetails = async (req, res) => {
         return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
     }
 };
-
 
 export const checkSabhaCustomer = async (req, res) => {
     try {

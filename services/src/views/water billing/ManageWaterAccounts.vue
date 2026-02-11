@@ -33,7 +33,8 @@ const editForm = reactive({
   nic: '',
   contactInfo: '',
   isSamurdhi: false,
-  samurdhiNumber: ''
+  samurdhiNumber: '',
+  status: 1
 })
 
 // 4. Fetch Data on Load
@@ -122,6 +123,7 @@ const openEditModal = (acc) => {
   editForm.contactInfo = acc.contactInfo
   editForm.isSamurdhi = Boolean(acc.isSamurdhi)
   editForm.samurdhiNumber = acc.samurdhiNumber || ''
+  editForm.status = acc.status
   isEditDialogOpen.value = true
 }
 
@@ -133,6 +135,7 @@ const closeEditModal = () => {
   editForm.contactInfo = ''
   editForm.isSamurdhi = false
   editForm.samurdhiNumber = ''
+  editForm.status = 1
 }
 
 const saveCustomer = async () => {
@@ -144,7 +147,8 @@ const saveCustomer = async () => {
       nic: editForm.nic,
       contactInfo: editForm.contactInfo,
       isSamurdhi: editForm.isSamurdhi,
-      samurdhiNumber: editForm.samurdhiNumber
+      samurdhiNumber: editForm.samurdhiNumber,
+      status: Number(editForm.status)
     }
     const response = await axios.put(`/update-customer/${editForm.id}`, payload)
     if (response.status === 200) {
@@ -314,6 +318,13 @@ const saveCustomer = async () => {
               <label>Samurdhi Number</label>
               <input type="text" v-model="editForm.samurdhiNumber" />
            </div>
+           <div class="form-group">
+              <label>Status</label>
+              <select v-model="editForm.status">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+          </div>
            <div class="modal-actions">
              <button type="button" class="modal-btn" @click="closeEditModal" :disabled="isSaving">Cancel</button>
              <button type="submit" class="modal-btn primary" :disabled="isSaving">
@@ -538,6 +549,38 @@ const saveCustomer = async () => {
 .modal-content h4 {
   margin-top: 0; margin-bottom: 15px; color: #2c3e50;
   border-bottom: 2px solid #42b883; display: inline-block; padding-bottom: 5px; font-size: 16px;
+}
+
+/* --- Edit Form Status Dropdown Styles --- */
+.form-group select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group select:focus {
+  border-color: #42b883; /* Vue brand color */
+}
+
+/* Status anuwa select box eke border eka wenas kireema (Optional) */
+.form-group select option[value="1"] {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.form-group select option[value="0"] {
+  color: #c0392b;
+  font-weight: bold;
+}
+
+/* Edit Modal eke warnings/important labels thiyena nisa labels walata tikak space denna */
+.edit-form .form-group label {
+  margin-bottom: 2px;
 }
 .edit-form { display: flex; flex-direction: column; gap: 15px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }

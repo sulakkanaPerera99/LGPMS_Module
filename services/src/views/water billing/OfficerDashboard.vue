@@ -13,7 +13,7 @@ const cards = ref([
   { id: 3, title: 'Edit Billing Fees', subtitle: 'Edit Tariffs & Slabs', route: '/edit-billing-fees', icon: 'fas fa-pen-to-square', color: '#28a745' },
   { id: 4, title: 'Register Customer', subtitle: 'New Connections', route: '/add-customer', icon: 'fas fa-user-plus', color: '#17a2b8' },
   { id: 5, title: 'Water Accounts', subtitle: 'Manage Accounts', route: '/manage-water-accounts', icon: 'fas fa-faucet', color: '#6610f2' },
-  { id: 6, title: 'Meter Readings', subtitle: 'Add Manual Reading', route: '/add-meter-reading', icon: 'fas fa-tachometer-alt', color: '#fd7e14' },
+  //{ id: 6, title: 'Meter Readings', subtitle: 'Add Manual Reading', route: '/add-meter-reading', icon: 'fas fa-tachometer-alt', color: '#fd7e14' },
   { id: 7, title: 'Bill Payment', subtitle: 'Add PIV Payments', route: '/bill-payment', icon: 'fas fa-credit-card', color: '#e83e8c' },
   { id: 8, title: 'Print Bill', subtitle: 'Generate & Print', route: '/print-bill', icon: 'fas fa-print', color: '#6c757d' },
   { id: 9, title: 'Reports', subtitle: 'Generate Insights', route: '/water-bill-report-generation', icon: 'fas fa-chart-line', color: '#20c997' },
