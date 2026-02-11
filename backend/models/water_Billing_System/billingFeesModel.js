@@ -7,7 +7,7 @@ export const insertBillingConfig = (data) => {
     return new Promise((resolve, reject) => {
         // Updated Query with new columns
         const query = `
-            INSERT INTO billing_configurations 
+            INSERT INTO water_billing_configurations 
             (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, sabha_code) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
@@ -39,7 +39,7 @@ export const getBillingConfigs = (sabha_code, search, sort) => {
     return new Promise((resolve, reject) => {
         
         // 1. Base Query
-        let query = "SELECT * FROM billing_configurations WHERE sabha_code = ?";
+        let query = "SELECT * FROM water_billing_configurations WHERE sabha_code = ?";
         let params = [sabha_code];
 
         // 2. Dynamic Search Logic (SQL Injection Safe)
@@ -90,7 +90,7 @@ export const updateBillingConfig = (oldId, data, userNic) => {
 
             // පියවර 1: පරණ Record එක Deactivate කිරීම (Expire කිරීම)
             const deactivateQuery = `
-                UPDATE billing_configurations 
+                UPDATE water_billing_configurations 
                 SET 
                     status = 0, 
                     effective_to = NOW() 
@@ -104,7 +104,7 @@ export const updateBillingConfig = (oldId, data, userNic) => {
 
                 // පියවර 2: අලුත් මිල ගණන් අලුත් පේළියක් ලෙස ඇතුලත් කිරීම (New Version)
                 const insertQuery = `
-                    INSERT INTO billing_configurations 
+                    INSERT INTO water_billing_configurations 
                     (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
                 `;

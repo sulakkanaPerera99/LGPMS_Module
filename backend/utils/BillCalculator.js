@@ -77,7 +77,7 @@ export const calculateBill = async (connection, data, previousDues = 0) => {
 
     // B. Database Query
     const query = `
-        SELECT * FROM billing_configurations 
+        SELECT * FROM water_billing_configurations 
         WHERE sabha_code = ? 
         AND connection_type = ? 
         AND status = 1 
