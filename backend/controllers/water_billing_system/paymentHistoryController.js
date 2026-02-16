@@ -1,8 +1,12 @@
 import { getCustomersHistoryBySabha1 } from '../../models/water_Billing_System/paymentHistoryModel.js';
 
+/**
+ * Controller: Get All Customers with Payment History
+ * Retrieves filtered list of customers along with their latest payment details.
+ */
 export const getAllCustomers = async (req, res) => {
     try {
-        // 1. URL Parameters සහ Query Parameters ලබා ගැනීම
+        // 1. Extract URL Parameters and Query Parameters
         const { sabha_code } = req.params;
         const { 
             search, 
@@ -14,12 +18,12 @@ export const getAllCustomers = async (req, res) => {
             projectCode 
         } = req.query;
 
-        // 2. Validation (සභා කේතය අනිවාර්යයි)
+        // 2. Validation (Sabha Code is mandatory)
         if (!sabha_code) {
             return res.status(400).json({ success: false, message: "Sabha Code is required" });
         }
 
-        // 3. Filters සකසා ගැනීම (Frontend String -> DB Integers)
+        // 3. Prepare Filters (Convert Frontend Strings -> DB Values)
         const filters = {};
 
         // Search Text
@@ -32,7 +36,7 @@ export const getAllCustomers = async (req, res) => {
             filters.sort = sort;
         }
 
-        // Connection Types (Array එකක් බවට පත් කිරීම)
+        // Connection Types (Convert comma-separated string to array)
         if (connectionTypes) {
             filters.connectionTypes = connectionTypes.split(',').map(type => type.trim()).filter(Boolean);
         }
@@ -67,14 +71,14 @@ export const getAllCustomers = async (req, res) => {
             }).filter(val => val !== null);
         }
 
-        // 4. Model එක Call කිරීම (දත්ත ලබා ගැනීම)
+        // 4. Call Model to Fetch Data
         const customers = await getCustomersHistoryBySabha1(sabha_code, projectCode, filters);
 
-        // 6. සාර්ථක ප්‍රතිචාරය යැවීම
+        // 5. Send Successful Response
         return res.status(200).json(customers);
 
     } catch (error) {
-        console.error("❌ Controller Error:", error);
+        console.error("❌ Controller Error (getAllCustomers):", error);
         return res.status(500).json({ 
             success: false, 
             message: "Internal Server Error", 

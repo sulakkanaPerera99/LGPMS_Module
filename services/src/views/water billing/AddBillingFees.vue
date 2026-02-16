@@ -97,7 +97,7 @@ const submitForm = async () => {
 </script>
 
 <template>
-  <div class="billing-container">
+  <div id="add-billing-fees-container" class="billing-container">
     <header class="page-header">
       <h2>Add New Billing Fee</h2>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
@@ -163,33 +163,35 @@ const submitForm = async () => {
             <button type="button" @click="addUnitRange" class="add-btn">+ Add Slab</button>
           </div>
 
-          <div class="dynamic-section">
-            <div class="section-header">Taxes & Service Charges</div>
-            <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row-other">
-              <input v-model="item.name" type="text" placeholder="Charge Name" />
-              <select v-model="item.type" class="small-select">
-                 <option value="fixed">Fixed (Rs)</option>
-                 <option value="percentage">%</option>
-              </select>
-              <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
-              <button type="button" @click="removeOtherCharge(index)" class="remove-btn" v-if="otherCharges.length > 1">Remove</button>
-            </div>
-            <button type="button" @click="addOtherCharge" class="add-btn">+ Add Charge</button>
-          </div>
+          <div class="side-by-side-row">
+    <div class="dynamic-section">
+        <div class="section-header">Taxes & Service Charges</div>
+        <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row-other">
+            <input v-model="item.name" type="text" placeholder="Charge Name" />
+            <select v-model="item.type" class="small-select">
+                <option value="fixed">Fixed (Rs)</option>
+                <option value="percentage">%</option>
+            </select>
+            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+            <button type="button" @click="removeOtherCharge(index)" class="remove-btn" v-if="otherCharges.length > 1">Remove</button>
+        </div>
+        <button type="button" @click="addOtherCharge" class="add-btn">+ Add Charge</button>
+    </div>
 
-          <div class="dynamic-section discount-section">
-            <div class="section-header">Discounts</div>
-            <div v-for="(item, index) in discounts" :key="index" class="dynamic-row-other">
-              <input v-model="item.name" type="text" placeholder="Discount Name" />
-              <select v-model="item.type" class="small-select">
-                 <option value="fixed">Fixed (Rs)</option>
-                 <option value="percentage">%</option>
-              </select>
-              <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
-              <button type="button" @click="removeDiscount(index)" class="remove-btn" v-if="discounts.length > 1">Remove</button>
-            </div>
-            <button type="button" @click="addDiscount" class="add-btn">+ Add Discount</button>
-          </div>
+    <div class="dynamic-section discount-section">
+        <div class="section-header">Discounts</div>
+        <div v-for="(item, index) in discounts" :key="index" class="dynamic-row-other">
+            <input v-model="item.name" type="text" placeholder="Discount Name" />
+            <select v-model="item.type" class="small-select">
+                <option value="fixed">Fixed (Rs)</option>
+                <option value="percentage">%</option>
+            </select>
+            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+            <button type="button" @click="removeDiscount(index)" class="remove-btn" v-if="discounts.length > 1">Remove</button>
+        </div>
+        <button type="button" @click="addDiscount" class="add-btn">+ Add Discount</button>
+    </div>
+</div>
 
           <button type="submit" class="submit-btn">Save Configuration</button>
         </form>
@@ -200,217 +202,246 @@ const submitForm = async () => {
 
 <style scoped>
 /* --- Page Layout --- */
-.billing-container {
-    padding: 20px;
-    max-width: 1000px;
-    margin: 0 auto;
-    font-family: sans-serif;
+#add-billing-fees-container .billing-container {
+    padding: 20px !important;
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+    font-family: sans-serif !important;
 }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 15px;
+#add-billing-fees-container .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: 30px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 15px !important;
 }
 
-.back-link {
-    color: #42b883;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px; 
+#add-billing-fees-container .back-link {
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important; 
 }
 
-.content-area {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+#add-billing-fees-container .content-area {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 30px !important;
+    margin: 30px !important;
 }
 
-.card {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+#add-billing-fees-container .card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
 }
 
-h4 {
-    margin-top: 0;
-    color: #2c3e50;
-    border-bottom: 2px solid #42b883;
-    display: inline-block;
-    padding-bottom: 5px;
-    margin-bottom: 20px;
-    font-size: 16px; 
+#add-billing-fees-container h4 {
+    margin-top: 0 !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    margin-bottom: 20px !important;
+    font-size: 16px !important; 
 }
 
-.section-header {
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #2c3e50;
-    font-size: 14px; 
+#add-billing-fees-container .section-header {
+    font-weight: bold !important;
+    margin-bottom: 10px !important;
+    color: #2c3e50 !important;
+    font-size: 14px !important; 
 }
 
 /* --- FORM ELEMENTS --- */
-.billing-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+#add-billing-fees-container .billing-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
 }
 
-.form-row {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+#add-billing-fees-container .form-row {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
 }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-    min-width: 150px;
+#add-billing-fees-container .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    flex: 1 !important;
+    min-width: 150px !important;
+    padding: 0 !important;
+    margin: 0 5px !important;
 }
 
-label {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 13px; 
+#add-billing-fees-container label {
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+    font-size: 13px !important; 
 }
 
-input,
-select {
-    padding: 10px; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    width: 100%; 
-    box-sizing: border-box;
+#add-billing-fees-container input,
+#add-billing-fees-container select {
+    padding: 10px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    width: 100% !important; 
+    box-sizing: border-box !important;
 }
 
-input:focus,
-select:focus {
-    outline: none;
-    border-color: #42b883;
+#add-billing-fees-container input:focus,
+#add-billing-fees-container select:focus {
+    outline: none !important;
+    border-color: #42b883 !important;
 }
 
-.checkbox-row {
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-    align-items: center;
-    padding-top: 15px;
+#add-billing-fees-container .checkbox-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 20px !important;
+    align-items: center !important;
+    padding-top: 15px !important;
 }
 
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-    font-size: 13px; 
+#add-billing-fees-container .checkbox-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    font-size: 13px !important; 
 }
 
-.checkbox-item input {
-    width: auto; 
+#add-billing-fees-container .checkbox-item input {
+    width: auto !important; 
 }
 
-/* --- DYNAMIC SECTIONS (Ranges, Charges) --- */
-/* ✅ 4. Style Change: Updated Grid to support 4 columns + button */
-.header-labels01 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 50px; 
-    gap: 10px;
-    font-size: 13px; 
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #666;
+/* --- DYNAMIC SECTIONS --- */
+#add-billing-fees-container .header-labels01 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr 50px !important; 
+    gap: 10px !important;
+    font-size: 13px !important; 
+    font-weight: bold !important;
+    margin-bottom: 5px !important;
+    color: #666 !important;
 }
 
-.header-labels01 span {
-    text-align: center;
+#add-billing-fees-container .header-labels01 span {
+    text-align: center !important;
 }
 
-.dynamic-section,
-.dynamic-section01 {
-    border: 1px solid #eee;
-    padding: 15px;
-    border-radius: 4px;
-    background-color: #f9f9f9;
+#add-billing-fees-container .dynamic-section,
+#add-billing-fees-container .dynamic-section01 {
+    border: 1px solid #eee !important;
+    padding: 15px !important;
+    border-radius: 4px !important;
+    background-color: #f9f9f9 !important;
 }
 
-.discount-section {
-    border-color: #a8e6cf;
-    background-color: #f0fff4;
+#add-billing-fees-container .discount-section {
+    border-color: #a8e6cf !important;
+    background-color: #f0fff4 !important;
 }
 
-/* Main Slab Row Style */
-.dynamic-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr auto; 
-    gap: 10px;
-    margin-bottom: 8px;
-    align-items: center;
+/* ✅ සෙක්ෂන් දෙක පේළියකට ගැනීමට එක් කළ Layout එක */
+#add-billing-fees-container .side-by-side-row {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: nowrap !important; 
+    align-items: flex-start !important;
 }
 
-/* Taxes and Discounts Row Style*/
-.dynamic-row-other {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 10px;
-    margin-bottom: 8px;
-    align-items: center;
+
+#add-billing-fees-container .side-by-side-row .dynamic-section {
+    flex: 1 !important;
+    min-width: 0 !important; /* Overflow omit */
 }
 
-.small-input {
-    width: 100%;
+#add-billing-fees-container .dynamic-row-other {
+    display: grid !important;
+    grid-template-columns: 1.5fr 1fr 1fr auto !important; 
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+    align-items: center !important;
 }
 
-.small-select {
-    padding: 10px; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    width: 100%;
-    box-sizing: border-box;
+/* small screen (Responsive) */
+@media (max-width: 850px) {
+    #add-billing-fees-container .side-by-side-row {
+        flex-direction: column !important;
+    }
+}
+
+#add-billing-fees-container .dynamic-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto !important; 
+    gap: 10px !important;
+    margin-bottom: 8px !important;
+    align-items: center !important;
+}
+
+#add-billing-fees-container .dynamic-row-other {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr 1fr auto !important;
+    gap: 10px !important;
+    margin-bottom: 8px !important;
+    align-items: center !important;
+}
+
+#add-billing-fees-container .small-input {
+    width: 100% !important;
+}
+
+#add-billing-fees-container .small-select {
+    padding: 10px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 /* --- BUTTONS --- */
-.add-btn,
-.remove-btn {
-    border: none;
-    padding: 6px 12px; 
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px; 
+#add-billing-fees-container .add-btn,
+#add-billing-fees-container .remove-btn {
+    border: none !important;
+    padding: 6px 12px !important; 
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important; 
 }
 
-.add-btn {
-    background-color: #2c3e50;
-    color: white;
+#add-billing-fees-container .add-btn {
+    background-color: #2c3e50 !important;
+    color: white !important;
 }
 
-.remove-btn {
-    background-color: #e74c3c;
-    color: white;
+#add-billing-fees-container .remove-btn {
+    background-color: #e74c3c !important;
+    color: white !important;
 }
 
-.submit-btn {
-    background-color: #42b883;
-    color: white;
-    border: none;
-    padding: 0 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    align-self: flex-start;
-    font-size: 13px; 
-    height: 38px; 
+#add-billing-fees-container .submit-btn {
+    background-color: #42b883 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0 20px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    align-self: flex-start !important;
+    font-size: 13px !important; 
+    height: 38px !important; 
 }
 
-.submit-btn:hover {
-    background-color: #3aa876;
+#add-billing-fees-container .submit-btn:hover {
+    background-color: #3aa876 !important;
 }
 </style>

@@ -54,7 +54,7 @@ const goBack = () => {
          <h2>Payment History</h2>
          <span class="sub-header">Account: {{ selectedCustomer.newBillNumber || 'Loading...' }}</span>
       </div>
-      <button @click="goBack" class="back-link-btn">← Back</button>
+      <button @click="goBack" class="back-link-btn">Back to List</button>
     </header>
 
     <div v-if="isLoading" class="loading-state">
@@ -86,24 +86,20 @@ const goBack = () => {
             <thead>
               <tr>
                 <th class="date-col">Paid Date</th>
-                
-                <th class="reading-col">Prev<br>Read</th>
-                <th class="reading-col">Curr<br>Read</th>
+                <th class="reading-col">Prev Read</th>
+                <th class="reading-col">Curr Read</th>
                 <th class="units-col">Units</th>
-                
                 <th class="money-col">Bill Total</th>
                 <th class="money-col">Paid Amt</th>
                 <th class="money-col">Prev Due</th>
-                </tr>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="hist in customerHistory" :key="hist.id">
                 <td class="date-cell">{{ formatDate(hist.paidDate) }}</td>
-                
                 <td class="reading-cell">{{ hist.previousReading }}</td>
                 <td class="reading-cell">{{ hist.currentReading }}</td>
                 <td class="units-cell">{{ hist.unitsConsumed }}</td>
-                
                 <td class="money-cell">{{ Number(hist.totalAmount).toFixed(2) }}</td>
                 <td class="money-cell text-green">{{ Number(hist.paidAmount).toFixed(2) }}</td>
                 <td class="money-cell text-red">{{ Number(hist.previousDues).toFixed(2) }}</td>
@@ -120,120 +116,138 @@ const goBack = () => {
 </template>
 
 <style scoped>
-/* Layout Containers */
+/* Main Container */
 .page-container {
-  padding: 15px;
-  max-width: 1000px;
-  margin: 0 auto;
-  font-family: 'Segoe UI', sans-serif;
-  color: #333;
+  padding: 15px !important;
+  max-width: 1000px !important;
+  margin: 0 auto !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+  color: #333 !important;
 }
 
 /* Header */
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 10px;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  border-bottom: 2px solid #f0f0f0 !important;
+  padding-bottom: 10px !important;
 }
-.header-left h2 { margin: 0; font-size: 20px; color: #2c3e50; }
-.sub-header { font-size: 13px; color: #7f8c8d; }
+
+.header-left h2 { 
+  margin: 0 !important; 
+  font-size: 22px !important; 
+  color: #2c3e50 !important; 
+}
+
+.sub-header { 
+  font-size: 14px !important; 
+  color: #7f8c8d !important; 
+}
 
 .back-link-btn {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  padding: 6px 12px;
-  border-radius: 4px;
-  color: #555;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  background: #f8f9fa !important;
+  border: none !important;
+  padding: 6px 15px !important;
+  color: #27ae60 !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
 }
-.back-link-btn:hover { background: #e9ecef; color: #333; }
 
-/* Customer Summary Card */
+/* Cards */
 .card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  margin-bottom: 15px;
-  border: 1px solid #eaeaea;
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+  margin-bottom: 20px !important;
+  border: 1px solid #eaeaea !important;
 }
-.summary-card { padding: 15px; background: #fdfdfd; }
-.info-row { display: flex; gap: 30px; flex-wrap: wrap; }
-.info-group { display: flex; flex-direction: column; }
-.label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 3px; }
-.value { font-size: 14px; font-weight: 500; color: #2c3e50; }
 
-/* Table Section */
-.table-card { padding: 0; overflow: hidden; } /* Remove padding for edge-to-edge table */
-h4 {
-  margin: 15px 15px 10px;
-  font-size: 15px;
-  color: #42b883;
-  font-weight: 600;
+.summary-card { 
+  padding: 20px !important; 
+}
+
+.info-row { 
+  display: flex !important; 
+  gap: 40px !important; 
+  flex-wrap: wrap !important; 
+}
+
+.info-group { 
+  display: flex !important; 
+  flex-direction: column !important; 
+}
+
+.label { 
+  font-size: 11px !important; 
+  color: #95a5a6 !important; 
+  text-transform: uppercase !important; 
+  font-weight: bold !important; 
+  margin-bottom: 5px !important; 
+}
+
+.value { 
+  font-size: 15px !important; 
+  font-weight: 600 !important; 
+  color: #34495e !important; 
+}
+
+/* Table Style */
+.table-card h4 {
+  margin: 15px 20px !important;
+  color: #2c3e50 !important;
+  font-size: 16px !important;
 }
 
 .table-wrapper {
-  width: 100%;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  padding: 0 15px 15px 15px !important;
 }
 
 .history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+  width: 100% !important;
+  border-collapse: collapse !important; 
+  font-size: 13px !important;
+  border: 1px solid #4d555c !important;
 }
 
-/* Table Headers */
 .history-table th {
-  background: #f8f9fa;
-  color: #555;
-  font-weight: 600;
-  padding: 10px 8px;
-  text-align: right; /* Default align right for numbers */
-  border-bottom: 1px solid #eee;
-  font-size: 12px;
+  background: #bcccdc !important;
+  color: #2c3e50 !important;
+  font-weight: bold !important;
+  padding: 12px 10px !important;
+  text-align: right !important;
+  border: 1px solid #dee2e6 !important;
 }
-.history-table th.date-col { text-align: left; width: 15%; }
-.history-table th.reading-col { width: 10%; background: #f1f8e9; } /* Subtle green tint for readings */
-.history-table th.units-col { width: 8%; background: #f1f8e9; font-weight: bold; }
-.history-table th.money-col { width: 14%; }
 
-/* Table Cells */
+.history-table th.date-col { text-align: left !important; }
+
 .history-table td {
-  padding: 8px;
-  border-bottom: 1px solid #f5f5f5;
-  text-align: right;
-  vertical-align: middle;
+  padding: 12px 10px !important;
+  border: 1px solid #dee2e6 !important; 
+  text-align: right !important;
+  font-weight: 500 !important;
 }
-.history-table td.date-cell { text-align: left; color: #666; font-weight: 500; }
-.history-table td.reading-cell { color: #555; }
-.history-table td.units-cell { font-weight: bold; color: #2c3e50; }
-.money-cell { font-family: 'Consolas', monospace; letter-spacing: -0.5px; }
 
-/* Colors */
-.text-green { color: #27ae60; font-weight: bold; }
-.text-red { color: #c0392b; }
+.history-table td.date-cell { text-align: left !important; font-weight: bold !important; }
 
-.empty-state { text-align: center; padding: 20px; color: #999; font-style: italic; }
+.history-table tbody tr:hover {
+  background-color: #f1f8f5 !important;
+}
 
-/* Loading */
-.loading-state { text-align: center; padding: 40px; color: #888; }
+/* Colors & Helpers */
+.text-green { color: #27ae60 !important; font-weight: bold !important; }
+.text-red { color: #e74c3c !important; font-weight: bold !important; }
+.empty-state { text-align: center !important; padding: 30px !important; color: #95a5a6 !important; }
+
+/* Loading State */
+.loading-state { text-align: center !important; padding: 50px !important; font-weight: bold !important; }
 .spinner { 
-    display: inline-block; width: 12px; height: 12px; 
-    border: 2px solid #ccc; border-top-color: #42b883; 
-    border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px;
+  display: inline-block !important; width: 20px !important; height: 20px !important; 
+  border: 3px solid #f3f3f3 !important; border-top: 3px solid #42b883 !important; 
+  border-radius: 50% !important; animation: spin 1s linear infinite !important;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Responsive Tweaks for very small screens */
-@media (max-width: 600px) {
-  .info-row { flex-direction: column; gap: 10px; }
-  .history-table th, .history-table td { padding: 6px 4px; font-size: 11px; }
-  .history-table th.reading-col { display: none; } /* Hide Previous Reading on mobile if needed */
-  .history-table td.reading-cell:nth-child(2) { display: none; }
-}
+@keyframes spin { to { transform: rotate(360deg) !important; } }
 </style>

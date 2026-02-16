@@ -1,27 +1,28 @@
 import { getProjectCollectionReportModel } from '../../models/water_Billing_System/reportModel.js';
 
-export const getProjectCollectionReport = (req, res) => {
-    
-    const { sabha_code } = req.params;
+/**
+ * Controller: Get Project Collection Report
+ * Generates a summary report of water project collections, including due amounts and collection percentages.
+ */
+export const getProjectCollectionReport = async (req, res) => {
+    try {
+        const { sabha_code } = req.params;
 
-    if (!sabha_code) {
-        return res.status(400).json({ success: false, message: "Sabha Code is required" });
-    }
-
-    getProjectCollectionReportModel(sabha_code, (err, rows) => {
-        if (err) {
-            console.error("Controller Error:", err);
-            return res.status(500).json({ success: false, message: "Database Error", error: err.message });
+        if (!sabha_code) {
+            return res.status(400).json({ success: false, message: "Sabha Code is required" });
         }
 
-        // ගණනය කිරීම් (Due Amount & Percentage)
+        // Fetch raw data from the model
+        const rows = await getProjectCollectionReportModel(sabha_code);
+
+        // Perform Calculations (Due Amount & Collection Percentage)
         const reportData = rows.map((row, index) => {
             const total = Number(row.total_amount_to_collect || 0);
             const collected = Number(row.collected_amount || 0);
             
             const due = total - collected;
             
-            // 0න් බෙදීම වැළැක්වීමට (Division by zero check)
+            // Percentage Calculation with Division by Zero check
             const percentage = total > 0 ? ((collected / total) * 100) : 0;
 
             return {
@@ -37,5 +38,13 @@ export const getProjectCollectionReport = (req, res) => {
         });
 
         return res.status(200).json({ success: true, data: reportData });
-    });
+
+    } catch (err) {
+        console.error("Controller Error (getProjectCollectionReport):", err);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Database Error", 
+            error: err.message 
+        });
+    }
 };

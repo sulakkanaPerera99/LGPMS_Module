@@ -1,7 +1,13 @@
 import db from "../../config/database.js";
 
-export const getCustomerPaymentHistory = (accountId) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Retrieves payment history and account details for a specific customer.
+ * Uses a LEFT JOIN to fetch customer details even if no bill history exists.
+ * * @param {string|number} accountId - The unique ID of the customer account.
+ * @returns {Promise<Array>} - Returns an array of objects containing customer and bill details.
+ */
+export const getCustomerPaymentHistory = async (accountId) => {
+    try {
         const query = `
             SELECT 
                 wca.full_name, 
@@ -23,11 +29,12 @@ export const getCustomerPaymentHistory = (accountId) => {
             ORDER BY wb.paid_date DESC
         `;
 
-        db.query(query, [accountId], (err, results) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(results);
-        });
-    });
+        // Execute the query using the promise-based pool
+        const [results] = await db.query(query, [accountId]);
+        return results;
+
+    } catch (err) {
+        console.error("Database Error in getCustomerPaymentHistory:", err);
+        throw err;
+    }
 };

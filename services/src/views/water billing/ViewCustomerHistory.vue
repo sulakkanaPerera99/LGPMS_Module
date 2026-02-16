@@ -368,19 +368,20 @@ const printReport = () => {
   border-collapse: collapse;
   font-size: 13px;
   min-width: 800px;
+  margin-top: 10px;
 }
 
 .accounts-table th,
 .accounts-table td {
   text-align: left;
   padding: 12px;
-  border-bottom: 1px solid #eee;
+  border: 2px solid #99a3b0 !important;
   color: #2c3e50;
   vertical-align: top;
 }
 
 .accounts-table th {
-  background-color: #f8f9fa;
+  background-color: #bcccdc;
   font-weight: 600;
   white-space: nowrap;
 }

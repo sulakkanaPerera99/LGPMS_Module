@@ -1,76 +1,67 @@
 import db from '../../config/database.js';
 
-// 1. Get Customer Count
-export const getCustomerCountBySabhaAndProject = (sabhaCode, projectCode) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Gets the count of existing customers for a specific project in a Sabha.
+ * Used for generating the next serial number.
+ */
+export const getCustomerCountBySabhaAndProject = async (sabhaCode, projectCode) => {
+    try {
         const query = 'SELECT COUNT(*) as count FROM water_customer_accounts WHERE sabha_code = ? AND project_code = ?';
-        db.query(query, [sabhaCode, projectCode], (err, results) => {
-            if (err) return reject(err);
-            resolve(results.length > 0 ? results[0].count : 0);
-        });
-    });
+        const [results] = await db.query(query, [sabhaCode, projectCode]);
+        return results.length > 0 ? results[0].count : 0;
+    } catch (error) {
+        throw error;
+    }
 };
 
-// 2. Insert Customer (UPDATED with Transaction for History)
-export const insertCustomer = (data) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Inserts a new water customer and creates an initial history record.
+ * Uses a transaction to ensure data integrity.
+ */
+export const insertCustomer = async (data) => {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Step 1: Insert into Main Customer Account Table
+        const insertAccountQuery = 'INSERT INTO water_customer_accounts SET ?';
+        const [result] = await connection.query(insertAccountQuery, data);
         
-        // Transaction පටන් ගන්නවා (Tables දෙකටම හරියට වැටුනොත් විතරයි Save වෙන්නේ)
-        db.beginTransaction((err) => {
-            if (err) return reject(err);
+        const newCustomerId = result.insertId;
 
-            // Step 1: Main Customer Account එකට දත්ත දැමීම
-            const insertAccountQuery = 'INSERT INTO water_customer_accounts SET ?';
-            
-            db.query(insertAccountQuery, data, (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        reject(err);
-                    });
-                }
+        // Step 2: Insert into History Table
+        const insertHistoryQuery = `
+            INSERT INTO water_customer_history 
+            (customer_id, full_name, nic, is_samurdhi, is_active, valid_from, valid_to) 
+            VALUES (?, ?, ?, ?, ?, NOW(), NULL)
+        `;
 
-                const newCustomerId = result.insertId; // අලුතින් හැදුනු ID එක
+        const historyValues = [
+            newCustomerId,
+            data.full_name,
+            data.nic,
+            data.is_samurdhi,
+            1 // is_active = 1 (Active)
+        ];
 
-                // Step 2: History Table එකට දත්ත දැමීම
-                const insertHistoryQuery = `
-                    INSERT INTO water_customer_history 
-                    (customer_id, full_name, nic, is_samurdhi, is_active, valid_from, valid_to) 
-                    VALUES (?, ?, ?, ?, ?, NOW(), NULL)
-                `;
+        await connection.query(insertHistoryQuery, historyValues);
 
-                const historyValues = [
-                    newCustomerId,
-                    data.full_name,
-                    data.nic,
-                    data.is_samurdhi,
-                    1 // is_active = 1 (Active)
-                ];
+        await connection.commit();
+        return result;
 
-                db.query(insertHistoryQuery, historyValues, (err, historyResult) => {
-                    if (err) {
-                        // History එකේ Error එකක් ආවොත්, Account එකත් Cancel කරනවා (Rollback)
-                        return db.rollback(() => {
-                            reject(err);
-                        });
-                    }
-
-                    // ඔක්කොම හරි නම් Save කරනවා
-                    db.commit((err) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                reject(err);
-                            });
-                        }
-                        resolve(result);
-                    });
-                });
-            });
-        });
-    });
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
 };
 
-export const insertSabhaCustomer = (data) => {
-    return new Promise((resolve, reject) => { 
+/**
+ * Inserts a new general Sabha Customer (if they don't exist).
+ */
+export const insertSabhaCustomer = async (data) => {
+    try {
         const query = `
             INSERT INTO sbha_cutomers 
             (sabha_code, cus_nic, cus_name, cus_address, cus_contact, cus_date) 
@@ -85,34 +76,26 @@ export const insertSabhaCustomer = (data) => {
             data.cus_contact
         ];
 
-        db.query(query, values, (err, result) => {
-            if (err) {
-                return reject(err); // Error ආවොත් Reject කරනවා
-            }
-            resolve(result); // Result එක (insertId එක්ක) Controller එකට යවනවා
-        });
-    });
+        const [result] = await db.query(query, values);
+        return result;
+    } catch (error) {
+        throw error;
+    }
 };
 
-// 3. Get All Customers (No Change)
-export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Retrieves all customers based on filters.
+ */
+export const getCustomersBySabha = async (sabhaCode, projectCode, filters = {}) => {
+    try {
         let query = `
             SELECT
-                id,
-                nic,
-                old_bill_number AS oldBillNumber,
-                current_reading AS currentReading,
-                new_bill_number AS newBillNumber,
-                full_name AS fullName,
-                property_address AS propertyAddress,
-                mailing_address AS mailingAddress,
-                contact_info AS contactInfo,
-                connection_type AS connectionType,
-                project_code AS projectCode,
-                is_samurdhi AS isSamurdhi,
-                samurdhi_number AS samurdhiNumber,
-                is_metered AS isMetered,
+                id, nic, old_bill_number AS oldBillNumber, current_reading AS currentReading,
+                new_bill_number AS newBillNumber, full_name AS fullName,
+                property_address AS propertyAddress, mailing_address AS mailingAddress,
+                contact_info AS contactInfo, connection_type AS connectionType,
+                project_code AS projectCode, is_samurdhi AS isSamurdhi,
+                samurdhi_number AS samurdhiNumber, is_metered AS isMetered,
                 status AS status
             FROM water_customer_accounts
             WHERE sabha_code = ?
@@ -161,6 +144,7 @@ export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
             query += ' AND ' + conditions.join(' AND ');
         }
 
+        // Sorting Logic
         if (filters.sort) {
             switch (filters.sort) {
                 case 'name_asc': query += ' ORDER BY full_name ASC'; break;
@@ -173,117 +157,95 @@ export const getCustomersBySabha = (sabhaCode, projectCode, filters = {}) => {
             query += ' ORDER BY full_name ASC';
         }
 
-        db.query(query, params, (err, results) => {
-            if (err) return reject(err);
-            resolve(results);
-        });
-    });
+        const [results] = await db.query(query, params);
+        return results;
+
+    } catch (error) {
+        throw error;
+    }
 };
 
-export const updateCustomer = (customerId, data) => {
-    return new Promise((resolve, reject) => {
-        
-        db.beginTransaction((err) => {
-            if (err) return reject(err);
+/**
+ * Updates customer details. Handles ownership transfer (NIC change) by updating history.
+ */
+export const updateCustomer = async (customerId, data) => {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
 
-            // 1. දැනට තියෙන NIC එක ගන්න (Check කරන්න)
-            const checkQuery = 'SELECT nic FROM water_customer_accounts WHERE id = ?';
+        // 1. Get current NIC
+        const checkQuery = 'SELECT nic FROM water_customer_accounts WHERE id = ?';
+        const [results] = await connection.query(checkQuery, [customerId]);
+
+        if (results.length === 0) {
+            throw new Error("Customer not found");
+        }
+
+        const currentNIC = results[0].nic;
+        const newNIC = data.nic;
+
+        // 2. Update Main Account Table
+        const updateAccountQuery = 'UPDATE water_customer_accounts SET ? WHERE id = ?';
+        await connection.query(updateAccountQuery, [data, customerId]);
+
+        // 3. Handle History based on NIC change
+        if (currentNIC === newNIC) {
+            // SCENARIO 1: Same NIC (Correction/Update)
+            const updateHistoryQuery = `
+                UPDATE water_customer_history 
+                SET full_name = ?, is_samurdhi = ?
+                WHERE customer_id = ? AND is_active = 1
+            `;
+            await connection.query(updateHistoryQuery, [data.full_name, data.is_samurdhi, customerId]);
             
-            db.query(checkQuery, [customerId], (err, results) => {
-                if (err || results.length === 0) {
-                    return db.rollback(() => reject(err || new Error("Customer not found")));
-                }
+            await connection.commit();
+            return { message: "Customer details updated successfully (Status/Info Updated)" };
 
-                const currentNIC = results[0].nic;
-                const newNIC = data.nic;
+        } else {
+            // SCENARIO 2: Different NIC (Ownership Transfer)
+            
+            // A. Close old history record
+            const closeHistoryQuery = `
+                UPDATE water_customer_history 
+                SET is_active = 0, valid_to = NOW() 
+                WHERE customer_id = ? AND is_active = 1
+            `;
+            await connection.query(closeHistoryQuery, [customerId]);
 
-                // 2. Main Account Table එක Update කරන්න (නම, NIC, Contact, Samurdhi, Status)
-                const updateAccountQuery = 'UPDATE water_customer_accounts SET ? WHERE id = ?';
-                
-                db.query(updateAccountQuery, [data, customerId], (err, result) => {
-                    if (err) {
-                        return db.rollback(() => reject(err));
-                    }
+            // B. Insert new history record
+            const insertHistoryQuery = `
+                INSERT INTO water_customer_history 
+                (customer_id, full_name, nic, is_samurdhi, is_active, valid_from, valid_to) 
+                VALUES (?, ?, ?, ?, 1, NOW(), NULL)
+            `;
+            await connection.query(insertHistoryQuery, [customerId, data.full_name, data.nic, data.is_samurdhi]);
 
-                    // --- (Decision Logic) ---
-                    
-                    if (currentNIC === newNIC) {
-                        // SCENARIO 1: NIC එක සමානයි (Correction / Status Update Only)
-                        // අලුත් Row එකක් දාන්නේ නෑ. තියෙන History Row එකේ නම හදනවා.
-                        
-                        const updateHistoryQuery = `
-                            UPDATE water_customer_history 
-                            SET full_name = ?, is_samurdhi = ?
-                            WHERE customer_id = ? AND is_active = 1
-                        `;
-                        const historyParams = [data.full_name, data.is_samurdhi, customerId];
+            await connection.commit();
+            return { message: "Ownership transferred successfully (New Owner Registered)" };
+        }
 
-                        db.query(updateHistoryQuery, historyParams, (err) => {
-                            if (err) return db.rollback(() => reject(err));
-                            
-                            db.commit((err) => {
-                                if (err) return db.rollback(() => reject(err));
-                                resolve({ message: "Customer details updated successfully (Status/Info Updated)" });
-                            });
-                        });
-
-                    } else {
-                        // SCENARIO 2: NIC එක වෙනස් (Ownership Transfer)
-                        // පරණ History එක Close කරලා, අලුත් එකක් දාන්න.
-                        
-                        // A. පරණ Active Record එක Close කරන්න (valid_to දාන්න)
-                        const closeHistoryQuery = `
-                            UPDATE water_customer_history 
-                            SET is_active = 0, valid_to = NOW() 
-                            WHERE customer_id = ? AND is_active = 1
-                        `;
-
-                        db.query(closeHistoryQuery, [customerId], (err) => {
-                            if (err) return db.rollback(() => reject(err));
-
-                            // B. අලුත් History Record එකක් දාන්න
-                            // මෙතනදී අලුත් අයිතිකරු නිසා is_active = 1 විය යුතුයි (data.status මොකක් වුනත්)
-                            const insertHistoryQuery = `
-                                INSERT INTO water_customer_history 
-                                (customer_id, full_name, nic, is_samurdhi, is_active, valid_from, valid_to) 
-                                VALUES (?, ?, ?, ?, 1, NOW(), NULL)
-                            `;
-                            
-                            const historyValues = [
-                                customerId, 
-                                data.full_name, 
-                                data.nic, 
-                                data.is_samurdhi
-                            ];
-
-                            db.query(insertHistoryQuery, historyValues, (err) => {
-                                if (err) return db.rollback(() => reject(err));
-
-                                db.commit((err) => {
-                                    if (err) return db.rollback(() => reject(err));
-                                    resolve({ message: "Ownership transferred successfully (New Owner Registered)" });
-                                });
-                            });
-                        });
-                    }
-                });
-            });
-        });
-    });
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
 };
 
-//water customer adding process
-export const getSabhaCustomerByNIC = (nic) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Check if a Sabha Customer exists by NIC.
+ */
+export const getSabhaCustomerByNIC = async (nic) => {
+    try {
         const query = `
             SELECT cus_name, cus_address, cus_contact, id 
             FROM sbha_cutomers 
             WHERE cus_nic = ? 
             LIMIT 1
         `;
-        db.query(query, [nic], (err, results) => {
-            if (err) return reject(err);
-            resolve(results[0]); // පලමු result එක හෝ undefined
-        });
-    });
+        const [results] = await db.query(query, [nic]);
+        return results[0]; // Returns row object or undefined
+    } catch (error) {
+        throw error;
+    }
 };

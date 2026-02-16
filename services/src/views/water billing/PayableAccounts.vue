@@ -7,7 +7,7 @@ const router = useRouter()
 
 // 1. Data Storage
 const accounts = ref([])
-const availableProjectCodes = ref([]) // ✅ Projects ගබඩා කරගන්න Array එක
+const availableProjectCodes = ref([]) 
 const currentSabha = ref('')
 const isLoading = ref(false)
 
@@ -18,7 +18,7 @@ const sortBy = ref('name_asc')
 // 3. Filter State
 const isFilterDialogOpen = ref(false)
 const activeFilters = reactive({
-  projectCode: '', // ✅ Project එක Filter කිරීමට අලුත් property එකක්
+  projectCode: '', 
   connectionTypes: [],
   samurdhi: [],
   metered: [],
@@ -34,10 +34,9 @@ onMounted(async () => {
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
 
     if (currentSabha.value) {
-      // ✅ Accounts සහ Projects දෙකම එකවර Load කරන්න
       await Promise.all([
         fetchAccounts(),
-        fetchProjects() // <--- මෙන්න මේ Function Call එක තමයි කලින් අඩු වෙලා තිබුණේ
+        fetchProjects() 
       ]);
     } else {
       alert("Session Error: Sabha Code not found.");
@@ -52,13 +51,11 @@ watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 
-// --- 🆕 5.1 Fetch Projects Function (අලුතින් එකතු කළ කොටස) ---
+// 5.1 Fetch Projects Function
 const fetchProjects = async () => {
     try {
-        // Backend Route: /water-payment-projects/:sabha_code
         const response = await axios.get(`/water-payment-projects/${currentSabha.value}`);
         availableProjectCodes.value = response.data;
-        // console.log("Projects Loaded:", availableProjectCodes.value);
     } catch (error) {
         console.error("Error loading projects:", error);
     }
@@ -78,9 +75,6 @@ const fetchAccounts = async () => {
       params.sort = sortBy.value;
     }
 
-    // --- ✅ Project Filter එක API එකට යැවීම ---
-    // Backend Controller එකේ 'projectCode' හෝ 'project_code' බලාපොරොත්තු වන නම අනුව මෙය ගැලපෙන්න ඕන.
-    // සාමාන්‍යයෙන් query params වල camelCase භාවිතා වේ.
     if (activeFilters.projectCode) {
         params.projectCode = activeFilters.projectCode;
     }
@@ -118,7 +112,7 @@ const applyFilters = () => {
 }
 
 const clearFilters = () => {
-  activeFilters.projectCode = '' // ✅ Project Filter එකත් Reset කරන්න
+  activeFilters.projectCode = '' 
   activeFilters.connectionTypes = []
   activeFilters.samurdhi = []
   activeFilters.metered = []
@@ -128,19 +122,19 @@ const clearFilters = () => {
 
 const openPaymentModal = (account) => {
   console.log("Pay Bill clicked for Account:", account.id);
-  // අපි යවන්නේ Account ID එක (database ID එක)
   router.push({ name: 'WaterBillPayment', params: { accountId: account.id } });
 };
 </script>
 
 <template>
-  <div class="page-container">
+  <div id="payable-accounts-container" class="page-container">
     <header class="page-header">
       <h3>Pay Bill</h3>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
     </header>
 
     <div class="card table-card">
+      <h4>Existing Accounts</h4>
       <div class="controls-row">
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
@@ -241,241 +235,252 @@ const openPaymentModal = (account) => {
 
 <style scoped>
 /* Page Styles */
-.page-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: sans-serif;
+#payable-accounts-container.page-container {
+    padding: 20px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    font-family: sans-serif !important;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 10px;
+#payable-accounts-container .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 10px !important;
 }
 
-.back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 14px; /* Increased from 10px */
+#payable-accounts-container .back-link {
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important; 
 }
 
-.card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
+#payable-accounts-container .card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    margin-bottom: 20px !important;
 }
 
-.controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 15px;
-  flex-wrap: wrap;
+#payable-accounts-container h4 {
+    margin-top: 0 !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 20px !important;
+    font-size: 16px !important; 
 }
 
-.search-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
+#payable-accounts-container .controls-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 15px !important;
+    gap: 15px !important;
+    flex-wrap: wrap !important;
 }
 
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px; /* Increased from 10px */
-  color: #888;
-  pointer-events: none;
+#payable-accounts-container .search-wrapper {
+    position: relative !important;
+    flex: 1 !important;
+    min-width: 200px !important;
 }
 
-.search-input {
-  width: 100%;
-  padding: 10px 10px 10px 30px; /* Increased padding */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
-  box-sizing: border-box;
+#payable-accounts-container .search-icon {
+    position: absolute !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 14px !important; 
+    color: #888 !important;
+    pointer-events: none !important;
 }
 
-.sort-select {
-  padding: 10px; /* Increased padding */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px; /* Increased from 7px */
-  background-color: white;
-  cursor: pointer;
+#payable-accounts-container .search-input {
+    width: 100% !important;
+    padding: 10px 10px 10px 30px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    box-sizing: border-box !important;
 }
 
-.filter-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 10px 16px; /* Increased padding */
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 13px; /* Increased from 7px */
+#payable-accounts-container .sort-select {
+    padding: 10px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    background-color: white !important;
+    cursor: pointer !important;
 }
 
-.table-responsive {
-  overflow-x: auto;
+#payable-accounts-container .filter-btn {
+    background-color: #2c3e50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 16px !important; 
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 13px !important; 
 }
 
-.accounts-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px; /* Increased from 7px */
-  min-width: 600px;
+#payable-accounts-container .table-responsive {
+    overflow-x: auto !important;
 }
 
-.accounts-table th,
-.accounts-table td {
-  text-align: left;
-  padding: 12px; /* Increased padding */
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
-  vertical-align: top;
+#payable-accounts-container .accounts-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important; 
+    min-width: 600px !important;
+    margin-top: 10px !important;
 }
 
-.accounts-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  white-space: nowrap;
+#payable-accounts-container .accounts-table th,
+#payable-accounts-container .accounts-table td {
+    text-align: left !important;
+    padding: 12px !important; 
+    border: 2px solid #99a3b0 !important;
+    color: #2c3e50 !important;
+    vertical-align: top !important;
 }
 
-.accounts-table tr:hover {
-  background-color: #f9f9f9;
+#payable-accounts-container .accounts-table th {
+    background-color: #bcccdc !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
 }
 
-.action-btn {
-  background: transparent;
-  border: 1px solid #42b883;
-  color: #42b883;
-  padding: 6px 12px; /* Increased padding */
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px; /* Increased from 7px */
+#payable-accounts-container .accounts-table tr:hover {
+    background-color: #f9f9f9 !important;
 }
 
-.action-btn:hover {
-  background: #42b883;
-  color: white;
+#payable-accounts-container .action-btn {
+    background: transparent !important;
+    border: 1px solid #42b883 !important;
+    color: #42b883 !important;
+    padding: 6px 12px !important; 
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important; 
+}
+
+#payable-accounts-container .action-btn:hover {
+    background: #42b883 !important;
+    color: white !important;
 }
 
 /* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+#payable-accounts-container .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 1000 !important;
 }
 
-.modal-content {
-  background: white;
-  padding: 25px; /* Increased padding */
-  border-radius: 8px;
-  width: 350px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+#payable-accounts-container .modal-content {
+    background: white !important;
+    padding: 25px !important; 
+    border-radius: 8px !important;
+    width: 350px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-.modal-content h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  font-size: 16px; /* Increased from 14px */
+#payable-accounts-container .modal-content h4 {
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    font-size: 16px !important; 
 }
 
-.filter-section {
-  margin-bottom: 15px;
+#payable-accounts-container .filter-section {
+    margin-bottom: 15px !important;
 }
 
-.filter-section h5 {
-  margin: 0 0 8px 0;
-  font-size: 13px; /* Increased from 7px */
-  color: #2c3e50;
-  text-transform: uppercase;
-  font-weight: bold;
+#payable-accounts-container .filter-section h5 {
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important; 
+    color: #2c3e50 !important;
+    text-transform: uppercase !important;
+    font-weight: bold !important;
 }
 
-.checkbox-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+#payable-accounts-container .checkbox-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
 }
 
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px; /* Increased from 7px */
-  color: #2c3e50;
-  cursor: pointer;
+#payable-accounts-container .checkbox-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 13px !important; 
+    color: #2c3e50 !important;
+    cursor: pointer !important;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 25px;
-  border-top: 1px solid #eee;
-  padding-top: 15px;
+#payable-accounts-container .modal-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    margin-top: 25px !important;
+    border-top: 1px solid #eee !important;
+    padding-top: 15px !important;
 }
 
-.modal-btn {
-  padding: 8px 16px; /* Increased padding */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 13px; /* Increased from 7px */
-  font-weight: bold;
+#payable-accounts-container .modal-btn {
+    padding: 8px 16px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    background: white !important;
+    cursor: pointer !important;
+    font-size: 13px !important; 
+    font-weight: bold !important;
 }
 
-.modal-btn.primary {
-  background-color: #42b883;
-  color: white;
-  border-color: #42b883;
+#payable-accounts-container .modal-btn.primary {
+    background-color: #42b883 !important;
+    color: white !important;
+    border-color: #42b883 !important;
 }
 
-.loading-state {
-  text-align: center;
-  padding: 20px;
-  font-size: 14px; /* Increased from 10px */
-  color: #42b883;
+#payable-accounts-container .loading-state {
+    text-align: center !important;
+    padding: 20px !important;
+    font-size: 14px !important; 
+    color: #42b883 !important;
 }
 
-.status-active {
-  color: #27ae60; /* Green */
-  font-weight: bold;
-  background-color: #eafaf1;
-  padding: 4px 8px;
-  border-radius: 4px;
+#payable-accounts-container .status-active {
+    color: #27ae60 !important; 
+    font-weight: bold !important;
+    background-color: #eafaf1 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 
-.status-inactive {
-  color: #c0392b; /* Red */
-  font-weight: bold;
-  background-color: #fdedec;
-  padding: 4px 8px;
-  border-radius: 4px;
+#payable-accounts-container .status-inactive {
+    color: #c0392b !important; 
+    font-weight: bold !important;
+    background-color: #fdedec !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 </style>

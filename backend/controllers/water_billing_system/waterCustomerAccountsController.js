@@ -1,24 +1,20 @@
 import { getProjectNumberByCode } from '../../models/water_billing_system/waterprojectsModel.js';
-import { getCustomerCountBySabhaAndProject, insertCustomer, getCustomersBySabha, updateCustomer ,getSabhaCustomerByNIC , insertSabhaCustomer } from '../../models/water_billing_system/waterCustomerAccountsModel.js';
+import { 
+    getCustomerCountBySabhaAndProject, 
+    insertCustomer, 
+    getCustomersBySabha, 
+    updateCustomer, 
+    getSabhaCustomerByNIC, 
+    insertSabhaCustomer 
+} from '../../models/water_billing_system/waterCustomerAccountsModel.js';
 
 export const registerCustomer = async (req, res) => {
     try {
         const {
-            customerType,
-            oldBillNumber,
-            currentReading,
-            fullName,
-            nic,
-            propertyAddress,
-            mailingAddress,
-            contactInfo,
-            connectionType,
-            projectCode,
-            isSamurdhi,
-            samurdhiNumber,
-            isMetered,
-            sabha_code,
-            sabhaCustomerId // Frontend එකෙන් එන ID එක
+            customerType, oldBillNumber, currentReading, fullName, nic,
+            propertyAddress, mailingAddress, contactInfo, connectionType,
+            projectCode, isSamurdhi, samurdhiNumber, isMetered,
+            sabha_code, sabhaCustomerId
         } = req.body;
 
         if (!sabha_code) {
@@ -26,43 +22,34 @@ export const registerCustomer = async (req, res) => {
         }
 
         // --- 1. Bill Number Generation Logic ---
-        // 1. Sabha Code (අග ඉලක්කම් 3)
-const sabhaSuffix = String(sabha_code).slice(-3);
-let projectPart = 'GEN'; // Project Code එකක් නැත්නම් Default අගයක්
-if (projectCode) {
-    // Project Code එක String එකක් බවට හරවා, Capital Akuru වලට හැරවීම
-    projectPart = String(projectCode).toUpperCase(); 
-}
+        const sabhaSuffix = String(sabha_code).slice(-3);
+        let projectPart = 'GEN'; 
+        if (projectCode) {
+            projectPart = String(projectCode).toUpperCase(); 
+        }
 
-// 3. Account Type Code
-let accountTypeCode = '1'; 
-if (connectionType) {
-    const type = connectionType.toLowerCase();
-    if (type === 'domestic') accountTypeCode = 'D';
-    else if (type === 'commercial') accountTypeCode = 'C';
-    else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = 'I';
-}
+        let accountTypeCode = '1'; 
+        if (connectionType) {
+            const type = connectionType.toLowerCase();
+            if (type === 'domestic') accountTypeCode = 'D';
+            else if (type === 'commercial') accountTypeCode = 'C';
+            else if (type.includes('industrial') || type.includes('construction')) accountTypeCode = 'I';
+        }
 
-// 4. Samurdhi Status (S or N) 
-const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
-const samurdhiCode = isSamurdhiBool ? 'S' : 'N'; // True නම් 'S', නැත්නම් 'N'
+        const isSamurdhiBool = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
+        const samurdhiCode = isSamurdhiBool ? 'S' : 'N';
 
-// 5. Metered Status (M or N)
-const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
-const meteredCode = isMeteredBool ? 'M' : 'N'; // True නම් 'M', නැත්නම් 'N'
+        const isMeteredBool = (isMetered === true || isMetered === 'true' || isMetered === 1);
+        const meteredCode = isMeteredBool ? 'M' : 'N';
 
-// 6. Serial Number (Count + 1)
-const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
-const serialNum = String(customerCount + 1).padStart(3, '0'); // ඉලක්කම් 3කට හැදීම (උදා: 001)
+        const customerCount = await getCustomerCountBySabhaAndProject(sabha_code, projectCode);
+        const serialNum = String(customerCount + 1).padStart(3, '0');
 
-// --- Final Bill Number ---
-const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
+        const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiCode}${meteredCode}${serialNum}`;
 
-
-        // --- 2. ✅ Sabha Customer ID Setup Logic (New Part) ---
+        // --- 2. Sabha Customer ID Setup Logic ---
         let finalSabhaCustomerId = sabhaCustomerId;
 
-        // ID එකක් Frontend එකෙන් ආවේ නැත්නම්, අලුතෙන් Sabha Customer කෙනෙක් හදන්න
         if (!finalSabhaCustomerId) {
             const newSabhaData = {
                 sabha_code: sabha_code,
@@ -72,14 +59,9 @@ const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiC
                 cus_contact: contactInfo
             };
 
-            // Model එකට යවලා Save කරනවා
             const sabhaResult = await insertSabhaCustomer(newSabhaData);
-            
-            // අලුතෙන් ලැබුණ ID එක ගන්නවා
             finalSabhaCustomerId = sabhaResult.insertId;
-            console.log("New Sabha Customer Created with ID:", finalSabhaCustomerId);
         }
-
 
         // --- 3. Prepare Water Account Data ---
         const customerData = {
@@ -102,7 +84,6 @@ const newBillNumber = `${sabhaSuffix}${projectPart}${accountTypeCode}${samurdhiC
             sabha_customer_id: finalSabhaCustomerId 
         };
 
-        // Insert into DB
         await insertCustomer(customerData);
 
         return res.status(201).json({
@@ -165,18 +146,12 @@ export const getAllCustomers = async (req, res) => {
     }
 };
 
-
 export const editCustomerDetails = async (req, res) => {
     try {
         const { id } = req.params; 
         
         const {
-            fullName,
-            nic,
-            contactInfo,
-            isSamurdhi,
-            samurdhiNumber,
-            status
+            fullName, nic, contactInfo, isSamurdhi, samurdhiNumber, status
         } = req.body;
 
         if (!id) {
@@ -192,7 +167,6 @@ export const editCustomerDetails = async (req, res) => {
             status: status 
         };
 
-        // Model එකට යවන්න
         const result = await updateCustomer(id, updateData);
 
         return res.status(200).json({
@@ -217,13 +191,11 @@ export const checkSabhaCustomer = async (req, res) => {
         const customer = await getSabhaCustomerByNIC(nic);
 
         if (customer) {
-            // Data හමු වුනා
             return res.status(200).json({
                 success: true,
                 data: customer 
             });
         } else {
-            // Data හමු වුනේ නෑ (මෙය error එකක් නෙවෙයි)
             return res.status(200).json({
                 success: false,
                 message: "No existing sabha customer found"

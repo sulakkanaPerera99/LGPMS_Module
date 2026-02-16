@@ -1,11 +1,12 @@
-// models/water_billing_system/BillingfeesModel.js
-
 import db from "../../config/database.js";
 
-// 1. Data ඇතුලත් කිරීමේ Function එක
-export const insertBillingConfig = (data) => {
-    return new Promise((resolve, reject) => {
-        // Updated Query with new columns
+/**
+ * Inserts a new billing configuration into the database.
+ * * @param {Object} data - The configuration data object.
+ * @returns {Promise<Object>} - The result of the insert operation (contains insertId).
+ */
+export const insertBillingConfig = async (data) => {
+    try {
         const query = `
             INSERT INTO water_billing_configurations 
             (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, sabha_code) 
@@ -16,42 +17,45 @@ export const insertBillingConfig = (data) => {
             data.projectCode || 'General Config',
             data.connectionType,
             data.isMetered ? 1 : 0,
-            data.isSamurdhi ? 1 : 0,        // <--- Boolean -> TINYINT
+            data.isSamurdhi ? 1 : 0,
             data.fixedRate,
             JSON.stringify(data.unitRanges || []),
             JSON.stringify(data.otherCharges || []),
-            JSON.stringify(data.discounts || []), // <--- Array -> JSON String
-            1,                              // <--- Default Status is 1 (Active)
+            JSON.stringify(data.discounts || []),
+            1, // Default Status is 1 (Active)
             data.sabha_code
         ];
 
-        db.query(query, values, (err, result) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(result);
-        });
-    });
+        // Destructure to get the result object (ignore fields)
+        const [result] = await db.query(query, values);
+        return result;
+
+    } catch (error) {
+        console.error("Error in insertBillingConfig:", error);
+        throw error;
+    }
 };
 
-// 2. Data ලබා ගැනීමේ Function එක
-export const getBillingConfigs = (sabha_code, search, sort) => {
-    return new Promise((resolve, reject) => {
-        
-        // 1. Base Query
+/**
+ * Retrieves billing configurations based on Sabha code, search, and sort criteria.
+ * * @param {string} sabha_code - The Sabha code.
+ * @param {string} search - Search keyword.
+ * @param {string} sort - Sort parameter.
+ * @returns {Promise<Array>} - Array of configuration objects.
+ */
+export const getBillingConfigs = async (sabha_code, search, sort) => {
+    try {
         let query = "SELECT * FROM water_billing_configurations WHERE sabha_code = ?";
         let params = [sabha_code];
 
-        // 2. Dynamic Search Logic (SQL Injection Safe)
+        // Dynamic Search Logic
         if (search) {
-            // Search in project_code OR connection_type
             query += " AND (project_code LIKE ? OR connection_type LIKE ?)";
             const searchTerm = `%${search}%`;
             params.push(searchTerm, searchTerm);
         }
 
-        // 3. Dynamic Sorting Logic (Whitelist Approach)
-        //use a switch statement to prevent SQL injection via ORDER BY
+        // Dynamic Sorting Logic
         if (sort) {
             switch (sort) {
                 case 'code_asc':
@@ -67,75 +71,79 @@ export const getBillingConfigs = (sabha_code, search, sort) => {
                     query += " ORDER BY connection_type DESC";
                     break;
                 default:
-                    query += " ORDER BY id DESC"; // Default fallback
+                    query += " ORDER BY id DESC";
             }
         } else {
-            query += " ORDER BY id DESC"; // Default if no sort provided
+            query += " ORDER BY id DESC";
         }
 
-        // 4. Execute Query
-        db.query(query, params, (err, results) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(results);
-        });
-    });
+        const [rows] = await db.query(query, params);
+        return rows;
+
+    } catch (error) {
+        console.error("Error in getBillingConfigs:", error);
+        throw error;
+    }
 };
 
-export const updateBillingConfig = (oldId, data, userNic) => {
-    return new Promise((resolve, reject) => {
-        db.beginTransaction((err) => {
-            if (err) return reject(err);
+/**
+ * Updates a configuration by deactivating the old record and inserting a new one (Versioning).
+ * Uses a Database Transaction to ensure data integrity.
+ * * @param {number} oldId - The ID of the record to deactivate.
+ * @param {Object} data - The new data to insert.
+ * @param {string} userNic - The NIC of the user performing the update.
+ * @returns {Promise<Object>} - The result of the new insertion.
+ */
+export const updateBillingConfig = async (oldId, data, userNic) => {
+    // 1. Get a specific connection from the pool for the transaction
+    const connection = await db.getConnection();
 
-            // පියවර 1: පරණ Record එක Deactivate කිරීම
-            const deactivateQuery = `
-                UPDATE water_billing_configurations 
-                SET 
-                    status = 0, 
-                    effective_to = NOW() 
-                WHERE id = ?
-            `;
+    try {
+        // 2. Start Transaction
+        await connection.beginTransaction();
 
-            db.query(deactivateQuery, [oldId], (err, result) => {
-                if (err) {
-                    return db.rollback(() => reject(err));
-                }
+        // Step A: Deactivate old record
+        const deactivateQuery = `
+            UPDATE water_billing_configurations 
+            SET status = 0, effective_to = NOW() 
+            WHERE id = ?
+        `;
+        await connection.query(deactivateQuery, [oldId]);
 
-                // පියවර 2: අලුත් මිල ගණන් අලුත් පේළියක් ලෙස ඇතුලත් කිරීම
-                const insertQuery = `
-                    INSERT INTO water_billing_configurations 
-                    (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
-                `;
+        // Step B: Insert new record with updated values
+        const insertQuery = `
+            INSERT INTO water_billing_configurations 
+            (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
+        `;
 
-                const values = [
-                    data.projectCode,
-                    data.connectionType,
-                    data.isMetered ? 1 : 0,
-                    data.isSamurdhi ? 1 : 0,
-                    data.fixedRate,
-                    JSON.stringify(data.unitRanges || []),
-                    JSON.stringify(data.otherCharges || []),
-                    JSON.stringify(data.discounts || []),
-                    userNic,     // Edited User's NIC
-                    data.sabha_code
-                ];
+        const values = [
+            data.projectCode,
+            data.connectionType,
+            data.isMetered ? 1 : 0,
+            data.isSamurdhi ? 1 : 0,
+            data.fixedRate,
+            JSON.stringify(data.unitRanges || []),
+            JSON.stringify(data.otherCharges || []),
+            JSON.stringify(data.discounts || []),
+            userNic,
+            data.sabha_code
+        ];
 
-                db.query(insertQuery, values, (err, insertResult) => {
-                    if (err) {
-                        return db.rollback(() => reject(err));
-                    }
+        const [insertResult] = await connection.query(insertQuery, values);
 
-                    // සාර්ථක නම් Commit කරන්න
-                    db.commit((err) => {
-                        if (err) {
-                            return db.rollback(() => reject(err));
-                        }
-                        resolve(insertResult);
-                    });
-                });
-            });
-        });
-    });
+        // 3. Commit the Transaction
+        await connection.commit();
+        
+        return insertResult;
+
+    } catch (error) {
+        // 4. Rollback in case of error
+        await connection.rollback();
+        console.error("Error in updateBillingConfig (Transaction Rolled Back):", error);
+        throw error;
+    } finally {
+        // 5. Release the connection back to the pool
+        connection.release();
+    }
 };

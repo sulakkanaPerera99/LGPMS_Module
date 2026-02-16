@@ -173,7 +173,7 @@ const printReport = () => {
       </div>
       <div class="header-actions">
          <router-link to="/officer-dashboard" class="back-link">
-           <span class="icon">←</span> Back to Dashboard
+           <span class="icon"></span> Back to Dashboard
          </router-link>
       </div>
     </header>
@@ -362,10 +362,11 @@ const printReport = () => {
     padding: 12px;
     border-bottom: 1px solid #eee;
     color: #2c3e50;
+    border: 2px solid #99a3b0 !important;
 }
 
 .report-table th {
-    background-color: #f8f9fa;
+    background-color: #bcccdc;
     font-weight: 600;
 }
 

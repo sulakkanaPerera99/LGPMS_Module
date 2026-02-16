@@ -1,32 +1,55 @@
-import { fetchCustomersModel, fetchProjectsModel, fetchAccountPaymentDetails } from "../../models/water_billing_system/waterBillPaymentModel.js";
+import { 
+    fetchCustomersModel, 
+    fetchProjectsModel, 
+    fetchAccountPaymentDetails 
+} from "../../models/water_billing_system/waterBillPaymentModel.js";
 
-// List customers (Existing logic)
+/**
+ * Controller: Get Water Customers List
+ * Retrieves a list of customers for the dashboard/grid view.
+ */
 export const getWaterCustomers = async (req, res) => {
-
     try {
         const { sabha_code } = req.params;
-        const customers = await fetchCustomersModel(sabha_code, req.query); // Pass query params for filtering
+
+        // Validate required parameter
+        if (!sabha_code) {
+            return res.status(400).json({ status: 'error', message: 'Sabha Code is required' });
+        }
+
+        // Fetch data from model passing query parameters
+        const customers = await fetchCustomersModel(sabha_code, req.query); 
+        
         return res.status(200).json(customers);
+
     } catch (error) {
+        console.error("Controller Error (getWaterCustomers):", error);
         return res.status(500).json({ error: error.message });
     }
 };
 
-// Get Details for Payment Page (By Account ID)
+/**
+ * Controller: Get Account Details for Payment
+ * Retrieves specific account details and pending bill breakdown for the payment processing page.
+ */
 export const getAccountDetailsForPayment = async (req, res) => {
     try {
-        const { account_id } = req.params; // use Account ID 
+        const { account_id } = req.params; 
 
+        // Validate required parameter
         if (!account_id) {
             return res.status(400).json({ success: false, message: "Account ID is required" });
         }
 
+        // Fetch detailed data from model
         const data = await fetchAccountPaymentDetails(account_id);
 
+        // Handle case where account does not exist
         if (!data) {
             return res.status(404).json({ success: false, message: "Account not found." });
         }
 
+        // Return structured response matching frontend expectations
         return res.status(200).json({
             success: true,
             data: {
@@ -40,16 +63,33 @@ export const getAccountDetailsForPayment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching account details:", error);
-        return res.status(500).json({ success: false, message: "Server Error", error: error.message });
+        console.error("Controller Error (getAccountDetailsForPayment):", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Server Error", 
+            error: error.message 
+        });
     }
 };
 
+/**
+ * Controller: Get Project List
+ * Retrieves list of water projects for dropdown filtering.
+ */
 export const getProjectList = async (req, res) => {
     try {
-        const projects = await fetchProjectsModel(req.params.sabha_code);
+        const { sabha_code } = req.params;
+
+        if (!sabha_code) {
+            return res.status(400).json({ status: 'error', message: 'Sabha Code is required' });
+        }
+
+        const projects = await fetchProjectsModel(sabha_code);
+        
         return res.status(200).json(projects);
+
     } catch (error) {
+        console.error("Controller Error (getProjectList):", error);
         return res.status(500).json({ error: error.message });
     }
 };

@@ -7,7 +7,7 @@ const router = useRouter()
 
 // 1. Data Storage
 const accounts = ref([])
-const availableProjectCodes = ref([]) // ✅ Projects ගබඩා කරගන්න Array එක
+const availableProjectCodes = ref([])
 const currentSabha = ref('')
 const isLoading = ref(false)
 
@@ -24,7 +24,7 @@ const sortBy = ref('name_asc')
 // 3. Filter State
 const isFilterDialogOpen = ref(false)
 const activeFilters = reactive({
-  projectCode: '', // ✅ Project එක Filter කිරීමට අලුත් property එකක්
+  projectCode: '', 
   connectionTypes: [],
   samurdhi: [],
   metered: [],
@@ -423,10 +423,11 @@ const formatBillingMonth = (dateString) => {
   border-bottom: 1px solid #eee;
   color: #2c3e50;
   vertical-align: top;
+  border: 2px solid #99a3b0 !important;
 }
 
 .accounts-table th {
-  background-color: #f8f9fa;
+  background-color: #bcccdc;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -586,12 +587,12 @@ const formatBillingMonth = (dateString) => {
 .bill-list-table th,
 .bill-list-table td {
   padding: 12px;
-  border-bottom: 1px solid #eee;
   text-align: left;
+  border: 2px solid #99a3b0 !important;
 }
 
 .bill-list-table th {
-  background-color: #f8f9fa;
+  background-color: #bcccdc;
   position: sticky;
   top: 0;
   color: #2c3e50;

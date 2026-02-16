@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -25,18 +25,27 @@ const navigateTo = (route) => {
     router.push(route)
   }
 }
+
+const userName = ref('User'); // Default value'User'
+
+onMounted(() => {
+    const userDataString = sessionStorage.getItem('userData');
+    
+    if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        
+        userName.value = userData.name || userData.full_name || userData.userName || 'User';
+    }
+});
 </script>
 
 <template>
   <div class="dashboard-container">
     <header class="dashboard-header">
       <div class="header-content">
-        <h2>Officer Dashboard</h2>
-        <p class="sub-text">Welcome back! Select a module to proceed.</p>
+        <h2>Water Billing Dashboard</h2>
+        <p class="sub-text">Welcome back, Officer <span class="user-highlight">{{ userName }}</span>! Select a module to proceed.</p>
       </div>
-      <router-link to="/" class="back-link">
-        <i class="fas fa-arrow-left"></i> Back to Home
-      </router-link>
     </header>
     
     <div class="grid-layout">
@@ -71,7 +80,6 @@ const navigateTo = (route) => {
   max-width: 1200px;
   margin: 0 auto;
   font-family: 'Poppins', sans-serif;
-  /* පසුබිම ලස්සන වෙන්න පොඩි pattern එකක් */
   background-color: #f8f9fa; 
   border-radius: 20px;
   min-height: 80vh;
@@ -87,16 +95,16 @@ const navigateTo = (route) => {
 }
 
 .dashboard-header h2 {
-  font-size: 1.8rem;
+  font-size: 2.5rem;
   color: #343a40;
   margin: 0;
   font-weight: 600;
 }
 
 .sub-text {
-  color: #6c757d;
+  color: #505457;
   margin-top: 5px;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
 .back-link {
@@ -116,9 +124,9 @@ const navigateTo = (route) => {
 
 .grid-layout {
   display: grid;
-  /* Cards වල size එක responsive විදියට හැදුවා */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 30px;
+  /* Cards වල size එක responsive*/
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
 .card {
@@ -127,26 +135,24 @@ const navigateTo = (route) => {
   border-radius: 16px;
   padding: 25px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
   height: 130px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  
-  /* Industrial Styling: Soft Shadow */
+  border: #9fa5ac solid 1px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-  
   /* Smooth Transitions */
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* Glassmorphism Hover Effect */
 .card:hover {
-  transform: translateY(-8px); /* උඩට එසවීම */
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); /* Shadow එක වැඩි කිරීම */
-  border-color: var(--hover-color); /* අදාළ පාටින් border එක එනවා */
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); 
+  border-color: var(--hover-color);
 }
 
 /* Hover වෙනකොට පසුබිම පොඩ්ඩක් පාට වෙනවා */
@@ -169,7 +175,7 @@ const navigateTo = (route) => {
 
 .icon-wrapper {
   font-size: 2rem;
-  margin-bottom: 15px;
+  margin-right: 50px;
   z-index: 1;
   transition: transform 0.3s;
 }
@@ -179,21 +185,25 @@ const navigateTo = (route) => {
 }
 
 .card-content {
-  z-index: 1;
-  width: 100%;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  z-index: 1 !important;
 }
 
 .card h3 {
-  font-size: 1.1rem;
+  font-size: 2.0rem;
   margin: 0;
   color: #343a40;
   font-weight: 600;
 }
 
 .card p {
-  font-size: 0.8rem;
-  color: #868e96;
+  font-size: 1.3rem;
+  color: #676c70;
   margin: 5px 0 0 0;
+  font-weight: bold;
 }
 
 .go-arrow {

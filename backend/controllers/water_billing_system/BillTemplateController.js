@@ -1,10 +1,14 @@
 import * as WaterBillModel from '../../models/water_billing_system/BillTemplateModel.js';
 
-// Get Bill Details for Printing
+/**
+ * Controller: Get Bill Details for Printing
+ * Fetches specific bill data and maps database columns to frontend template properties.
+ */
 export const getBillDetails = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Fetch raw bill data from model
         const bill = await WaterBillModel.getBillById(id);
 
         if (!bill) {
@@ -47,7 +51,7 @@ export const getBillDetails = async (req, res) => {
             totalAmount: bill.total_amount,
             paymentStatus: bill.payment_status,
 
-            //sabha details
+            // Sabha details
             sb_name_en: bill.sb_name_en,
             sb_address: bill.sb_address,
             sb_contact: bill.sb_contact,
@@ -58,7 +62,7 @@ export const getBillDetails = async (req, res) => {
         return res.status(200).json(formattedBill);
 
     } catch (error) {
-        console.error("Error fetching bill details:", error);
+        console.error("Controller Error (getBillDetails):", error);
         return res.status(500).json({ 
             status: 'error', 
             message: 'Internal Server Error' 
@@ -66,15 +70,20 @@ export const getBillDetails = async (req, res) => {
     }
 };
 
-// ✅ NEW: Get Last 12 Bills for Selection
+/**
+ * Controller: Get Last 12 Bills for Selection
+ * Fetches bill history for a specific account to allow user selection.
+ */
 export const getBillHistory = async (req, res) => {
     try {
         const { accountId } = req.params;
 
+        // Validate required parameter
         if (!accountId) {
             return res.status(400).json({ success: false, message: "Account ID is required" });
         }
 
+        // Fetch bill history from model
         const bills = await WaterBillModel.getLastTwelveBills(accountId);
 
         return res.status(200).json({
@@ -83,7 +92,7 @@ export const getBillHistory = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching bill history:", error);
+        console.error("Controller Error (getBillHistory):", error);
         return res.status(500).json({ success: false, message: "Server Error" });
     }
 };

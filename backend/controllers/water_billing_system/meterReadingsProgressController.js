@@ -1,23 +1,31 @@
-import { getProjectProgressModel } from '../../models/water_Billing_System/meterReadingsProgressModel.js'; // Model එක Import කරගන්න
+import { getProjectProgressModel } from '../../models/water_Billing_System/meterReadingsProgressModel.js'; 
 
+/**
+ * Controller: Get Project Meter Reading Progress
+ * Fetches raw data from the model, calculates completion percentages, 
+ * formats the output, and applies sorting based on user request.
+ */
 export const getProjectProgressController = async (req, res) => {
     try {
         const { sabha_code, month, year, sort_by, order } = req.query;
 
-        // 1. Validation: අත්‍යවශ්‍ය දත්ත තිබේදැයි බැලීම
+        // 1. Validation: Check for required parameters
         if (!sabha_code || !month || !year) {
-            return res.status(400).json({ status: 'error', message: 'Missing parameters: sabha_code, month, or year' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: 'Missing parameters: sabha_code, month, or year' 
+            });
         }
 
-        // 2. Model එක හරහා දත්ත ගෙන්වා ගැනීම
+        // 2. Fetch raw data via Model
         const rawData = await getProjectProgressModel(sabha_code, parseInt(month), parseInt(year));
 
-        // 3. Percentage එක ගණනය කිරීම සහ Data Format කිරීම
+        // 3. Process Data: Calculate Percentage and Format
         let processedData = rawData.map(project => {
             const total = project.total_users || 0;
             const completed = project.completed_readings || 0;
             
-            // ප්‍රතිශතය ගණනය කිරීම (0 න් බෙදීම වැළැක්වීමට check එකක්)
+            // Calculate Percentage (Prevent Division by Zero)
             const percentage = total > 0 ? ((completed / total) * 100).toFixed(2) : 0;
 
             return {
@@ -30,8 +38,8 @@ export const getProjectProgressController = async (req, res) => {
         });
 
         // 4. Sorting Logic
-        // sort_by = 'progress' හෝ 'users'
-        // order = 'asc' (ආරෝහණ) හෝ 'desc' (අවරෝහණ)
+        // sort_by: 'progress' | 'users'
+        // order: 'asc' | 'desc'
         if (sort_by) {
             processedData.sort((a, b) => {
                 let valA, valB;
@@ -43,15 +51,15 @@ export const getProjectProgressController = async (req, res) => {
                     valA = a.total_users;
                     valB = b.total_users;
                 } else {
-                    return 0; // වෙනත් දෙයක් නම් sort නොකරයි
+                    return 0; // No sorting if key doesn't match
                 }
 
-                // Ascending or Descending
+                // Handle Ascending vs Descending
                 return order === 'asc' ? valA - valB : valB - valA;
             });
         }
 
-        // 5. ප්‍රතිඵලය යැවීම
+        // 5. Send Successful Response
         res.json({ status: 'success', data: processedData });
 
     } catch (error) {

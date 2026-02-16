@@ -1,18 +1,19 @@
-// controllers/water_billing_system/BillingfeesController.js
+import * as BillingFeesModel from '../../models/water_Billing_System/BillingfeesModel.js';
 
-import * as BillingFeesModel from '../../models/water_Billing_System/billingFeesModel.js';
-
+/**
+ * Controller to add a new billing configuration.
+ */
 export const addConfig = async (req, res) => {
     try {
         const { 
             projectCode, 
             connectionType, 
             isMetered, 
-            isSamurdhi,   // <--- NEW: Samurdhi Status
+            isSamurdhi, 
             fixedRate, 
             unitRanges, 
             otherCharges, 
-            discounts,    // <--- NEW: Discounts Array
+            discounts, 
             sabha_code 
         } = req.body;
 
@@ -28,11 +29,11 @@ export const addConfig = async (req, res) => {
             projectCode,
             connectionType,
             isMetered,
-            isSamurdhi,   // <--- Pass to Model
+            isSamurdhi,
             fixedRate,
             unitRanges,
             otherCharges,
-            discounts,    // <--- Pass to Model
+            discounts,
             sabha_code
         });
 
@@ -43,7 +44,7 @@ export const addConfig = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error adding billing config:", error);
+        console.error("Controller Error (addConfig):", error);
         return res.status(500).json({ 
             status: 'error', 
             message: 'Internal Server Error' 
@@ -51,11 +52,13 @@ export const addConfig = async (req, res) => {
     }
 };
 
+/**
+ * Controller to get configurations.
+ * Handles data formatting (JSON parsing) for the frontend.
+ */
 export const getConfigs = async (req, res) => {
     try {
         const { sabha_code } = req.params;
-        
-        // --- NEW: Extract Query Parameters ---
         const { search, sort } = req.query;
 
         if (!sabha_code) {
@@ -65,7 +68,6 @@ export const getConfigs = async (req, res) => {
             });
         }
 
-        // --- NEW: Pass search & sort to Model ---
         const configs = await BillingFeesModel.getBillingConfigs(sabha_code, search, sort);
 
         // Data Mapping (snake_case DB fields -> camelCase Frontend fields)
@@ -77,9 +79,9 @@ export const getConfigs = async (req, res) => {
             isSamurdhi: Boolean(config.is_samurdhi),
             fixedRate: config.fixed_rate,
             
-            // JSON Parsing checks (Handling DB stored JSON strings)
-            unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : config.unit_ranges,
-            otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : config.other_charges,
+            // Safe JSON Parsing checks
+            unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : (config.unit_ranges || []),
+            otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : (config.other_charges || []),
             discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []),
             
             status: config.status,
@@ -92,7 +94,7 @@ export const getConfigs = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching billing configs:", error);
+        console.error("Controller Error (getConfigs):", error);
         return res.status(500).json({ 
             status: 'error', 
             message: 'Internal Server Error' 
@@ -100,9 +102,12 @@ export const getConfigs = async (req, res) => {
     }
 };
 
+/**
+ * Controller to update configuration (Versioning).
+ */
 export const updateConfig = async (req, res) => {
     try {
-        const { id } = req.params; // මෙය පරණ ID එකයි
+        const { id } = req.params; // Old ID
         const { 
             projectCode, connectionType, isMetered, isSamurdhi, 
             fixedRate, unitRanges, otherCharges, discounts, 
@@ -111,10 +116,12 @@ export const updateConfig = async (req, res) => {
 
         // Validation
         if (!id || !connectionType || fixedRate === null) {
-            return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: 'Missing required fields' 
+            });
         }
 
-        // Model එකට යැවීම
         await BillingFeesModel.updateBillingConfig(id, {
             projectCode,
             connectionType,
@@ -129,11 +136,14 @@ export const updateConfig = async (req, res) => {
 
         return res.status(200).json({
             status: 'success',
-            message: 'Configuration updated with new version successfully.' // Message updated
+            message: 'Configuration updated with new version successfully.'
         });
 
     } catch (error) {
-        console.error("Error updating billing config:", error);
-        return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+        console.error("Controller Error (updateConfig):", error);
+        return res.status(500).json({ 
+            status: 'error', 
+            message: 'Internal Server Error' 
+        });
     }
 };

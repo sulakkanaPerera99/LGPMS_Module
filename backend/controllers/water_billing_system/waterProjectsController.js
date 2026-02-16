@@ -1,23 +1,32 @@
-import { insertProject, getProjectsBySabha, getProjectList as getProjectListModel, updateProjectModel } from "../../models/water_Billing_System/waterprojectsModel.js";
+import { 
+    insertProject, 
+    getProjectsBySabha, 
+    getProjectList as getProjectListModel, 
+    updateProjectModel 
+} from "../../models/water_Billing_System/waterprojectsModel.js";
 
-// ✅ Helper Function: Duplicate Error හඳුනා ගැනීමට
+/**
+ * Helper Function: Handles database errors, specifically targeting duplicate entries.
+ * Returns appropriate HTTP status codes (409 for conflicts, 500 for server errors).
+ * * @param {Object} err - The error object returned from the database.
+ * @param {Object} res - The response object to send data back to the client.
+ */
 const handleDatabaseError = (err, res) => {
     console.error("Database Error:", err);
 
-    // MySQL Duplicate Entry Error Code is 1062 or 'ER_DUP_ENTRY'
+    // MySQL Duplicate Entry Error Code: 1062 or 'ER_DUP_ENTRY'
     if (err.code === 'ER_DUP_ENTRY') {
         let message = "This record already exists.";
 
-        // Error message එක කියවා බලමු මොන Column එකද ඩ डुප්ලිකේට් වෙලා තියෙන්නේ කියලා
-        if (err.sqlMessage.includes("code")) {
+        // Identify which field caused the duplication based on the SQL error message
+        if (err.sqlMessage && err.sqlMessage.includes("code")) {
             message = "Project Code already exists! Please use a different code.";
-        } else if (err.sqlMessage.includes("number")) {
+        } else if (err.sqlMessage && err.sqlMessage.includes("number")) {
             message = "Project Number already exists! Please use a different number.";
-        } else if (err.sqlMessage.includes("name")) {
+        } else if (err.sqlMessage && err.sqlMessage.includes("name")) {
             message = "Project Name already exists! Please use a different name.";
         }
 
-        // 409 Conflict status යවමු
         return res.status(409).json({ 
             status: "error", 
             message: message,
@@ -25,19 +34,28 @@ const handleDatabaseError = (err, res) => {
         });
     }
 
+    // Default server error response
     return res.status(500).json({ 
         status: "error", 
-        message: "Database error occurred." 
+        message: "Internal Server Error. Please try again later.",
+        error: err.message 
     });
 };
 
 
-// --- Create New Project ---
-export const addWaterProject = (req, res) => {
+/**
+ * Controller: Create New Water Project
+ * Method: POST
+ */
+export const addWaterProject = async (req, res) => {
     const { name, code, number, sabha_code } = req.body;
 
+    // Basic Validation
     if (!name || !code || !sabha_code) {
-        return res.status(400).json({ status: "error", message: "Project Name, Code and Sabha Code are required!" });
+        return res.status(400).json({ 
+            status: "error", 
+            message: "Project Name, Code, and Sabha Code are required!" 
+        });
     }
 
     const projectData = {
@@ -47,49 +65,86 @@ export const addWaterProject = (req, res) => {
         number: number,
     };
 
-    insertProject(projectData, (err, results) => {
-        //ERROR HANDLING
-        if (err) return handleDatabaseError(err, res);
+    try {
+        // Await the insertion from the model
+        const result = await insertProject(projectData);
         
         return res.status(201).json({
             status: "success",
             message: "Project added successfully",
-            data: { id: results.insertId, ...projectData }
+            data: { id: result.insertId, ...projectData }
         });
-    });
+
+    } catch (error) {
+        return handleDatabaseError(error, res);
+    }
 };
 
-// --- Get All Projects
-export const getSabhaProjects = (req, res) => {
+
+/**
+ * Controller: Get All Projects for a specific Sabha
+ * Method: GET
+ * Supports search and sorting via query parameters.
+ */
+export const getSabhaProjects = async (req, res) => {
     const sabha_code = req.params.sabha_code;
     const { search, sort } = req.query;
 
-    if (!sabha_code) return res.status(400).json({ message: "Sabha Code is missing" });
+    if (!sabha_code) {
+        return res.status(400).json({ status: "error", message: "Sabha Code is missing" });
+    }
 
-    getProjectsBySabha(sabha_code, search, sort, (err, results) => {
-        if (err) return res.status(500).send(err);
+    try {
+        const results = await getProjectsBySabha(sabha_code, search, sort);
         return res.json(results);
-    });
+    } catch (error) {
+        console.error("Error fetching sabha projects:", error);
+        return res.status(500).json({ 
+            status: "error", 
+            message: "Failed to retrieve projects." 
+        });
+    }
 };
 
-// --- Get Project List
-export const getProjectList = (req, res) => {
+
+/**
+ * Controller: Get a simplified list of Projects (ID & Name only)
+ * Method: GET
+ * Used for dropdowns or simple listings.
+ */
+export const getProjectList = async (req, res) => {
     const sabha_code = req.params.sabha_code;
-    if (!sabha_code) return res.status(400).json({ message: "Sabha Code is missing" });
 
-    getProjectListModel(sabha_code, (err, results) => {
-        if (err) return res.status(500).send(err);
+    if (!sabha_code) {
+        return res.status(400).json({ status: "error", message: "Sabha Code is missing" });
+    }
+
+    try {
+        const results = await getProjectListModel(sabha_code);
         return res.json(results);
-    });
+    } catch (error) {
+        console.error("Error fetching project list:", error);
+        return res.status(500).json({ 
+            status: "error", 
+            message: "Failed to retrieve project list." 
+        });
+    }
 };
 
-// --- Edit/Update Water Project ---
-export const editWaterProject = (req, res) => {
+
+/**
+ * Controller: Edit/Update Water Project Details
+ * Method: PUT
+ */
+export const editWaterProject = async (req, res) => {
     const id = req.params.id;
     const { name, code, number, status, userId } = req.body; 
 
+    // Validation
     if (!id) return res.status(400).json({ status: "error", message: "Project ID is required" });
-    if (!name || !code || !number) return res.status(400).json({ status: "error", message: "All fields are required!" });
+    if (!name || !code || !number) {
+        return res.status(400).json({ status: "error", message: "All fields are required!" });
+    }
 
     const updateData = {
         name: name,
@@ -99,12 +154,12 @@ export const editWaterProject = (req, res) => {
         updated_by: userId
     };
 
-    updateProjectModel(id, updateData, (err, results) => {
-        //ERROR HANDLING
-        if (err) return handleDatabaseError(err, res);
+    try {
+        const result = await updateProjectModel(id, updateData);
 
-        if (results.affectedRows === 0) {
-            return res.status(404).json({ status: "error", message: "Project not found." });
+        // Check if any row was actually updated
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ status: "error", message: "Project not found or no changes made." });
         }
 
         return res.json({
@@ -112,7 +167,8 @@ export const editWaterProject = (req, res) => {
             message: "Project updated successfully",
             data: { id, ...updateData }
         });
-    });
+
+    } catch (error) {
+        return handleDatabaseError(error, res);
+    }
 };
-
-

@@ -1,7 +1,16 @@
 import db from '../../config/database.js';
 
-export const getPendingCustomers = (sabhaCode, projectCode, month, year) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Retrieves customers who have NOT yet had a meter reading for the specified month/year.
+ * It calculates the last known reading to be used as the 'previous reading' for the new entry.
+ * * @param {string} sabhaCode 
+ * @param {string} projectCode 
+ * @param {number} month 
+ * @param {number} year 
+ * @returns {Promise<Array>} List of pending customers
+ */
+export const getPendingCustomers = async (sabhaCode, projectCode, month, year) => {
+    try {
         const query = `
             SELECT
                 c.id as account_id,
@@ -33,23 +42,29 @@ export const getPendingCustomers = (sabhaCode, projectCode, month, year) => {
                 AND c.status = 1
             ORDER BY c.new_bill_number
         `;
-        db.query(query, [year, month, sabhaCode, projectCode], (err, results) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(results);
-        });
-    });
+
+        const [results] = await db.query(query, [year, month, sabhaCode, projectCode]);
+        return results;
+    } catch (error) {
+        throw error;
+    }
 };
 
-
-export const saveBatchReadings = (readings) => {
-    
-    return new Promise((resolve, reject) => {
+/**
+ * Saves a batch of meter readings. 
+ * Note: This function is primarily for raw insertion. 
+ * However, your Controller logic handles complex insertions one-by-one with billing calculation.
+ * If you need a bulk insert helper, this is it.
+ * * @param {Array} readings - Array of reading objects
+ * @returns {Promise<Object>} - Insert result
+ */
+export const saveBatchReadings = async (readings) => {
+    try {
         if (readings.length === 0) {
-            return resolve([]);
+            return [];
         }
 
+        // Prepare bulk insert values
         const values = readings.map(reading => [
             reading.account_id,
             reading.bill_number_ref,
@@ -62,7 +77,7 @@ export const saveBatchReadings = (readings) => {
             reading.current_reading,
             reading.reader_id,
             reading.reading_source,
-            1 // reading_status = 1
+            1 // reading_status = 1 (Active)
         ]);
 
         const query = `
@@ -71,23 +86,26 @@ export const saveBatchReadings = (readings) => {
             VALUES ?
         `;
 
-        db.query(query, [values], (err, result) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(result);
-        });
-    });
+        // Bulk insert using [values] array of arrays
+        const [result] = await db.query(query, [values]);
+        return result;
+
+    } catch (error) {
+        throw error;
+    }
 };
 
-export const getProjectCodes = (sabhaCode) => {
-    return new Promise((resolve, reject) => {
+/**
+ * Retrieves a list of water projects (code and name) for a specific Sabha.
+ * * @param {string} sabhaCode 
+ * @returns {Promise<Array>} List of projects
+ */
+export const getProjectCodes = async (sabhaCode) => {
+    try {
         const query = 'SELECT code, name FROM water_projects WHERE sabha_code = ? ORDER BY name';
-        db.query(query, [sabhaCode], (err, results) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(results);
-        });
-    });
+        const [results] = await db.query(query, [sabhaCode]);
+        return results;
+    } catch (error) {
+        throw error;
+    }
 };

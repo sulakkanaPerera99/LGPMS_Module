@@ -23,7 +23,14 @@ const editForm = ref({
   number: '',
   status: 'Active'
 });
+// ✅ New: මුල් දත්ත තබා ගැනීමට
+const originalEditForm = ref({}); 
 const editingId = ref(null);
+
+// ✅ Computed Property: දත්ත වෙනස් වී ඇත්දැයි බැලීමට
+const isFormChanged = computed(() => {
+  return JSON.stringify(editForm.value) !== JSON.stringify(originalEditForm.value);
+});
 
 // Load Data
 onMounted(async () => {
@@ -33,7 +40,6 @@ onMounted(async () => {
     currentSabha.value = userData.sabha || userData.sabha_code;
     await fetchProjects(); 
   } else {
-    // ❌ Error Alert (Session Error)
     Swal.fire({
       icon: 'error',
       title: 'Session Expired',
@@ -142,19 +148,17 @@ const addProject = async () => {
         projectNumber.value = '';
         users.value = '';
         
-        // ✅ Success Alert
         Swal.fire({
           icon: 'success',
           title: 'Project Saved!',
           text: 'New water project has been added successfully.',
-          timer: 2000, // 2 seconds walin auto close wenawa
+          timer: 2000, 
           showConfirmButton: false
         });
       }
     } catch (error) {
       console.error("Error saving:", error);
       
-      // ❌ Error Alert with Specific Message
       let errorMsg = "Failed to save project due to a server error.";
       if (error.response && error.response.data) {
         errorMsg = error.response.data.message;
@@ -168,7 +172,6 @@ const addProject = async () => {
       });
     }
   } else {
-    // ⚠️ Validation Alert
     Swal.fire({
       icon: 'warning',
       title: 'Missing Fields',
@@ -182,12 +185,18 @@ const addProject = async () => {
 const openEditModal = (project) => {
   editingId.value = project.id;
   
-  editForm.value = {
+  // දත්ත සකසන විට
+  const data = {
     name: project.name,
     code: project.code,
     number: project.number,
     status: project.status === 1 ? 'Active' : 'Inactive'
   };
+
+  editForm.value = { ...data };
+  // ✅ මුල් දත්ත වෙනම තබා ගනී (සංසන්දනය කිරීමට)
+  originalEditForm.value = JSON.parse(JSON.stringify(data));
+  
   showEditModal.value = true;
 };
 
@@ -195,12 +204,16 @@ const closeEditModal = () => {
   showEditModal.value = false;
   editingId.value = null;
   editForm.value = { name: '', code: '', number: '', status: 'Active' };
+  originalEditForm.value = {}; // Reset original data
 };
 
 // --- Update Project Function ---
 const updateProject = async () => {
   if (editForm.value.name.trim() && editForm.value.code.trim() && String(editForm.value.number).trim()) {
     
+    // ✅ 1. Confirmation එකට කලින් Modal එක Close කිරීම
+    showEditModal.value = false;
+
     // ❓ Confirmation Dialog
     const result = await Swal.fire({
       title: 'Are you sure?',
@@ -246,13 +259,15 @@ const updateProject = async () => {
             showConfirmButton: false
           });
 
-          closeEditModal();
+          // Modal එක කලින්ම close කළ නිසා මෙතන closeEditModal() අවශ්‍ය නැත, නමුත් state clear කිරීමට:
+          editingId.value = null;
+          editForm.value = { name: '', code: '', number: '', status: 'Active' };
+          
           fetchProjects(); 
         }
       } catch (error) {
         console.error("Error updating:", error);
 
-        // ❌ Error Alert
         let errorMsg = "Failed to update project.";
         if (error.response && error.response.data) {
             errorMsg = error.response.data.message;
@@ -265,8 +280,13 @@ const updateProject = async () => {
           confirmButtonColor: '#d33'
         });
       }
+    } else {
+        // User Cancel කළොත්, Modal එක වැසී ඇති නිසා, නැවත දත්ත clear කිරීම හෝ අවශ්‍ය නම් Modal එක නැවත පෙන්වීම කළ හැක.
+        // මෙහිදී අපි දත්ත clear කරමු.
+        closeEditModal();
     }
   } else {
+    // Validation Error නම් Modal එක වැසිය යුතු නැත, ඒ නිසා මෙය Swal එකට පසුව තබමු
     Swal.fire({
       icon: 'warning',
       title: 'Incomplete Data',
@@ -278,7 +298,7 @@ const updateProject = async () => {
 </script>
 
 <template>
-  <div class="manage-projects-container">
+  <div id="manage-projects-wrapper" class="manage-projects-container">
     <header class="page-header">
       <h2>Add and Manage Water Projects</h2>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
@@ -403,7 +423,7 @@ const updateProject = async () => {
 
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="closeEditModal">Cancel</button>
-            <button type="submit" class="save-btn">Save Changes</button>
+            <button type="submit" class="save-btn" :disabled="!isFormChanged">Save Changes</button>
           </div>
         </form>
       </div>
@@ -412,310 +432,323 @@ const updateProject = async () => {
 </template>
 
 <style scoped>
-/* ඔයාගේ පරණ CSS ටික ඒ විදිහටම තියන්න */
 /* --- Page Layout --- */
-.manage-projects-container {
-    padding: 20px;
-    max-width: 1000px;
-    margin: 0 auto;
-    font-family: sans-serif;
+#manage-projects-wrapper .manage-projects-container {
+    padding: 20px !important;
+    max-width: 1000px !important;
+    margin: 40px auto !important;
+    font-family: sans-serif !important;
 }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 15px;
+#manage-projects-wrapper .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: 40px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 15px !important;
 }
 
-.back-link {
-    color: #42b883;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px; 
+#manage-projects-wrapper .back-link {
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important; 
 }
 
-.content-area {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
+#manage-projects-wrapper .content-area {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 30px !important;
+    margin: 30px !important;
 }
 
-.card {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+#manage-projects-wrapper .card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
 }
 
-h4 {
-    margin-top: 0;
-    color: #2c3e50;
-    border-bottom: 2px solid #42b883;
-    display: inline-block;
-    padding-bottom: 5px;
-    margin-bottom: 20px;
-    font-size: 16px; 
+#manage-projects-wrapper h4 {
+    margin-top: 0 !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    margin-bottom: 20px !important;
+    font-size: 16px !important; 
 }
 
 /* --- Forms & Inputs --- */
-.project-form {
-    display: flex;
-    gap: 20px;
-    align-items: flex-end;
-    flex-wrap: wrap;
+#manage-projects-wrapper .project-form {
+    display: flex !important;
+    gap: 20px !important;
+    align-items: flex-end !important;
+    flex-wrap: wrap !important;
 }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex: 1;
-    min-width: 200px;
-    font-size: 14px; 
+#manage-projects-wrapper .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    flex: 1 !important;
+    min-width: 200px !important;
+    font-size: 14px !important;
+    padding: 0 !important;
+    margin: 0 5px !important; 
 }
 
-label {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 13px; 
+#manage-projects-wrapper label {
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+    font-size: 13px !important; 
 }
 
-input,
-select {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    width: 100%;
-    box-sizing: border-box;
+#manage-projects-wrapper input,
+#manage-projects-wrapper select {
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-input:focus,
-select:focus {
-    outline: none;
-    border-color: #42b883;
+#manage-projects-wrapper input:focus,
+#manage-projects-wrapper select:focus {
+    outline: none !important;
+    border-color: #42b883 !important;
 }
 
-.submit-btn {
-    background-color: #42b883;
-    color: white;
-    border: none;
-    padding: 0 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    height: 38px; 
-    font-size: 13px; 
+#manage-projects-wrapper .submit-btn {
+    background-color: #42b883 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    height: 38px !important; 
+    font-size: 13px !important; 
 }
 
-.submit-btn:hover {
-    background-color: #3aa876;
+#manage-projects-wrapper .submit-btn:hover {
+    background-color: #3aa876 !important;
 }
 
 /* --- Table Styles --- */
-.project-table {
-    width: 100%;
-    margin: 0 auto;
-    border-collapse: collapse;
-    font-size: 13px; 
+#manage-projects-wrapper .project-table {
+    width: 100% !important;
+    margin: 0 auto !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important; 
 }
 
-.project-table th,
-.project-table td {
-    text-align: center;
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    color: #2c3e50;
+#manage-projects-wrapper .project-table th,
+#manage-projects-wrapper .project-table td {
+    text-align: center !important;
+    padding: 12px !important;
+    border: 1px solid #4d555c !important; 
+    color: #2c3e50 !important;
+    font-weight: 600 !important;
 }
 
-.project-table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
+#manage-projects-wrapper .project-table th {
+    background-color: #bcccdc !important;
+    font-weight: 600 !important;
 }
 
-.action-btn {
-    background: transparent;
-    border: 1px solid #42b883;
-    color: #42b883;
-    padding: 6px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px; 
+#manage-projects-wrapper .project-table tbody tr:hover {
+    background-color: #f1f8f5 !important;
 }
 
-.action-btn:hover {
-    background: #42b883;
-    color: white;
+#manage-projects-wrapper .action-btn {
+    background: transparent !important;
+    border: 1px solid #42b883 !important;
+    color: #42b883 !important;
+    padding: 6px 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important; 
+}
+
+#manage-projects-wrapper .action-btn:hover {
+    background: #42b883 !important;
+    color: white !important;
 }
 
 /* --- Search & Sort Controls --- */
-.controls-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    gap: 15px;
-    flex-wrap: wrap;
+#manage-projects-wrapper .controls-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+    gap: 15px !important;
+    flex-wrap: wrap !important;
 }
 
-.search-wrapper,
-.sort-wrapper {
-    position: relative;
-    flex: 1;
-    min-width: 200px;
+#manage-projects-wrapper .search-wrapper,
+#manage-projects-wrapper .sort-wrapper {
+    position: relative !important;
+    flex: 1 !important;
+    min-width: 200px !important;
 }
 
-.search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px; 
-    color: #888;
-    pointer-events: none;
+#manage-projects-wrapper .search-icon {
+    position: absolute !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 14px !important; 
+    color: #888 !important;
+    pointer-events: none !important;
 }
 
-.search-input {
-    width: 100%;
-    padding: 8px 8px 8px 30px; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    box-sizing: border-box;
+#manage-projects-wrapper .search-input {
+    width: 100% !important;
+    padding: 8px 8px 8px 30px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    box-sizing: border-box !important;
 }
 
-.sort-select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    background-color: white;
-    cursor: pointer;
+#manage-projects-wrapper .sort-select {
+    width: 100% !important;
+    padding: 8px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    background-color: white !important;
+    cursor: pointer !important;
 }
 
 /* --- Status Styles --- */
-.status-active {
-    color: #27ae60;
-    font-weight: bold;
+#manage-projects-wrapper .status-active {
+    color: #27ae60 !important;
+    font-weight: bold !important;
 }
 
-.status-inactive {
-    color: #e74c3c;
-    font-weight: bold;
+#manage-projects-wrapper .status-inactive {
+    color: #e74c3c !important;
+    font-weight: bold !important;
 }
 
-.status-select {
-    background-color: white;
+#manage-projects-wrapper .status-select {
+    background-color: white !important;
 }
 
 /* --- Modal Styles --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    animation: fadeIn 0.3s ease;
+#manage-projects-wrapper .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 9999 !important; /* Top layer */
+    animation: fadeIn 0.3s ease !important;
 }
 
-.modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    width: 450px; 
-    max-width: 90%;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    animation: slideUp 0.3s ease;
+#manage-projects-wrapper .modal-content {
+    background: white !important;
+    padding: 25px !important;
+    border-radius: 12px !important;
+    width: 450px !important; 
+    max-width: 90% !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+    animation: slideUp 0.3s ease !important;
 }
 
-.edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+#manage-projects-wrapper .edit-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
 }
 
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+#manage-projects-wrapper .modal-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
 }
 
-.cancel-btn {
-    background: #f1f1f1;
-    border: 1px solid #ccc;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px; 
+#manage-projects-wrapper .cancel-btn {
+    background: #f1f1f1 !important;
+    border: 1px solid #ccc !important;
+    padding: 8px 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 13px !important; 
 }
 
-.save-btn {
-    background: #42b883;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px; 
+#manage-projects-wrapper .save-btn {
+    background: #42b883 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 13px !important; 
 }
 
-.pagination-controls {
-  display: flex;
-  justify-content: flex-end; 
-  align-items: center;
-  margin-top: 15px;
-  gap: 15px;
-  padding: 10px;
-  font-size: 13px;
+#manage-projects-wrapper .pagination-controls {
+  display: flex !important;
+  justify-content: flex-end !important; 
+  align-items: center !important;
+  margin-top: 15px !important;
+  gap: 15px !important;
+  padding: 10px !important;
+  font-size: 13px !important;
 }
 
-.page-btn {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  color: #2c3e50;
-  font-weight: bold;
-  transition: all 0.2s;
+#manage-projects-wrapper .page-btn {
+  background-color: #ffffff !important;
+  border: 1px solid #ddd !important;
+  padding: 6px 12px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  color: #2c3e50 !important;
+  font-weight: bold !important;
+  transition: all 0.2s !important;
 }
 
-.page-btn:hover:not(:disabled) {
-  background-color: #42b883;
-  color: white;
-  border-color: #42b883;
+#manage-projects-wrapper .page-btn:hover:not(:disabled) {
+  background-color: #42b883 !important;
+  color: white !important;
+  border-color: #42b883 !important;
 }
 
-.page-btn:disabled {
-  background-color: #f5f5f5;
-  color: #aaa;
-  cursor: not-allowed;
+#manage-projects-wrapper .page-btn:disabled {
+  background-color: #f5f5f5 !important;
+  color: #aaa !important;
+  cursor: not-allowed !important;
 }
 
-.page-info {
-  font-weight: 600;
-  color: #2c3e50;
+#manage-projects-wrapper .page-info {
+  font-weight: 600 !important;
+  color: #2c3e50 !important;
 }
-
+#manage-projects-wrapper .save-btn:disabled {
+    background-color: #a5d4c0 !important; 
+    color: #ffffff !important;
+    cursor: not-allowed !important;     
+    opacity: 0.9 !important;         
+    border: 1px solid #a5d4c0 !important;
+}
 /* --- Animations --- */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0 !important; }
+    to { opacity: 1 !important; }
 }
 
 @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from { transform: translateY(20px) !important; opacity: 0 !important; }
+    to { transform: translateY(0) !important; opacity: 1 !important; }
 }
 </style>

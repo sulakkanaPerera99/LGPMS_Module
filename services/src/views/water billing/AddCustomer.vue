@@ -166,225 +166,237 @@ const submitForm = async () => {
 </script>
 
 <template>
-  <div class="page-container">
+  <div id="register-customer-container" class="page-container">
     <header class="page-header">
       <h2>Register New Customer</h2>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
     </header>
 
-    <div class="card form-card">
-      <h4>Customer Details Form</h4>
-      <form @submit.prevent="submitForm" class="customer-form">
-        
-        <div class="form-group">
-          <label for="cType">Customer Type</label>
-          <select id="cType" v-model="form.customerType">
-            <option v-for="type in customerTypes" :key="type" :value="type">{{ type }}</option>
-          </select>
-        </div>
+    <div class="content-area">
+      <div class="card form-card">
+        <h4>Customer Details Form</h4>
+        <form @submit.prevent="submitForm" class="customer-form">
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="cType">Customer Type</label>
+              <select id="cType" v-model="form.customerType">
+                <option v-for="type in customerTypes" :key="type" :value="type">{{ type }}</option>
+              </select>
+            </div>
 
-        <div class="form-row" v-if="form.customerType === 'Existing Customer'">
-          <div class="form-group">
-            <label for="oldBillNo">Old Bill Number</label>
-            <input id="oldBillNo" v-model="form.oldBillNumber" type="text" placeholder="Enter existing bill number" />
-          </div>
-          <div class="form-group">
-            <label for="currReading">Current Reading</label>
-            <input id="currReading" v-model="form.currentReading" type="number" placeholder="Enter current meter reading" />
-          </div>
-        </div>
+            <div class="form-group">
+              <label for="nic">NIC</label>
+              <input id="nic" v-model="form.nic" type="text" placeholder="National Identity Card No" required />
+            </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="nic">NIC</label>
-            <input id="nic" v-model="form.nic" type="text" placeholder="National Identity Card No" required />
+            <div class="form-group">
+              <label for="fName">Full Name</label>
+              <input id="fName" v-model="form.fullName" type="text" placeholder="Enter full name" required />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="fName">Full Name</label>
-            <input id="fName" v-model="form.fullName" type="text" placeholder="Enter full name" required />
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="pAddress">Property Address (Water Supply)</label>
-            <textarea id="pAddress" v-model="form.propertyAddress" rows="3"></textarea>
+          <div class="form-row" v-if="form.customerType === 'Existing Customer'">
+            <div class="form-group">
+              <label for="oldBillNo">Old Bill Number</label>
+              <input id="oldBillNo" v-model="form.oldBillNumber" type="text" placeholder="Enter existing bill number" />
+            </div>
+            <div class="form-group">
+              <label for="currReading">Current Reading</label>
+              <input id="currReading" v-model="form.currentReading" type="number" placeholder="Enter current meter reading" />
+            </div>
           </div>
-          <div class="form-group">
-            <label for="mAddress">Mailing Address</label>
-            <textarea id="mAddress" v-model="form.mailingAddress" rows="3"></textarea>
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="contact">Contact Information</label>
-            <input id="contact" v-model="form.contactInfo" type="text" placeholder="Phone / Email" />
-          </div>
-          <div class="form-group">
-            <label for="connType">Water Supply Connection Type</label>
-            <select id="connType" v-model="form.connectionType">
-              <option v-for="type in connectionTypes" :key="type" :value="type">{{ type }}</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pAddress">Property Address (Water Supply)</label>
+              <textarea id="pAddress" v-model="form.propertyAddress" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="mAddress">Mailing Address</label>
+              <textarea id="mAddress" v-model="form.mailingAddress" rows="3"></textarea>
+            </div>
           </div>
           
-          <div class="form-group">
-              <label for="pCode">Water Project Code</label>
-              <select id="pCode" v-model="form.projectCode" required>
-                <option value="" disabled>Select a Project</option>
-                <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
-                  {{ project.name }} - {{ project.code }}
-                </option>
-              </select>
-          </div>
+          <div class="form-row">
+             <div class="form-group">
+               <label for="contact">Contact Information</label>
+               <input id="contact" v-model="form.contactInfo" type="text" placeholder="Phone / Email" />
+             </div>
+             <div class="form-group">
+               <label for="connType">Water Supply Connection Type</label>
+               <select id="connType" v-model="form.connectionType">
+                 <option v-for="type in connectionTypes" :key="type" :value="type">{{ type }}</option>
+               </select>
+             </div>
+             <div class="form-group">
+                 <label for="pCode">Water Project Code</label>
+                 <select id="pCode" v-model="form.projectCode" required>
+                   <option value="" disabled>Select a Project</option>
+                   <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
+                     {{ project.name }} - {{ project.code }}
+                   </option>
+                 </select>
+             </div>
+           </div>
 
-        </div>
-
-        <div class="form-row checkbox-row">
-          <div class="form-group checkbox-group">
-            <label for="samurdhi">Samurdhi Beneficiary</label>
-            <input id="samurdhi" v-model="form.isSamurdhi" type="checkbox" />
-          </div>
-          <div class="form-group" v-if="form.isSamurdhi">
-            <label for="sNumber">Samurdhi Number</label>
-            <input id="sNumber" v-model="form.samurdhiNumber" type="text" placeholder="Enter Samurdhi Number" />
-          </div>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label for="metered">Metered Status</label>
-          <input id="metered" v-model="form.isMetered" type="checkbox" />
-        </div>
-
-        <button type="submit" class="submit-btn">Register Customer</button>
-      </form>
+           <div class="form-row checkbox-row">
+             <div class="form-group checkbox-group">
+               <div class="form-group checkbox-group">
+                  <label for="metered">Metered Status</label>
+                  <input id="metered" v-model="form.isMetered" type="checkbox" />
+               </div>
+                  <label for="samurdhi">Samurdhi Beneficiary</label>
+                  <input id="samurdhi" v-model="form.isSamurdhi" type="checkbox" />
+                </div>
+             <div class="form-group" v-if="form.isSamurdhi">
+               <label for="sNumber">Samurdhi Number</label>
+               <input class="samurdhi-input" id="sNumber" v-model="form.samurdhiNumber" type="text" placeholder="Enter Samurdhi Number" />
+             </div>
+           </div>
+          <button type="submit" class="submit-btn">Register Customer</button>
+        </form>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 /* --- Page Layout --- */
-.page-container {
-    padding: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-    font-family: sans-serif;
+#register-customer-container.page-container {
+    padding: 20px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    font-family: sans-serif !important;
 }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 10px;
+#register-customer-container .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: 40px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 10px !important;
 }
 
-.back-link {
-    color: #42b883;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px; 
+#register-customer-container .back-link {
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important; 
 }
 
-.card {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+#register-customer-container .content-area {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 30px !important;
+    margin: 30px !important;
 }
 
-h4 {
-    margin-top: 0;
-    color: #2c3e50;
-    border-bottom: 2px solid #42b883;
-    display: inline-block;
-    padding-bottom: 5px;
-    margin-bottom: 20px;
-    font-size: 16px; 
+#register-customer-container .card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+#register-customer-container h4 {
+    margin-top: 0 !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    margin-bottom: 20px !important;
+    font-size: 16px !important; 
 }
 
 /* --- Form Layout --- */
-.customer-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+#register-customer-container .customer-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
 }
 
-.form-row {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+#register-customer-container .form-row {
+    display: flex !important;
+    gap: 20px !important;
+    flex-wrap: wrap !important;
 }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-    min-width: 150px;
+#register-customer-container .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    flex: 1 !important;
+    min-width: 150px !important;
+    padding: 0 !important;
+    margin: 5px 5px !important;
 }
 
-.checkbox-row {
-    align-items: center;
+#register-customer-container .samurdhi-input {
+    max-width: 500px !important;
 }
 
-.checkbox-group {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    flex: 0 0 auto;
+#register-customer-container .checkbox-row {
+    align-items: center !important;
 }
 
-.checkbox-group input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-    padding: 0;
+#register-customer-container .checkbox-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+}
+
+#register-customer-container .checkbox-group input[type="checkbox"] {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* --- Form Elements --- */
-label {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 13px; 
+#register-customer-container label {
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+    font-size: 13px !important; 
 }
 
-input, 
-select, 
-textarea {
-    padding: 10px; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px; 
-    width: 100%;
-    box-sizing: border-box;
+#register-customer-container input, 
+#register-customer-container select, 
+#register-customer-container textarea {
+    padding: 10px !important; 
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important; 
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-input:focus, 
-select:focus, 
-textarea:focus {
-    outline: none;
-    border-color: #42b883;
+#register-customer-container input:focus, 
+#register-customer-container select:focus, 
+#register-customer-container textarea:focus {
+    outline: none !important;
+    border-color: #42b883 !important;
 }
 
 /* --- Buttons --- */
-.submit-btn {
-    background-color: #42b883;
-    color: white;
-    border: none;
-    padding: 0 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    align-self: flex-start;
-    font-size: 13px; 
-    margin-top: 10px;
-    height: 38px;
+#register-customer-container .submit-btn {
+    background-color: #42b883 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0 20px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    align-self: flex-start !important;
+    font-size: 13px !important; 
+    margin-top: 10px !important;
+    height: 38px !important;
 }
 
-.submit-btn:hover {
-    background-color: #3aa876;
+#register-customer-container .submit-btn:hover {
+    background-color: #3aa876 !important;
 }
 </style>

@@ -1,13 +1,14 @@
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 // 1. Data Storage
-const accounts = ref([]) // Stores ALL fetched accounts
+const accounts = ref([]) 
 const currentSabha = ref('')
 const isLoading = ref(false)
 
-// --- NEW: Pagination State ---
+// --- Pagination State ---
 const currentPage = ref(1)
 const itemsPerPage = 10
 
@@ -37,6 +38,14 @@ const editForm = reactive({
   status: 1
 })
 
+// මුල් දත්ත තබා ගැනීමට
+const originalEditForm = ref({})
+
+// දත්ත වෙනස් වී ඇත්දැයි බැලීමට Computed Property
+const isFormChanged = computed(() => {
+  return JSON.stringify(editForm) !== JSON.stringify(originalEditForm.value)
+})
+
 // 4. Fetch Data on Load
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
@@ -46,10 +55,10 @@ onMounted(async () => {
     if (currentSabha.value) {
       await fetchAccounts();
     } else {
-      alert("Session Error: Sabha Code not found.");
+      Swal.fire('Error', "Session Error: Sabha Code not found.", 'error');
     }
   } else {
-    alert("Session Expired. Please login again.");
+    Swal.fire('Error', "Session Expired. Please login again.", 'error');
   }
 });
 
@@ -58,7 +67,6 @@ watch(searchQuery, () => fetchAccounts(), { immediate: false });
 watch(sortBy, () => fetchAccounts(), { immediate: false });
 watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 
-// --- NEW: Reset to Page 1 when data changes ---
 watch(accounts, () => {
     currentPage.value = 1;
 });
@@ -78,13 +86,12 @@ const fetchAccounts = async () => {
     accounts.value = response.data;
   } catch (error) {
     console.error("Error fetching accounts:", error);
-    alert("Failed to load customer data.");
   } finally {
     isLoading.value = false;
   }
 };
 
-// --- NEW: Pagination Logic (Computed Properties) ---
+// --- Pagination Logic ---
 const totalPages = computed(() => {
     return Math.ceil(accounts.value.length / itemsPerPage) || 1;
 });
@@ -115,7 +122,7 @@ const clearFilters = () => {
   activeFilters.status = []
 }
 
-// Edit Functions (Unchanged)
+// Edit Functions
 const openEditModal = (acc) => {
   editForm.id = acc.id
   editForm.fullName = acc.fullName
@@ -124,6 +131,9 @@ const openEditModal = (acc) => {
   editForm.isSamurdhi = Boolean(acc.isSamurdhi)
   editForm.samurdhiNumber = acc.samurdhiNumber || ''
   editForm.status = acc.status
+
+  originalEditForm.value = JSON.parse(JSON.stringify(editForm));
+
   isEditDialogOpen.value = true
 }
 
@@ -136,43 +146,76 @@ const closeEditModal = () => {
   editForm.isSamurdhi = false
   editForm.samurdhiNumber = ''
   editForm.status = 1
+  originalEditForm.value = {}
 }
 
 const saveCustomer = async () => {
   if (!editForm.id) return
-  isSaving.value = true
-  try {
-    const payload = {
-      fullName: editForm.fullName,
-      nic: editForm.nic,
-      contactInfo: editForm.contactInfo,
-      isSamurdhi: editForm.isSamurdhi,
-      samurdhiNumber: editForm.samurdhiNumber,
-      status: Number(editForm.status)
-    }
-    const response = await axios.put(`/update-customer/${editForm.id}`, payload)
-    if (response.status === 200) {
-      alert(response.data.message || "Customer updated successfully")
-      closeEditModal()
-      await fetchAccounts() 
-    }
-  } catch (error) {
-    console.error("Error updating customer:", error)
-    alert("Failed to update customer. Please check inputs.")
-  } finally {
-    isSaving.value = false
+
+  // Modal එක Close කිරීම
+  isEditDialogOpen.value = false
+
+  // Confirmation Dialog
+  const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to update this customer's details?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#42b883',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, Update it!'
+  });
+
+  if (result.isConfirmed) {
+      isSaving.value = true
+      try {
+        const payload = {
+          fullName: editForm.fullName,
+          nic: editForm.nic,
+          contactInfo: editForm.contactInfo,
+          isSamurdhi: editForm.isSamurdhi,
+          samurdhiNumber: editForm.samurdhiNumber,
+          status: Number(editForm.status)
+        }
+        const response = await axios.put(`/update-customer/${editForm.id}`, payload)
+        
+        if (response.status === 200) {
+          // ✅ Success Message Update (Auto Close & No Button)
+          Swal.fire({
+            icon: 'success',
+            title: 'Updated!',
+            text: response.data.message || "Customer updated successfully",
+            timer: 2000, // තත්පර 2කින් මැකී යයි
+            showConfirmButton: false // OK බොත්තම ඉවත් කළා
+          });
+          
+          editForm.id = null
+          originalEditForm.value = {}
+          await fetchAccounts() 
+        }
+      } catch (error) {
+        console.error("Error updating customer:", error)
+        Swal.fire('Error', "Failed to update customer.", 'error')
+      } finally {
+        isSaving.value = false
+      }
+  } else {
+      closeEditModal();
   }
 }
 </script>
 
 <template>
-  <div class="page-container">
+  <div id="manage-water-accounts-container" class="page-container">
     <header class="page-header">
       <h2>Manage Water Accounts</h2>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
     </header>
 
     <div class="card table-card">
+      
+      <h4>Existing Accounts</h4>
+
       <div class="controls-row">
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
@@ -321,13 +364,13 @@ const saveCustomer = async () => {
            <div class="form-group">
               <label>Status</label>
               <select v-model="editForm.status">
-                <option value="1">Active</option>
-                <option value="0">Inactive</option>
+                <option :value="1">Active</option>
+                <option :value="0">Inactive</option>
               </select>
           </div>
            <div class="modal-actions">
              <button type="button" class="modal-btn" @click="closeEditModal" :disabled="isSaving">Cancel</button>
-             <button type="submit" class="modal-btn primary" :disabled="isSaving">
+             <button type="submit" class="modal-btn primary" :disabled="isSaving || !isFormChanged">
                {{ isSaving ? 'Saving...' : 'Save Changes' }}
              </button>
            </div>
@@ -340,265 +383,391 @@ const saveCustomer = async () => {
 
 <style scoped>
 /* --- Page Layout --- */
-.page-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: sans-serif;
+#manage-water-accounts-container .page-container {
+    padding: 20px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    font-family: sans-serif !important;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 15px;
+#manage-water-accounts-container .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: 40px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 15px !important;
 }
 
-.back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 14px;
+#manage-water-accounts-container .back-link {
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
 }
 
-.card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+#manage-water-accounts-container .card {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    margin: 40px !important;
+}
+
+#manage-water-accounts-container h4 {
+    margin-top: 0 !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    margin-bottom: 20px !important;
+    font-size: 16px !important; 
 }
 
 /* --- Controls Row --- */
-.controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 15px;
-  flex-wrap: wrap;
+#manage-water-accounts-container .controls-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 15px !important;
+    gap: 15px !important;
+    flex-wrap: wrap !important;
 }
 
-.search-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
+#manage-water-accounts-container .search-wrapper {
+    position: relative !important;
+    flex: 1 !important;
+    min-width: 200px !important;
 }
 
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: #888;
-  pointer-events: none;
+#manage-water-accounts-container .search-icon {
+    position: absolute !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 14px !important;
+    color: #888 !important;
+    pointer-events: none !important;
 }
 
-.search-input {
-  width: 100%;
-  padding: 10px 10px 10px 30px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  box-sizing: border-box;
+#manage-water-accounts-container .search-input {
+    width: 100% !important;
+    padding: 10px 10px 10px 30px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
 }
 
-.sort-select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  background-color: white;
-  cursor: pointer;
+#manage-water-accounts-container .sort-select {
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    background-color: white !important;
+    cursor: pointer !important;
 }
 
-.filter-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 13px;
+#manage-water-accounts-container .filter-btn {
+    background-color: #2c3e50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
 }
 
 /* --- Table Styles --- */
-.table-responsive {
-  overflow-x: auto;
+#manage-water-accounts-container .table-responsive {
+    overflow-x: auto !important;
 }
 
-.accounts-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  min-width: 800px;
-  margin-bottom: 15px; /* Added margin for pagination */
+#manage-water-accounts-container .accounts-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    min-width: 800px !important;
+    margin-bottom: 15px !important;
 }
 
-.accounts-table th,
-.accounts-table td {
-  text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
-  vertical-align: top;
+#manage-water-accounts-container .accounts-table th,
+#manage-water-accounts-container .accounts-table td {
+    text-align: left !important;
+    padding: 12px !important;
+    border: 2px solid #99a3b0 !important;
+    color: #2c3e50 !important;
+    vertical-align: top !important;
 }
 
-.accounts-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  white-space: nowrap;
+#manage-water-accounts-container .accounts-table td {
+    font-size: 14px !important;
+    font-weight: 500 !important;
 }
 
-.accounts-table tr:hover {
-  background-color: #f9f9f9;
+#manage-water-accounts-container .accounts-table th {
+    background-color: #bcccdc !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
 }
 
-.action-btn {
-  background: transparent;
-  border: 1px solid #42b883;
-  color: #42b883;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
+#manage-water-accounts-container .accounts-table tr:hover {
+    background-color: #f9f9f9 !important;
 }
 
-.action-btn:hover {
-  background: #42b883;
-  color: white;
+#manage-water-accounts-container .action-btn {
+    background: transparent !important;
+    border: 1px solid #42b883 !important;
+    color: #42b883 !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+}
+
+#manage-water-accounts-container .action-btn:hover {
+    background: #42b883 !important;
+    color: white !important;
 }
 
 /* --- Status Badges --- */
-.status-active {
-  color: #27ae60;
-  font-weight: bold;
-  background-color: #eafaf1;
-  padding: 4px 8px;
-  border-radius: 4px;
+#manage-water-accounts-container .status-active {
+    color: #27ae60 !important;
+    font-weight: bold !important;
+    background-color: #eafaf1 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 
-.status-inactive {
-  color: #c0392b;
-  font-weight: bold;
-  background-color: #fdedec;
-  padding: 4px 8px;
-  border-radius: 4px;
+#manage-water-accounts-container .status-inactive {
+    color: #c0392b !important;
+    font-weight: bold !important;
+    background-color: #fdedec !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 
-.new-bill { font-weight: bold; color: #2c3e50; }
-.loading-state { text-align: center; padding: 20px; font-size: 14px; color: #42b883; font-weight: bold; }
-
-/* --- NEW: Pagination Styles (Matches Reference Image) --- */
-.pagination-container {
-    display: flex;
-    justify-content: flex-end; /* Aligns to right like the screenshot */
-    align-items: center;
-    padding-top: 15px;
-    border-top: 1px solid #e0e0e0;
-    gap: 10px;
+#manage-water-accounts-container .new-bill {
+    font-weight: bold !important;
+    color: #2c3e50 !important;
 }
 
-.pagination-btn {
-    background-color: #ffffff;
-    border: 1px solid #dcdcdc;
-    color: #333;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.2s;
+#manage-water-accounts-container .loading-state {
+    text-align: center !important;
+    padding: 20px !important;
+    font-size: 14px !important;
+    color: #42b883 !important;
+    font-weight: bold !important;
 }
 
-.pagination-btn:hover:not(:disabled) {
-    background-color: #f1f1f1;
-    border-color: #bbb;
+/* --- Pagination Styles --- */
+#manage-water-accounts-container .pagination-container {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    padding-top: 15px !important;
+    border-top: 1px solid #e0e0e0 !important;
+    gap: 10px !important;
 }
 
-.pagination-btn:disabled {
-    color: #ccc;
-    background-color: #f9f9f9;
-    cursor: not-allowed;
-    border-color: #eee;
+#manage-water-accounts-container .pagination-btn {
+    background-color: #ffffff !important;
+    border: 1px solid #dcdcdc !important;
+    color: #333 !important;
+    padding: 8px 15px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s !important;
 }
 
-.page-info {
-    font-size: 13px;
-    color: #555;
-    margin: 0 10px;
+#manage-water-accounts-container .pagination-btn:hover:not(:disabled) {
+    background-color: #f1f1f1 !important;
+    border-color: #bbb !important;
 }
 
-/* --- Modal Styles (Same as before) --- */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 1000;
+#manage-water-accounts-container .pagination-btn:disabled {
+    color: #ccc !important;
+    background-color: #f9f9f9 !important;
+    cursor: not-allowed !important;
+    border-color: #eee !important;
 }
-.modal-content {
-  background: white; padding: 25px; border-radius: 8px;
-  width: 350px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+#manage-water-accounts-container .page-info {
+    font-size: 13px !important;
+    color: #555 !important;
+    margin: 0 10px !important;
 }
-.edit-modal { width: 450px; }
-.modal-content h4 {
-  margin-top: 0; margin-bottom: 15px; color: #2c3e50;
-  border-bottom: 2px solid #42b883; display: inline-block; padding-bottom: 5px; font-size: 16px;
+
+/* --- Modal Styles --- */
+#manage-water-accounts-container .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 1000 !important;
+}
+
+#manage-water-accounts-container .modal-content {
+    background: white !important;
+    padding: 25px !important;
+    border-radius: 8px !important;
+    width: 350px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+#manage-water-accounts-container .edit-modal {
+    width: 450px !important;
+}
+
+#manage-water-accounts-container .modal-content h4 {
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    font-size: 16px !important;
+}
+
+#manage-water-accounts-container .form-group {
+    margin: 5px !important;
 }
 
 /* --- Edit Form Status Dropdown Styles --- */
-.form-group select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  background-color: white;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
+#manage-water-accounts-container .form-group select {
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    background-color: white !important;
+    cursor: pointer !important;
+    outline: none !important;
+    transition: border-color 0.2s !important;
+    padding: 5px !important;
+    margin: 5px !important;
 }
 
-.form-group select:focus {
-  border-color: #42b883; /* Vue brand color */
+#manage-water-accounts-container .form-group select:focus {
+    border-color: #42b883 !important;
 }
 
-/* Status anuwa select box eke border eka wenas kireema (Optional) */
-.form-group select option[value="1"] {
-  color: #27ae60;
-  font-weight: bold;
+#manage-water-accounts-container .form-group select option[value="1"] {
+    color: #27ae60 !important;
+    font-weight: bold !important;
 }
 
-.form-group select option[value="0"] {
-  color: #c0392b;
-  font-weight: bold;
+#manage-water-accounts-container .form-group select option[value="0"] {
+    color: #c0392b !important;
+    font-weight: bold !important;
 }
 
-/* Edit Modal eke warnings/important labels thiyena nisa labels walata tikak space denna */
-.edit-form .form-group label {
-  margin-bottom: 2px;
+#manage-water-accounts-container .edit-form .form-group label {
+    margin-bottom: 2px !important;
 }
-.edit-form { display: flex; flex-direction: column; gap: 15px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group label { font-size: 13px; font-weight: bold; color: #2c3e50; }
-.form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
-.warning-input { border-color: #f39c12 !important; background-color: #fef9e7; }
-.checkbox-row { flex-direction: row; align-items: center; gap: 10px; }
-.filter-section { margin-bottom: 15px; }
-.filter-section h5 { margin: 0 0 8px 0; font-size: 13px; color: #2c3e50; text-transform: uppercase; font-weight: bold; }
-.checkbox-list { display: flex; flex-direction: column; gap: 6px; }
-.checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #2c3e50; cursor: pointer; }
-.modal-actions {
-  display: flex; justify-content: flex-end; gap: 10px;
-  margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;
+
+#manage-water-accounts-container .edit-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
 }
-.modal-btn {
-  padding: 8px 16px; border: 1px solid #ccc; background: white;
-  cursor: pointer; border-radius: 4px; font-size: 13px; font-weight: bold;
+
+#manage-water-accounts-container .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
 }
-.modal-btn.primary { background: #42b883; color: white; border-color: #42b883; }
+
+#manage-water-accounts-container .form-group label {
+    font-size: 13px !important;
+    font-weight: bold !important;
+    color: #2c3e50 !important;
+}
+
+#manage-water-accounts-container .form-group input {
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+}
+
+#manage-water-accounts-container .warning-input {
+    border-color: #f39c12 !important;
+    background-color: #fef9e7 !important;
+}
+
+#manage-water-accounts-container .checkbox-row {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+#manage-water-accounts-container .filter-section {
+    margin-bottom: 15px !important;
+}
+
+#manage-water-accounts-container .filter-section h5 {
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important;
+    color: #2c3e50 !important;
+    text-transform: uppercase !important;
+    font-weight: bold !important;
+}
+
+#manage-water-accounts-container .checkbox-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+}
+
+#manage-water-accounts-container .checkbox-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 13px !important;
+    color: #2c3e50 !important;
+    cursor: pointer !important;
+}
+
+#manage-water-accounts-container .modal-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
+    border-top: 1px solid #eee !important;
+    padding-top: 15px !important;
+}
+
+#manage-water-accounts-container .modal-btn {
+    padding: 8px 16px !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
+}
+
+#manage-water-accounts-container .modal-btn.primary {
+    background: #42b883 !important;
+    color: white !important;
+    border-color: #42b883 !important;
+}
+
+/* ✅ Disabled Button Style */
+#manage-water-accounts-container .modal-btn.primary:disabled {
+    background-color: #a5d4c0 !important; 
+    color: #ffffff !important;
+    cursor: not-allowed !important;        
+    opacity: 0.7 !important;               
+    border: 1px solid #a5d4c0 !important;
+}
 </style>

@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 export const insertShop = (data,result) => {
     db.query("INSERT INTO sabha_shop_place SET ?",data, (err,results)=> {

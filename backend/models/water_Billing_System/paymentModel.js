@@ -50,75 +50,99 @@ export const logTransaction = async (connection, accountId, amount, type = 'PAYM
 
 import db from '../../config/database.js';
 
-// 1. Get Customer Details by Account ID
+/**
+ * Retrieves customer details including rate head information for payment processing.
+ * Fetches basic info from 'water_customer_accounts' and the rate head from 'sb_rates_new' via a subquery.
+ * * @param {number} accountId - The ID of the water customer account.
+ * @returns {Promise<Object>} - Returns customer details object or undefined if not found.
+ */
 export const getCustomerDetails = async (accountId) => {
-    const query = `
-        SELECT 
-            w.sabha_code,
-            w.nic AS nic_number,
-            w.full_name,
-            w.contact_info AS contact_no,
-            w.mailing_address AS address,
-            
-            -- ✅ මෙන්න වෙනස් කරපු කොටස (Subquery)
-            (
-                SELECT sb_rate_head 
-                FROM sb_rates_new 
-                WHERE sb_rate_head_name = 'water bills' 
-                AND rate_sb_code = w.sabha_code -- සභා කෝඩ් එක ගැලපෙන එක විතරක් ගන්න
-                LIMIT 1
-            ) AS rate_head
+    try {
+        const query = `
+            SELECT 
+                w.sabha_code,
+                w.nic AS nic_number,
+                w.full_name,
+                w.contact_info AS contact_no,
+                w.mailing_address AS address,
+                
+                -- Subquery to fetch the specific rate head for 'water bills' based on sabha code
+                (
+                    SELECT sb_rate_head 
+                    FROM sb_rates_new 
+                    WHERE sb_rate_head_name = 'water bills' 
+                    AND rate_sb_code = w.sabha_code
+                    LIMIT 1
+                ) AS rate_head
 
-        FROM water_customer_accounts w
-        WHERE w.id = ? OR w.sabha_customer_id = ?
-    `;
+            FROM water_customer_accounts w
+            WHERE w.id = ? OR w.sabha_customer_id = ?
+        `;
 
-    const [rows] = await db.promise().execute(query, [accountId, accountId]);
-    return rows[0];
+        // Execute query using the promise-based pool directly
+        const [rows] = await db.query(query, [accountId, accountId]);
+        return rows[0];
+
+    } catch (error) {
+        console.error("Database Error in getCustomerDetails:", error);
+        throw error;
+    }
 };
 
-// 2. Save to tempory_invoice table
+/**
+ * Saves payment transaction details to the 'tempory_invoice' table.
+ * This table acts as a holding area before the final receipt is generated.
+ * * @param {Object} data - The invoice data object containing customer and payment details.
+ * @returns {Promise<Object>} - Returns the result of the insert operation (including insertId).
+ */
 export const saveTemporaryInvoice = async (data) => {
-    const query = `
-        INSERT INTO tempory_invoice (
-            sabha_code,
-            cus_nic,
-            cus_name,
-            cus_contact,
-            cus_address,
-            sb_rate_head,
-            description,
-            amount,
-            stamp,
-            discount,
-            shoptotalarrears,
-            paymonth,
-            vat,
-            shopdid,
-            date,
-            sub_nic,
-            date_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())
-    `;
+    try {
+        const query = `
+            INSERT INTO tempory_invoice (
+                sabha_code,
+                cus_nic,
+                cus_name,
+                cus_contact,
+                cus_address,
+                sb_rate_head,
+                description,
+                amount,
+                stamp,
+                discount,
+                shoptotalarrears,
+                paymonth,
+                vat,
+                shopdid,
+                date,
+                sub_nic,
+                date_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())
+        `;
 
-    const params = [
-        data.sabha_code,
-        data.cus_nic,
-        data.cus_name,
-        data.cus_contact,
-        data.cus_address,
-        data.sb_rate_head,
-        data.description,
-        data.amount,
-        data.stamp,             // 0
-        data.discount,          // 0
-        data.shoptotalarrears,  // 0
-        data.paymonth,
-        data.vat,               // 0
-        data.shopdid,           // 0
-        data.sub_nic
-    ];
+        const params = [
+            data.sabha_code,
+            data.cus_nic,
+            data.cus_name,
+            data.cus_contact,
+            data.cus_address,
+            data.sb_rate_head,
+            data.description,
+            data.amount,
+            data.stamp,            // 0
+            data.discount,         // 0
+            data.shoptotalarrears, // 0
+            data.paymonth,
+            data.vat,              // 0
+            data.shopdid,          // 0
+            data.sub_nic
+        ];
 
-    const [result] = await db.promise().execute(query, params);
-    return result;
+        // Execute insert query
+        const [result] = await db.query(query, params);
+        return result;
+
+    } catch (error) {
+        console.error("Database Error in saveTemporaryInvoice:", error);
+        throw error;
+    }
 };

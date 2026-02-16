@@ -6,10 +6,13 @@ import { calculateBill } from '../../utils/BillCalculator.js';
 export const getPendingCustomersController = async (req, res) => {
     try {
         const { sabha_code, project_code, month, year } = req.query;
+        
         if (!sabha_code || !project_code || !month || !year) {
             return res.status(400).json({ status: 'error', message: 'Missing parameters' });
         }
+        
         const customers = await getPendingCustomers(sabha_code, project_code, parseInt(month), parseInt(year));
+        
         res.json({ status: 'success', data: customers });
     } catch (error) {
         console.error('Error fetching customers:', error);
@@ -17,9 +20,11 @@ export const getPendingCustomersController = async (req, res) => {
     }
 };
 
-// 2. Save Batch Readings (insertedCount Fixed ✅)
+// 2. Save Batch Readings (One-by-One with Transaction for Billing)
 export const saveBatchReadingsController = async (req, res) => {
-    const dbPromise = db.promise();
+    // Note: 'db' is already a promise pool, so we don't need db.promise()
+    // We get a dedicated connection for the transaction.
+    const connection = await db.getConnection();
 
     try {
         const readings = req.body;
@@ -28,7 +33,7 @@ export const saveBatchReadingsController = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Readings must be a non-empty array' });
         }
 
-        await dbPromise.beginTransaction();
+        await connection.beginTransaction();
         let processedCount = 0;
 
         for (const reading of readings) {
@@ -38,7 +43,7 @@ export const saveBatchReadingsController = async (req, res) => {
             }
 
             // Check for existing reading to prevent duplicate entry error
-            const [existingReadings] = await dbPromise.query(
+            const [existingReadings] = await connection.query(
                 `SELECT id FROM water_meter_readings WHERE account_id = ? AND year = ? AND month = ?`,
                 [reading.account_id, reading.year, reading.month]
             );
@@ -73,7 +78,7 @@ export const saveBatchReadingsController = async (req, res) => {
             // =========================================================
             // 🟢 STEP 1.5: Get Customer History ID
             // =========================================================
-            const [historyRows] = await dbPromise.query(
+            const [historyRows] = await connection.query(
                 `SELECT id FROM water_customer_history 
                  WHERE customer_id = ? 
                  ORDER BY id DESC LIMIT 1`, 
@@ -85,10 +90,10 @@ export const saveBatchReadingsController = async (req, res) => {
                 customerHistoryId = historyRows[0].id;
             } else {
                 // Fallback: Create new history record if missing
-                const [currentAccount] = await dbPromise.query(`SELECT * FROM water_customer_accounts WHERE id = ?`, [reading.account_id]);
+                const [currentAccount] = await connection.query(`SELECT * FROM water_customer_accounts WHERE id = ?`, [reading.account_id]);
                 if(currentAccount.length > 0) {
                     const acc = currentAccount[0];
-                    const [newHistory] = await dbPromise.query(`
+                    const [newHistory] = await connection.query(`
                         INSERT INTO water_customer_history 
                         (customer_id, connection_type, is_samurdhi, is_metered, status, created_at)
                         VALUES (?, ?, ?, ?, 'Active', NOW())
@@ -113,7 +118,7 @@ export const saveBatchReadingsController = async (req, res) => {
             const safeReaderId = reading.reader_id || 0; 
             const readingStatus = 1;
 
-            const [readingResult] = await dbPromise.query(readingInsertQuery, [
+            const [readingResult] = await connection.query(readingInsertQuery, [
                 reading.account_id,
                 reading.sabha_code,       
                 reading.bill_number_ref,  
@@ -135,7 +140,7 @@ export const saveBatchReadingsController = async (req, res) => {
             // =========================================================
 
             // Fetch Previous Dues
-            const [customerAccount] = await dbPromise.query(
+            const [customerAccount] = await connection.query(
                 `SELECT current_balance FROM water_customer_accounts WHERE id = ?`,
                 [reading.account_id]
             );
@@ -144,8 +149,9 @@ export const saveBatchReadingsController = async (req, res) => {
             if (customerAccount.length > 0 && customerAccount[0].current_balance) {
                 previous_dues = parseFloat(customerAccount[0].current_balance);
             }
- 
-            const billData = await calculateBill(dbPromise, {
+
+            // Note: pass 'connection' instead of 'dbPromise' so calculateBill uses the same transaction context
+            const billData = await calculateBill(connection, {
                 current_reading: reading.current_reading,
                 previous_reading: safePreviousReading,
                 sabha_code: reading.sabha_code,     
@@ -170,9 +176,10 @@ export const saveBatchReadingsController = async (req, res) => {
             `;
 
             const periodFrom = `${reading.year}-${reading.month}-01`;
+            // Calculate last day of the month correctly
             const periodTo = new Date(reading.year, reading.month, 0).toISOString().split('T')[0];
 
-            await dbPromise.query(billInsertQuery, [
+            await connection.query(billInsertQuery, [
                 reading.account_id,
                 customerHistoryId, 
                 billData.applied_config_id, 
@@ -193,7 +200,7 @@ export const saveBatchReadingsController = async (req, res) => {
                 billData.total_amount, 
             ]);
 
-            await dbPromise.query(
+            await connection.query(
                 `UPDATE water_customer_accounts SET current_balance = ? WHERE id = ?`,
                 [billData.total_amount, reading.account_id]
             );
@@ -201,9 +208,8 @@ export const saveBatchReadingsController = async (req, res) => {
             processedCount++;
         }
 
-        await dbPromise.commit();
+        await connection.commit();
         
-        // FIX: added 'data: { insertedCount }' back
         res.json({ 
             status: 'success', 
             message: `Successfully saved ${processedCount} readings/bills.`,
@@ -211,9 +217,15 @@ export const saveBatchReadingsController = async (req, res) => {
         });
 
     } catch (error) {
-        try { await dbPromise.rollback(); } catch (e) {}
+        if (connection) {
+            try { await connection.rollback(); } catch (e) {}
+        }
         console.error('Error saving batch:', error.message);
         res.status(500).json({ status: 'error', message: 'Transaction failed: ' + error.message });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -222,6 +234,7 @@ export const getProjectCodesController = async (req, res) => {
     try {
         const { sabha_code } = req.query;
         if (!sabha_code) return res.status(400).json({ status: 'error', message: 'Missing sabha_code' });
+        
         const projects = await getProjectCodes(sabha_code);
         res.json({ status: 'success', data: projects });
     } catch (error) {

@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div id="bill-template-container" class="page-container">
     <div class="invoice-box" v-if="billDetails">
       
       <header class="header-section relative-content">
@@ -67,31 +67,33 @@
 
       <section class="charges-box relative-content">
         <table class="sums-table">
-          <tr>
-            <td>Water Consumption Charges</td>
-            <td class="amount">LKR {{ formatCurrency(billDetails.waterConsumptionCharge) }}</td>
-          </tr>
-          <tr>
-            <td>Fixed Charges</td>
-            <td class="amount">LKR {{ formatCurrency(billDetails.fixedCharge) }}</td>
-          </tr>
-          <tr>
-            <td>Other Charges</td>
-            <td class="amount">LKR {{ formatCurrency(billDetails.otherCharges) }}</td>
-          </tr>
-          <tr>
-            <td>Discounts</td>
-            <td class="amount">LKR {{ formatCurrency(billDetails.discounts) }}</td>
-          </tr>
-          <tr class="sub-total">
-            <td><strong>Charges for this Month</strong></td>
-            <td class="amount"><strong>LKR {{ formatCurrency(calculateMonthTotal) }}</strong></td>
-          </tr>
-          <tr>
-            <td>(+) Dues / Arrears (Previous Bill)</td>
-            <td class="amount">LKR {{ formatCurrency(billDetails.previousDues) }}</td>
-          </tr>
-          </table>
+          <tbody>
+            <tr>
+              <td>Water Consumption Charges</td>
+              <td class="amount">LKR {{ formatCurrency(billDetails.waterConsumptionCharge) }}</td>
+            </tr>
+            <tr>
+              <td>Fixed Charges</td>
+              <td class="amount">LKR {{ formatCurrency(billDetails.fixedCharge) }}</td>
+            </tr>
+            <tr>
+              <td>Other Charges</td>
+              <td class="amount">LKR {{ formatCurrency(billDetails.otherCharges) }}</td>
+            </tr>
+            <tr>
+              <td>Discounts</td>
+              <td class="amount">LKR {{ formatCurrency(billDetails.discounts) }}</td>
+            </tr>
+            <tr class="sub-total">
+              <td><strong>Charges for this Month</strong></td>
+              <td class="amount"><strong>LKR {{ formatCurrency(calculateMonthTotal) }}</strong></td>
+            </tr>
+            <tr>
+              <td>(+) Dues / Arrears (Previous Bill)</td>
+              <td class="amount">LKR {{ formatCurrency(billDetails.previousDues) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <section class="total-payable relative-content">
@@ -111,7 +113,7 @@
             <div class="officer-signature">
                 <br><br>
                 --------------------------<br>
-                Revenue Officer
+                <p>Revenue Officer</p>
             </div>
         </div>
       </footer>
@@ -140,9 +142,9 @@ const billDetails = ref(null);
 const calculateMonthTotal = computed(() => {
   if (!billDetails.value) return 0;
   return (parseFloat(billDetails.value.waterConsumptionCharge) || 0) + 
-         (parseFloat(billDetails.value.fixedCharge) || 0)+
-         (parseFloat(billDetails.value.otherCharges) || 0) -
-         (parseFloat(billDetails.value.discounts) || 0);
+          (parseFloat(billDetails.value.fixedCharge) || 0)+
+          (parseFloat(billDetails.value.otherCharges) || 0) -
+          (parseFloat(billDetails.value.discounts) || 0);
 });
 
 const calculateGrandTotal = computed(() => {
@@ -166,7 +168,7 @@ const formatDate = (dateString) => {
 
 const fetchBillDetails = async (id) => {
   try {
-    const response = await axios.get(`http://localhost:3000/api/water-bills/${id}`); 
+    const response = await axios.get(`/water-bills/${id}`); 
     console.log("Bill Data Received:", response.data); 
     billDetails.value = response.data;
 
@@ -181,9 +183,9 @@ const fetchBillDetails = async (id) => {
 };
 
 const validTillDate = computed(() => {
-  const date = new Date(); // අද දිනය ගන්න
-  date.setMonth(date.getMonth() + 6); // මාස 6ක් එකතු කරන්න
-  return date.toLocaleDateString('en-GB'); // DD/MM/YYYY ෆෝමැට් එකට හරවන්න
+  const date = new Date(); // අද දිනය
+  date.setMonth(date.getMonth() + 6); 
+  return date.toLocaleDateString('en-GB'); // DD/MM/YYYY
 });
 
 const printBill = () => {
@@ -202,288 +204,299 @@ onMounted(() => {
 
 <style scoped>
 /* --- General Page Layout --- */
-.page-container {
-  background: #f4f4f4;
-  padding: 20px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+#bill-template-container.page-container {
+    background: #f4f4f4 !important;
+    padding: 20px !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
 }
 
-.invoice-box {
-  background: #fff;
-  width: 100%;
-  max-width: 210mm; /* A4 Width */
-  padding: 40px;
-  border: 1px solid #ddd;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  font-family: 'Times New Roman', Times, serif;
-  color: #333;
-  
-  /* ✅ Watermark Positioning Context */
-  position: relative; 
-  overflow: hidden; 
+#bill-template-container .invoice-box {
+    background: #fff !important;
+    width: 100% !important;
+    max-width: 210mm !important; /* A4 Width */
+    padding: 40px !important;
+    border: 1px solid #ddd !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    color: #333 !important;
+    
+    /* ✅ Watermark Positioning Context */
+    position: relative !important; 
+    overflow: hidden !important; 
 }
 
 /* ✅ WATERMARK STYLES */
-.invoice-box::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  
-  /* Log eka methanata link karanna */
-  background-image: url('../../assets/images/Sri-Lanka-Government.png'); 
-  
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100%;
-  opacity: 0.08;
-  z-index: 0;
-  pointer-events: none;
+#bill-template-container .invoice-box::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 100% !important;
+    height: 100% !important;
+    
+    /* Log eka methanata link karanna */
+    background-image: url('../../assets/images/Sri-Lanka-Government.png') !important; 
+    
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 100% !important;
+    opacity: 0.08 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
 }
 
 /* Ensure Text is ABOVE the watermark */
-.relative-content, 
-.header-section, 
-.bill-meta, 
-.customer-box, 
-.readings-box, 
-.charges-box, 
-.total-payable, 
-.bill-footer {
-  position: relative;
-  z-index: 1; 
+#bill-template-container .relative-content, 
+#bill-template-container .header-section, 
+#bill-template-container .bill-meta, 
+#bill-template-container .customer-box, 
+#bill-template-container .readings-box, 
+#bill-template-container .charges-box, 
+#bill-template-container .total-payable, 
+#bill-template-container .bill-footer {
+    position: relative !important;
+    z-index: 1 !important; 
 }
 
 /* --- Header --- */
-.header-section {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+#bill-template-container .header-section {
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 10px !important;
 }
-.logo-area {
-  flex: 0 0 80px;
+#bill-template-container .logo-area {
+    flex: 0 0 80px !important;
 }
-.authority-details {
-  flex: 1;
-  text-align: center;
+#bill-template-container .authority-details {
+    flex: 1 !important;
+    text-align: center !important;
 }
-.authority-details h2 {
-  margin: 0;
-  font-size: 18px;
-  text-transform: uppercase;
-  font-weight: 700;
+#bill-template-container .authority-details h2 {
+    margin: 0 !important;
+    font-size: 18px !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
 }
-.authority-details h3 {
-  margin: 2px 0;
-  font-size: 14px;
-  font-weight: 600;
+#bill-template-container .authority-details h3 {
+    margin: 2px 0 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
 }
-.authority-details p {
-  margin: 2px 0;
-  font-size: 12px;
+#bill-template-container .authority-details p {
+    margin: 2px 0 !important;
+    font-size: 12px !important;
 }
-.divider {
-  border: 0;
-  border-top: 2px solid #333;
-  margin-bottom: 15px;
+#bill-template-container .divider {
+    border: 0 !important;
+    border-top: 2px solid #333 !important;
+    margin-bottom: 15px !important;
 }
 
 /* --- Bill Meta Data --- */
-.bill-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  font-size: 14px;
-  border-bottom: 1px dashed #ccc;
-  padding-bottom: 10px;
+#bill-template-container .bill-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-bottom: 20px !important;
+    font-size: 14px !important;
+    border-bottom: 1px dashed #ccc !important;
+    padding-bottom: 10px !important;
 }
-.meta-row {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+#bill-template-container .meta-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
 }
 
 /* --- Customer Box --- */
-.customer-box {
-  border: 1px solid #333;
-  padding: 10px;
-  margin-bottom: 20px;
+#bill-template-container .customer-box {
+    border: 1px solid #333 !important;
+    padding: 10px !important;
+    margin-bottom: 20px !important;
 }
-.customer-box h4 {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 4px;
+#bill-template-container .customer-box h4 {
+    margin: 0 0 8px 0 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid #eee !important;
+    padding-bottom: 4px !important;
 }
-.customer-grid {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  row-gap: 5px;
-  font-size: 14px;
+#bill-template-container .customer-grid {
+    display: grid !important;
+    grid-template-columns: 80px 1fr !important;
+    row-gap: 5px !important;
+    font-size: 14px !important;
 }
-.label {
-  font-weight: bold;
+#bill-template-container .label {
+    font-weight: bold !important;
 }
 
 /* --- Tables --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
+#bill-template-container table {
+    width: 100% !important;
+    border-collapse: collapse !important;
 }
 
 /* Readings Table */
-.readings-box {
-  margin-bottom: 20px;
+#bill-template-container .readings-box {
+    margin-bottom: 20px !important;
 }
-.data-table th {
-  background: #eee;
-  border: 1px solid #333;
-  padding: 8px;
-  font-size: 13px;
-  text-align: center;
+#bill-template-container .data-table th {
+    background: #eee !important;
+    border: 1px solid #333 !important;
+    padding: 8px !important;
+    font-size: 13px !important;
+    text-align: center !important;
 }
-.data-table td {
-  border: 1px solid #333;
-  padding: 8px;
-  text-align: center;
-  font-size: 14px;
+#bill-template-container .data-table td {
+    border: 1px solid #333 !important;
+    padding: 8px !important;
+    text-align: center !important;
+    font-size: 14px !important;
 }
-.highlight-text {
-  font-weight: bold;
+#bill-template-container .highlight-text {
+    font-weight: bold !important;
 }
 
 /* Charges Table */
-.sums-table td {
-  padding: 6px 0;
-  font-size: 14px;
+#bill-template-container .sums-table {
+    margin-bottom: 40px !important;
 }
-.sums-table td:first-child {
-  text-align: left;
+#bill-template-container .sums-table td {
+    padding: 6.5px 0 !important;
+    font-size: 14px !important;
+    border: none !important;
 }
-.sums-table td.amount {
-  text-align: right;
-  width: 150px;
+
+#bill-template-container .sums-table td:first-child {
+    text-align: left !important;
 }
-.sub-total td {
-  border-top: 1px solid #333;
-  border-bottom: 1px solid #333;
-  padding: 8px 0;
+#bill-template-container .sums-table td.amount {
+    text-align: right !important;
+    width: 150px !important;
+}
+#bill-template-container .sub-total td {
+    border-top: 1px solid #333 !important;
+    border-bottom: 1px solid #333 !important;
+    padding: 8px 0 !important;
 }
 
 /* --- Total Payable --- */
-.total-payable {
-  margin-top: 20px;
-  border: 2px solid #333;
-  padding: 10px;
-  text-align: center;
-  background: #f9f9f9;
+#bill-template-container .total-payable {
+    margin-top: 20px !important;
+    border: 2px solid #333 !important;
+    padding: 10px !important;
+    text-align: center !important;
+    background: #f9f9f9 !important;
 }
-.total-label {
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
+#bill-template-container .total-label {
+    font-size: 20px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
 }
-.total-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 5px;
+#bill-template-container .total-value {
+    font-size: 22px !important;
+    font-weight: bold !important;
+    margin-top: 5px !important;
 }
 
 /* --- Footer --- */
-.bill-footer {
-  margin-top: 40px;
-  text-align: center;
-  font-size: 12px;
+#bill-template-container .bill-footer {
+    margin-top: 40px !important;
+    text-align: center !important;
+    font-size: 12px !important;
 }
-.officer-signature {
-  text-align: right;
-  margin-top: 30px;
-  margin-right: 20px;
-  font-weight: bold;
+#bill-template-container .officer-signature {
+    text-align: right !important;
+    margin-top: 30px !important;
+    margin-right: 20px !important;
+    margin-bottom: 10px !important;
+    font-weight: bold !important;
 }
-.system-note {
-  font-style: italic;
-  font-size: 10px;
-  color: #666;
+
+#bill-template-container .officer-signature p {
+    margin-right: 40px !important;
+}
+#bill-template-container .system-note {
+    font-style: italic !important;
+    font-size: 10px !important;
+    color: #666 !important;
 }
 
 /* --- Button --- */
-.print-btn {
-  margin-top: 20px;
-  padding: 12px 24px;
-  background: #0056b3;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+#bill-template-container .print-btn {
+    margin-top: 20px !important;
+    padding: 12px 24px !important;
+    background: #0056b3 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
 }
-.print-btn:hover {
-  background: #004494;
+#bill-template-container .print-btn:hover {
+    background: #004494 !important;
 }
 
-.separator {
-  margin: 0 7px; 
-  font-weight: bold;
-  color: #555; 
+#bill-template-container .separator {
+    margin: 0 7px !important; 
+    font-weight: bold !important;
+    color: #555 !important; 
 }
 
 /* --- PRINT MEDIA QUERIES --- */
 @media print {
   /* 1. මුළු පිටුවේම තියෙන හැමදේම හංගන්න */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
 
   /* 2. Invoice Box එක සහ ඒක ඇතුලේ තියෙන දේවල් විතරක් පෙන්නන්න */
-  .invoice-box, .invoice-box * {
-    visibility: visible;
+  #bill-template-container .invoice-box, 
+  #bill-template-container .invoice-box * {
+    visibility: visible !important;
   }
 
   /* 3. Invoice Box එක පිටුවේ උඩටම ගන්න (absolute positioning) */
-  .invoice-box {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 10px;
-    box-shadow: none;
-    border: 2px solid #000; /* බෝඩර් එක තදින් පෙනෙන්න */
+  #bill-template-container .invoice-box {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    box-shadow: none !important;
+    border: 2px solid #000 !important; /* බෝඩර් එක තදින් පෙනෙන්න */
   }
 
   /* 4. Page Settings */
   @page {
-    size: auto;   /* Auto size දාන්න, එතකොට content එක විතරක් ගනියි */
-    margin: 5mm;  
+    size: auto !important;   /* Auto size දාන්න, එතකොට content එක විතරක් ගනියි */
+    margin: 5mm !important;  
   }
 
   /* 5. අනවශ්‍ය බොත්තම් සම්පූර්ණයෙන්ම අයින් කරන්න */
-  .no-print {
+  #bill-template-container .no-print {
     display: none !important;
   }
 
   /* 6. Watermark සහ අනෙකුත් සැකසුම් */
-  .invoice-box::before {
+  #bill-template-container .invoice-box::before {
     opacity: 0.08 !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
     background-size: 80% !important;
   }
 
-  .total-payable {
+  #bill-template-container .total-payable {
     background: transparent !important; /* Watermark පෙනෙන්න */
-    border: 2px solid #000;
+    border: 2px solid #000 !important;
   }
 }
 </style>

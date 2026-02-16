@@ -90,6 +90,11 @@ export const processPayment = async (req, res) => {
 import db from '../../config/database.js';
 import * as paymentModel from '../../models/water_Billing_System/paymentModel.js';
 
+/**
+ * Controller: Process Payment
+ * Validates input, retrieves customer details, and saves payment information 
+ * to the temporary invoice table for further processing.
+ */
 export const processPayment = async (req, res) => {
     try {
         // 1. Input Validation
@@ -97,22 +102,22 @@ export const processPayment = async (req, res) => {
         let payment_amount = Number(req.body.payment_amount || req.body.paymentAmount);
         
         // ---------------------------------------------------------
-        // ✅ UPDATE: Officer NIC ලබා ගැනීම (Frontend Support + Security)
+        // ✅ UPDATE: Officer NIC Retrieval (Frontend Support + Security)
         // ---------------------------------------------------------
         
         let sub_nic = null;
 
-        // ක්‍රමය 1: Middleware (req.user) හරහා බලනවා
+        // Method 1: Check via Middleware (req.user)
         if (req.user) {
             sub_nic = req.user.nic || req.user.emp_nic || req.user.id;
         }
 
-        // ක්‍රමය 2: Middleware නැත්නම්, Frontend එකෙන් එවපු 'sub_nic' එක ගන්නවා
+        // Method 2: Fallback to Request Body if Middleware is not used
         if (!sub_nic && req.body.sub_nic) {
             sub_nic = req.body.sub_nic;
         }
 
-        // NIC එක හොයාගන්න බැරි නම් Error එකක් යවනවා
+        // Return Error if NIC cannot be determined
         if (!sub_nic) {
             return res.status(400).json({ 
                 success: false, 
@@ -124,28 +129,36 @@ export const processPayment = async (req, res) => {
 
         // ---------------------------------------------------------
 
-        // Pay Month
-        const paymonth = req.body.paymonth || new Date().toISOString().slice(0, 7); // YYYY-MM format
+        // Set Pay Month (Defaults to current YYYY-MM if not provided)
+        const paymonth = req.body.paymonth || new Date().toISOString().slice(0, 7); 
 
+        // Validate basic payment requirements
         if (!account_id || payment_amount <= 0) {
-            return res.status(400).json({ success: false, message: "Invalid Input: Account ID and positive Amount required." });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Input: Account ID and positive Amount required." 
+            });
         }
 
-        // 2. Customer Details ලබා ගැනීම
+        // 2. Retrieve Customer Details from Model
         const customerDetails = await paymentModel.getCustomerDetails(account_id);
 
         if (!customerDetails) {
-            return res.status(404).json({ success: false, message: "Customer not found for this Account ID." });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Customer not found for this Account ID." 
+            });
         }
 
-        // 3. Data Object එක සකස් කිරීම
+        // 3. Construct Invoice Data Object
+        // Uses retrieved customer details and 'WATER' as default fallback for rate head
         const invoiceData = {
             sabha_code: customerDetails.sabha_code,
             cus_nic: customerDetails.nic_number,
             cus_name: customerDetails.full_name,
             cus_contact: customerDetails.contact_no || "",
             cus_address: customerDetails.address,
-            sb_rate_head: customerDetails.rate_head || "WATER", // Model එකේ subquery එකෙන් එන අගය
+            sb_rate_head: customerDetails.rate_head || "WATER", 
             description: "Water Bill Payment",
             amount: payment_amount,
             stamp: 0,              
@@ -157,7 +170,7 @@ export const processPayment = async (req, res) => {
             sub_nic: sub_nic,      
         };
 
-        // 4. Save to tempory_invoice table
+        // 4. Save Data to Temporary Invoice Table
         await paymentModel.saveTemporaryInvoice(invoiceData);
 
         return res.status(200).json({
@@ -168,6 +181,10 @@ export const processPayment = async (req, res) => {
 
     } catch (error) {
         console.error("Temporary Invoice Save Error:", error);
-        return res.status(500).json({ success: false, message: "Failed to save invoice", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Failed to save invoice", 
+            error: error.message 
+        });
     }
 };
