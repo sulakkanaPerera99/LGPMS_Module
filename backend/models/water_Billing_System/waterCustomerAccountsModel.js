@@ -90,7 +90,7 @@ export const getCustomersBySabha = async (sabhaCode, projectCode, filters = {}) 
     try {
         let query = `
             SELECT
-                id, nic, old_bill_number AS oldBillNumber, current_reading AS currentReading,
+                id, nic, old_bill_number AS oldBillNumber,
                 new_bill_number AS newBillNumber, full_name AS fullName,
                 property_address AS propertyAddress, mailing_address AS mailingAddress,
                 contact_info AS contactInfo, connection_type AS connectionType,

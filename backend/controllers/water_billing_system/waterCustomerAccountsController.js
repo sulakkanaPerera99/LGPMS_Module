@@ -11,7 +11,7 @@ import {
 export const registerCustomer = async (req, res) => {
     try {
         const {
-            customerType, oldBillNumber, currentReading, fullName, nic,
+            customerType, oldBillNumber, currentReading, lastReadingDate, fullName, nic,
             propertyAddress, mailingAddress, contactInfo, connectionType,
             projectCode, isSamurdhi, samurdhiNumber, isMetered,
             sabha_code, sabhaCustomerId
@@ -68,6 +68,7 @@ export const registerCustomer = async (req, res) => {
             customer_type: customerType,
             old_bill_number: oldBillNumber,
             current_reading: currentReading,
+            last_reading_date: lastReadingDate,
             new_bill_number: newBillNumber,
             full_name: fullName,
             nic: nic,

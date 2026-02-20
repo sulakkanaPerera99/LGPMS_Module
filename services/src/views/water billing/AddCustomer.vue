@@ -2,6 +2,7 @@
 import { reactive, ref, onMounted, watch } from 'vue' 
 import axios from 'axios'
 import { convertToNewNic } from '../../utils/nicValidation.js';
+import Swal from 'sweetalert2';
 
 const customerTypes = ['New Customer', 'Existing Customer']
 const connectionTypes = ['Domestic', 'Commercial', 'Industrial/Construction']
@@ -14,6 +15,7 @@ const form = reactive({
   customerType: 'New Customer',
   oldBillNumber: '', 
   currentReading:'',
+  lastReadingDate: '',
   newBillNumber: '',
   fullName: '',
   nic: '',
@@ -21,7 +23,7 @@ const form = reactive({
   mailingAddress: '',
   contactInfo: '',
   connectionType: 'Domestic',
-  projectCode: '', // User තෝරන Code එක මෙතනට එනවා
+  projectCode: '',
   isSamurdhi: false,
   samurdhiNumber: '',
   isMetered: false,
@@ -133,13 +135,20 @@ const submitForm = async () => {
     const response = await axios.post('/register-customer', payload);
 
     if (response.status === 200 || response.status === 201) {
-      alert('Customer Registered Successfully! Bill No: ' + response.data.data.generatedBillNumber);
+      Swal.fire({
+        icon: 'success',
+        title: 'Saved!',
+        text: 'Customer added successfully.',
+        timer: 2000,
+        showConfirmButton: false
+    });
       
       // Form එක Reset කරනවා
       Object.assign(form, {
         customerType: 'New Customer',
         oldBillNumber: '',
         currentReading: '',
+        lastReadingDate: '',
         newBillNumber: '',
         fullName: '',
         nic: '',
@@ -204,6 +213,10 @@ const submitForm = async () => {
             <div class="form-group">
               <label for="currReading">Current Reading</label>
               <input id="currReading" v-model="form.currentReading" type="number" placeholder="Enter current meter reading" />
+            </div>
+            <div class="form-group">
+              <label for="currReading">Last Reading Date</label>
+              <input id="currReading" v-model="form.lastReadingDate" type="date" placeholder="Enter last reading date" />
             </div>
           </div>
 
