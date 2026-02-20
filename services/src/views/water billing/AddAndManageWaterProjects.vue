@@ -311,16 +311,26 @@ const updateProject = async () => {
           <div class="form-group">
             <label for="pName">Project Name</label>
             <input id="pName" v-model="projectName" type="text" placeholder="Enter project name" required />
+            <p>example : Kandy</p>
           </div>
           
           <div class="form-group">
             <label for="pCode">Project Code</label>
-            <input id="pCode" v-model="projectCode" type="text" placeholder="Enter project code" required />
+            <input 
+                  id="pCode" 
+                  v-model="projectCode" 
+                  type="text" 
+                  placeholder="Enter project code" 
+                  required 
+                  @input="projectCode = projectCode.toUpperCase()"
+                  maxlength="3"/>
+            <p>example : KND</p>
           </div>
 
           <div class="form-group">
             <label for="pNumber">Project Number</label>
             <input id="pNumber" v-model="projectNumber" type="text" placeholder="Enter project number" required />
+            <p>example : 12</p>
           </div>
 
           <button type="submit" class="submit-btn">Add Project</button>
@@ -500,6 +510,11 @@ const updateProject = async () => {
     margin: 0 5px !important; 
 }
 
+#manage-projects-wrapper .form-group p {
+    padding-left: 7px !important; 
+    font-size: 13px !important; 
+}
+
 #manage-projects-wrapper label {
     font-weight: 600 !important;
     color: #2c3e50 !important;
@@ -589,11 +604,16 @@ const updateProject = async () => {
     flex-wrap: wrap !important;
 }
 
-#manage-projects-wrapper .search-wrapper,
-#manage-projects-wrapper .sort-wrapper {
-    position: relative !important;
-    flex: 1 !important;
+#manage-projects-wrapper .search-wrapper {
+    flex: 0.7 !important;
     min-width: 200px !important;
+    position: relative !important;
+}
+
+#manage-projects-wrapper .sort-wrapper {
+    flex: 0.3 !important;
+    min-width: 150px !important;
+    position: relative !important;
 }
 
 #manage-projects-wrapper .search-icon {
