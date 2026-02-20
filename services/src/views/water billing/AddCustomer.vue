@@ -223,18 +223,18 @@ const submitForm = async () => {
           <div class="form-row">
             <div class="form-group">
               <label for="pAddress">Property Address (Water Supply)</label>
-              <textarea id="pAddress" v-model="form.propertyAddress" rows="3"></textarea>
+              <textarea id="pAddress" v-model="form.propertyAddress" rows="3" required></textarea>
             </div>
             <div class="form-group">
               <label for="mAddress">Mailing Address</label>
-              <textarea id="mAddress" v-model="form.mailingAddress" rows="3"></textarea>
+              <textarea id="mAddress" v-model="form.mailingAddress" rows="3" required></textarea>
             </div>
           </div>
           
           <div class="form-row">
              <div class="form-group">
                <label for="contact">Contact Information</label>
-               <input id="contact" v-model="form.contactInfo" type="text" placeholder="Phone / Email" />
+               <input id="contact" v-model="form.contactInfo" type="tel" placeholder="Phone number" pattern="07[0-9]{8}" maxlength="10" required />
              </div>
              <div class="form-group">
                <label for="connType">Water Supply Connection Type</label>
