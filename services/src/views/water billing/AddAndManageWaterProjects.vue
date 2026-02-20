@@ -605,13 +605,13 @@ const updateProject = async () => {
 }
 
 #manage-projects-wrapper .search-wrapper {
-    flex: 0.7 !important;
+    flex: 0.8 !important;
     min-width: 200px !important;
     position: relative !important;
 }
 
 #manage-projects-wrapper .sort-wrapper {
-    flex: 0.3 !important;
+    flex: 0.2 !important;
     min-width: 150px !important;
     position: relative !important;
 }

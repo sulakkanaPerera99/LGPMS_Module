@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue' // computed import කළා
+import { ref, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
-import Swal from 'sweetalert2' // SweetAlert import කළා
+import Swal from 'sweetalert2'
 
 const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
 const currentSabha = ref('')
@@ -54,6 +54,28 @@ onMounted(async () => {
   }
 })
 
+const addEditUnitRange = () => {
+  const ranges = editForm.value.unitRanges;
+  if (ranges.length > 0) {
+    const lastMax = Number(ranges[ranges.length - 1].max);
+    ranges.push({ min: lastMax + 1, max: lastMax + 1, rate: 0, fixed_charge: 0 });
+  } else {
+    ranges.push({ min: 0, max: 0, rate: 0, fixed_charge: 0 });
+  }
+}
+
+// ✅ watcher for Edit Form's Unit Ranges
+watch(() => editForm.value.unitRanges, (newRanges) => {
+  if (!newRanges) return;
+  
+  newRanges.forEach((range, index) => {
+    if (index > 0) {
+      const prevMax = Number(newRanges[index - 1].max);
+      range.min = prevMax + 1;
+    }
+  });
+}, { deep: true });
+
 // --- Watchers for Search & Sort
 let debounceTimeout = null;
 watch(searchQuery, () => {
@@ -85,7 +107,6 @@ const fetchBillingConfigs = async () => {
 
 // --- Edit Form Helpers ---
 // ✅ added fixed_charge: 0 to match AddBillingFees
-const addEditUnitRange = () => editForm.value.unitRanges.push({ min: 0, max: 0, rate: 0, fixed_charge: 0 })
 const removeEditUnitRange = (index) => editForm.value.unitRanges.splice(index, 1)
 const addEditOtherCharge = () => editForm.value.otherCharges.push({ name: '', amount: 0, type: 'fixed' })
 const removeEditOtherCharge = (index) => editForm.value.otherCharges.splice(index, 1)
@@ -317,7 +338,13 @@ const updateForm = async () => {
                 <span>Fixed Charge (Rs)</span> <span></span>
             </div>
             <div v-for="(item, index) in editForm.unitRanges" :key="index" class="dynamic-row">
-              <input v-model="item.min" type="number" placeholder="Min" class="small-input" />
+              <input 
+                      v-model.number="item.min" 
+                      type="number" 
+                      placeholder="Min" 
+                      class="small-input" 
+                      :readonly="index !== 0"
+                      :style="index !== 0 ? 'background-color: #f4f4f4; cursor: not-allowed; color: #666;' : ''"/>
               <input v-model="item.max" type="number" placeholder="Max" class="small-input" />
               <input v-model="item.rate" type="number" step="0.01" placeholder="Rate" />
               <input v-model="item.fixed_charge" type="number" step="0.01" placeholder="Fixed Rates Per Slab" />

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, watch} from 'vue'
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
 
@@ -108,7 +109,13 @@ const submitForm = async () => {
   try {
     const response = await axios.post('/billing-fees', payload)
     if (response.status === 200 || response.status === 201) {
-      alert("Configuration Saved Successfully!")
+      Swal.fire({
+        icon: 'success',
+        title: 'Saved!',
+        text: 'Configuration saved successfully.',
+        timer: 2000,
+        showConfirmButton: false
+    });
       
       // Reset Form
       projectCode.value = ''
