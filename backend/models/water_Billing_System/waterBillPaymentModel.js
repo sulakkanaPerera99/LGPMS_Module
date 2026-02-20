@@ -23,11 +23,62 @@ export const fetchCustomersModel = async (sabha_code, filters) => {
         
         const params = [sabha_code];
 
-        // Note: Logic to handle 'filters.search' can be appended here if required in the future.
-        // For now, we order by name for better readability.
-        query += ` ORDER BY a.full_name ASC`;
+        // 1. Search Logic (නම, NIC හෝ බිල්පත් අංකය අනුව සෙවීම)
+        if (filters.search) {
+            query += ` AND (a.full_name LIKE ? OR a.new_bill_number LIKE ? OR a.nic LIKE ?)`;
+            const searchParam = `%${filters.search}%`;
+            params.push(searchParam, searchParam, searchParam);
+        }
 
-        // Executing query directly on the promise-based pool
+        // 2. Filter: Project Code
+        if (filters.projectCode) {
+            query += ` AND a.project_code = ?`;
+            params.push(filters.projectCode);
+        }
+
+        // 3. Filter: Connection Types (උදා: 'Domestic,Commercial')
+        if (filters.connectionTypes) {
+            const types = filters.connectionTypes.split(',');
+            query += ` AND a.connection_type IN (?)`;
+            params.push(types);
+        }
+
+        // 4. Filter: Samurdhi Status ('Samurdhi' නම් 1, නැත්නම් 0 යැයි උපකල්පනය කර ඇත)
+        if (filters.samurdhi) {
+            const samurdhiValues = filters.samurdhi.split(',').map(val => val === 'Samurdhi' ? 1 : 0);
+            query += ` AND a.is_samurdhi IN (?)`;
+            params.push(samurdhiValues);
+        }
+
+        // 5. Filter: Metered Status
+        if (filters.metered) {
+            const meteredValues = filters.metered.split(',').map(val => val === 'Metered' ? 1 : 0);
+            query += ` AND a.is_metered IN (?)`;
+            params.push(meteredValues);
+        }
+
+        // 6. Sort Logic (තෝරාගත් අනුපිළිවෙළට පෙළගැස්වීම)
+        if (filters.sort) {
+            switch (filters.sort) {
+                case 'name_desc':
+                    query += ` ORDER BY a.full_name DESC`;
+                    break;
+                case 'bill_asc':
+                    query += ` ORDER BY a.new_bill_number ASC`;
+                    break;
+                case 'bill_desc':
+                    query += ` ORDER BY a.new_bill_number DESC`;
+                    break;
+                case 'name_asc':
+                default:
+                    query += ` ORDER BY a.full_name ASC`;
+                    break;
+            }
+        } else {
+            // Default Sorting
+            query += ` ORDER BY a.full_name ASC`;
+        }
+
         const [rows] = await db.query(query, params);
         return rows;
 
