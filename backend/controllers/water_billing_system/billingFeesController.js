@@ -1,4 +1,5 @@
 import * as BillingFeesModel from '../../models/water_Billing_System/BillingfeesModel.js';
+import db from '../../config/database.js'; 
 
 /**
  * Controller to add a new billing configuration.
@@ -22,6 +23,28 @@ export const addConfig = async (req, res) => {
             return res.status(400).json({ 
                 status: 'error', 
                 message: 'Missing required fields: connectionType, fixedRate, or sabha_code' 
+            });
+        }
+
+        // එකම Sabha, Project, Type, Metered සහ Samurdhi status එක ඇති record එකක් තිබේදැයි බලමු.
+        const [existing] = await db.query(
+            `SELECT id FROM water_billing_configurations 
+             WHERE sabha_code = ? AND project_code = ? AND connection_type = ? 
+             AND is_metered = ? AND is_samurdhi = ? AND status = 1`,
+            [
+                sabha_code, 
+                projectCode || 'General Config', 
+                connectionType, 
+                isMetered ? 1 : 0, 
+                isSamurdhi ? 1 : 0
+            ]
+        );
+
+        if (existing.length > 0) {
+            // 409 Conflict is the usual status code for indicating Duplicate data
+            return res.status(409).json({
+                status: 'error',
+                message: `Duplicate Entry: A configuration for ${connectionType} in ${projectCode || 'this project'} already exists.`
             });
         }
 

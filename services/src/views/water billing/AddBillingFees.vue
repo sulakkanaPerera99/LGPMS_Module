@@ -129,7 +129,26 @@ const submitForm = async () => {
     }
   } catch (error) {
     console.error("Error saving:", error)
-    alert("Failed to save.")
+       if (error.response && error.response.status === 409) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Duplicate Configuration',
+                text: error.response.data.message,
+                confirmButtonColor: '#f39c12'
+            });
+        } else if (error.response && error.response.data && error.response.data.message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response.data.message
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: 'Can not connect to the server. Please try again.'
+            });
+        }
   }
 }
 </script>

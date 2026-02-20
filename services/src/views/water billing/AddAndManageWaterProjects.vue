@@ -281,8 +281,6 @@ const updateProject = async () => {
         });
       }
     } else {
-        // User Cancel කළොත්, Modal එක වැසී ඇති නිසා, නැවත දත්ත clear කිරීම හෝ අවශ්‍ය නම් Modal එක නැවත පෙන්වීම කළ හැක.
-        // මෙහිදී අපි දත්ත clear කරමු.
         closeEditModal();
     }
   } else {
