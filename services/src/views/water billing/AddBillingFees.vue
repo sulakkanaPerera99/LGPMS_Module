@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch} from 'vue'
 import axios from 'axios'
 
 const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
@@ -19,6 +19,15 @@ const otherCharges = ref([{ name: '', amount: 0, type: 'fixed' }])
 const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])
 
 const availableProjectCodes = ref([])
+
+
+// unitRanges වෙනස් වන විට ඊළඟ Slab වල Min අගයන් නිවැරදි කිරීම
+watch(unitRanges, (newRanges) => {
+  for (let i = 1; i < newRanges.length; i++) {
+    const previousMax = Number(newRanges[i - 1].max);
+    newRanges[i].min = previousMax + 1;
+  }
+}, { deep: true });
 
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
@@ -49,10 +58,32 @@ const fetchProjectCodes = async () => {
 };
 
 // Add Form Helpers
-// ✅ 2. Script Change: Added 'fixed_charge: 0' when adding new row
-const addUnitRange = () => unitRanges.value.push({ min: 0, max: 0, rate: 0, fixed_charge: 0 })
+const validateSlabs = () => {
+  unitRanges.value.forEach((range, index) => {
+    if (index > 0) {
+      
+      const prevMax = Number(unitRanges.value[index - 1].max);
+      range.min = prevMax + 1;
+    }
+  });
+}
 
-const removeUnitRange = (index) => unitRanges.value.splice(index, 1)
+const addUnitRange = () => {
+  const lastIndex = unitRanges.value.length - 1;
+  const lastMax = Number(unitRanges.value[lastIndex].max);
+  
+  unitRanges.value.push({ 
+    min: lastMax + 1,
+    rate: 0, 
+    fixed_charge: 0 
+  });
+}
+
+const removeUnitRange = (index) => {
+  unitRanges.value.splice(index, 1);
+  validateSlabs();
+}
+
 const addOtherCharge = () => otherCharges.value.push({ name: '', amount: 0, type: 'fixed' })
 const removeOtherCharge = (index) => otherCharges.value.splice(index, 1)
 const addDiscount = () => discounts.value.push({ name: '', amount: 0, type: 'fixed' })
@@ -153,8 +184,11 @@ const submitForm = async () => {
             </div>
 
             <div v-for="(item, index) in unitRanges" :key="index" class="dynamic-row">
-              <input v-model="item.min" type="number" placeholder="Min" class="small-input" />
-              <input v-model="item.max" type="number" placeholder="Max" class="small-input" />
+              <input v-model.number="item.min" type="number" placeholder="Min" class="small-input" :readonly="index !== 0"
+              :style="index !== 0 ? 'background-color: #f4f4f4; cursor: not-allowed; color: #666;' : ''"
+               />
+      
+              <input v-model="item.max" type="number" class="small-input" />
               <input v-model="item.rate" type="number" step="0.01" placeholder="Rate" />
               <input v-model="item.fixed_charge" type="number" step="0.01" placeholder="Fixed Rates Per Slab" />
               
