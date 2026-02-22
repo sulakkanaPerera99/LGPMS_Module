@@ -9,8 +9,8 @@ export const insertBillingConfig = async (data) => {
     try {
         const query = `
             INSERT INTO water_billing_configurations 
-            (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, sabha_code) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, fines, status, sabha_code) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const values = [
@@ -22,6 +22,7 @@ export const insertBillingConfig = async (data) => {
             JSON.stringify(data.unitRanges || []),
             JSON.stringify(data.otherCharges || []),
             JSON.stringify(data.discounts || []),
+            JSON.stringify(data.fines || []),
             1, // Default Status is 1 (Active)
             data.sabha_code
         ];
@@ -113,8 +114,8 @@ export const updateBillingConfig = async (oldId, data, userNic) => {
         // Step B: Insert new record with updated values
         const insertQuery = `
             INSERT INTO water_billing_configurations 
-            (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, status, created_by, effective_from, sabha_code) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
+            (project_code, connection_type, is_metered, is_samurdhi, fixed_rate, unit_ranges, other_charges, discounts, fines, status, created_by, effective_from, sabha_code) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), ?)
         `;
 
         const values = [
@@ -126,6 +127,7 @@ export const updateBillingConfig = async (oldId, data, userNic) => {
             JSON.stringify(data.unitRanges || []),
             JSON.stringify(data.otherCharges || []),
             JSON.stringify(data.discounts || []),
+            JSON.stringify(data.fines || []),
             userNic,
             data.sabha_code
         ];

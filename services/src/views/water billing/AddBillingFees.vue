@@ -18,6 +18,8 @@ const unitRanges = ref([{ min: 0, max: 0, rate: 0, fixed_charge: 0 }])
 
 const otherCharges = ref([{ name: '', amount: 0, type: 'fixed' }])
 const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])
+const fines = ref([{ name: '', amount: 0, type: 'fixed' }])
+
 
 const availableProjectCodes = ref([])
 
@@ -89,6 +91,9 @@ const addOtherCharge = () => otherCharges.value.push({ name: '', amount: 0, type
 const removeOtherCharge = (index) => otherCharges.value.splice(index, 1)
 const addDiscount = () => discounts.value.push({ name: '', amount: 0, type: 'fixed' })
 const removeDiscount = (index) => discounts.value.splice(index, 1)
+const addFine = () => fines.value.push({ name: '', amount: 0, type: 'fixed' })
+const removeFine = (index) => fines.value.splice(index, 1)
+
 
 // --- Submit Logic (Add New) ---
 const submitForm = async () => {
@@ -103,7 +108,8 @@ const submitForm = async () => {
     fixedRate: fixedRate.value,
     unitRanges: unitRanges.value,     
     otherCharges: otherCharges.value,
-    discounts: discounts.value
+    discounts: discounts.value,
+    fines: fines.value
   }
 
   try {
@@ -126,6 +132,7 @@ const submitForm = async () => {
       unitRanges.value = [{ min: 0, max: 0, rate: 0, fixed_charge: 0 }]
       otherCharges.value = [{ name: '', amount: 0, type: 'fixed' }]
       discounts.value = [{ name: '', amount: 0, type: 'fixed' }]
+      fines.value = [{ name: '', amount: 0, type: 'fixed' }]
     }
   } catch (error) {
     console.error("Error saving:", error)
@@ -220,7 +227,7 @@ const submitForm = async () => {
               
               <button type="button" @click="removeUnitRange(index)" class="remove-btn" v-if="unitRanges.length > 1">Remove</button>
             </div>
-            <button type="button" @click="addUnitRange" class="add-btn">+ Add Slab</button>
+            <button type="button" @click="addUnitRange" class="add-btn">Add Slab</button>
           </div>
 
           <div class="side-by-side-row">
@@ -235,7 +242,7 @@ const submitForm = async () => {
             <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
             <button type="button" @click="removeOtherCharge(index)" class="remove-btn" v-if="otherCharges.length > 1">Remove</button>
         </div>
-        <button type="button" @click="addOtherCharge" class="add-btn">+ Add Charge</button>
+        <button type="button" @click="addOtherCharge" class="add-btn">Add Charge</button>
     </div>
 
     <div class="dynamic-section discount-section">
@@ -249,7 +256,20 @@ const submitForm = async () => {
             <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
             <button type="button" @click="removeDiscount(index)" class="remove-btn" v-if="discounts.length > 1">Remove</button>
         </div>
-        <button type="button" @click="addDiscount" class="add-btn">+ Add Discount</button>
+        <button type="button" @click="addDiscount" class="add-btn">Add Discount</button>
+    </div>
+    <div class="dynamic-section fine-section">
+        <div class="section-header">Fines</div>
+        <div v-for="(item, index) in fines" :key="index" class="dynamic-row-other">
+            <input v-model="item.name" type="text" placeholder="Fine Name" />
+            <select v-model="item.type" class="small-select">
+                <option value="fixed">Fixed (Rs)</option>
+                <option value="percentage">%</option>
+            </select>
+            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+            <button type="button" @click="removeFine(index)" class="remove-btn" v-if="fines.length > 1">Remove</button>
+        </div>
+        <button type="button" @click="addFine" class="add-btn">Add Fine</button>
     </div>
 </div>
 
@@ -408,6 +428,11 @@ const submitForm = async () => {
 #add-billing-fees-container .discount-section {
     border-color: #a8e6cf !important;
     background-color: #f0fff4 !important;
+}
+
+#add-billing-fees-container .fine-section {
+    border-color: #e6aba8 !important;
+    background-color: #fff0f0 !important;
 }
 
 /* ✅ සෙක්ෂන් දෙක පේළියකට ගැනීමට එක් කළ Layout එක */

@@ -22,7 +22,8 @@ const editForm = ref({
   fixedRate: 0,
   unitRanges: [],
   otherCharges: [],
-  discounts: []
+  discounts: [],
+  fines: []
 })
 
 // ✅ New: මුල් දත්ත තබා ගැනීමට (සංසන්දනය සඳහා)
@@ -112,6 +113,9 @@ const addEditOtherCharge = () => editForm.value.otherCharges.push({ name: '', am
 const removeEditOtherCharge = (index) => editForm.value.otherCharges.splice(index, 1)
 const addEditDiscount = () => editForm.value.discounts.push({ name: '', amount: 0, type: 'fixed' })
 const removeEditDiscount = (index) => editForm.value.discounts.splice(index, 1)
+const addEditFine = () => editForm.value.fines.push({ name: '', amount: 0, type: 'fixed' })
+const removeEditFine = (index) => editForm.value.fines.splice(index, 1)
+
 
 // --- Open Modal Logic ---
 const openEditModal = (config) => {
@@ -126,7 +130,8 @@ const openEditModal = (config) => {
     fixedRate: config.fixedRate,
     unitRanges: config.unitRanges || [],
     otherCharges: config.otherCharges || [],
-    discounts: config.discounts || []
+    discounts: config.discounts || [],
+    fines: config.fines || []
   };
 
   // ✅ editForm සහ originalEditForm දෙකටම දත්ත දැමීම
@@ -142,7 +147,7 @@ const closeEditModal = () => {
   // Reset Forms
   editForm.value = {
       projectCode: '', connectionType: '', isMetered: false, isSamurdhi: false,
-      fixedRate: 0, unitRanges: [], otherCharges: [], discounts: []
+      fixedRate: 0, unitRanges: [], otherCharges: [], discounts: [], fines: []
   };
   originalEditForm.value = {};
 }
@@ -245,7 +250,7 @@ const updateForm = async () => {
               <th>Samurdhi</th> 
               <th>Fixed</th>
               <th>Slabs (Min-Max : Rate)</th>
-              <th>Charges & Discounts</th>
+              <th>Charges , Discounts & fines</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -274,6 +279,9 @@ const updateForm = async () => {
                 </div>
                 <div v-for="(disc, idx) in config.discounts" :key="'d'+idx">
                    <span style="color:#27ae60">- {{ disc.name }} ({{ disc.amount }}{{ disc.type === 'percentage' ? '%' : '' }})</span>
+                </div>
+                <div v-for="(fine, idx) in config.fines" :key="'d'+idx">
+                   <span style="color:#FF7F11">- {{ fine.name }} ({{ fine.amount }}{{ fine.type === 'percentage' ? '%' : '' }})</span>
                 </div>
               </td>
               <td>
@@ -350,7 +358,7 @@ const updateForm = async () => {
               <input v-model="item.fixed_charge" type="number" step="0.01" placeholder="Fixed Rates Per Slab" />
               <button type="button" @click="removeEditUnitRange(index)" class="remove-btn">Remove</button>
             </div>
-            <button type="button" @click="addEditUnitRange" class="add-btn">+ Add Slab</button>
+            <button type="button" @click="addEditUnitRange" class="add-btn">Add Slab</button>
           </div>
 
             <div class="dynamic-section">
@@ -364,7 +372,7 @@ const updateForm = async () => {
                 <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
                 <button type="button" @click="removeEditOtherCharge(index)" class="remove-btn">Remove</button>
               </div>
-              <button type="button" @click="addEditOtherCharge" class="add-btn">+ Add Charge</button>
+              <button type="button" @click="addEditOtherCharge" class="add-btn">Add Charge</button>
             </div>
 
             <div class="dynamic-section discount-section">
@@ -378,7 +386,20 @@ const updateForm = async () => {
                 <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
                 <button type="button" @click="removeEditDiscount(index)" class="remove-btn">Remove</button>
               </div>
-              <button type="button" @click="addEditDiscount" class="add-btn">+ Add Discount</button>
+              <button type="button" @click="addEditDiscount" class="add-btn">Add Discount</button>
+            </div>
+            <div class="dynamic-section fines-section">
+              <div class="section-header">Fines</div>
+              <div v-for="(item, index) in editForm.fines" :key="index" class="dynamic-row-other">
+                <input v-model="item.name" type="text" placeholder="Fine Name" />
+                <select v-model="item.type" class="small-select">
+                   <option value="fixed">Fixed (Rs)</option>
+                   <option value="percentage">%</option>
+                </select>
+                <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+                <button type="button" @click="removeEditFine(index)" class="remove-btn">Remove</button>
+              </div>
+              <button type="button" @click="addEditFine" class="add-btn">Add Fine</button>
             </div>
 
           <button type="submit" class="submit-btn" style="width:100%" :disabled="!isFormChanged">Update Configuration</button>
@@ -591,6 +612,10 @@ const updateForm = async () => {
     background-color: #f0fff4 !important;
 }
 
+#edit-billing-fees-container .fines-section {
+    border-color: #e6aba8 !important;
+    background-color: #fff0f0 !important;
+}
 
 #edit-billing-fees-container .side-by-side-row .dynamic-section {
     flex: 1 !important;
@@ -689,7 +714,7 @@ const updateForm = async () => {
 #edit-billing-fees-container .billing-table th,
 #edit-billing-fees-container .billing-table td {
     text-align: center !important;
-    padding: 12px !important;
+    padding: 12px 0px !important;
     border: 1px solid #99a3b0 !important; 
     color: #2c3e50 !important;
     vertical-align: top !important;

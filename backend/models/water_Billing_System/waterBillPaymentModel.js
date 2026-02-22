@@ -104,7 +104,7 @@ export const fetchAccountPaymentDetails = async (accountId) => {
         
         // 2. Query to get Breakdown of Pending/Partial Bills
         const billsQuery = `
-            SELECT bill_number, total_amount, paid_amount, (total_amount - paid_amount) as due_amount, billing_date
+            SELECT bill_number, monthly_charge, paid_amount, (total_amount - paid_amount) as due_amount, billing_date
             FROM water_bills
             WHERE account_id = ? AND payment_status != 'Paid'
             ORDER BY billing_date ASC

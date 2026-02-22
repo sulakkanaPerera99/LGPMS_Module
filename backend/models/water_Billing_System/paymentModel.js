@@ -43,10 +43,11 @@ export const logTransaction = async (connection, accountId, amount, type = 'PAYM
         INSERT INTO payment_transactions (account_id, amount, transaction_type, date)
         VALUES (?, ?, ?, NOW())
     `;
-    // මේ Table එක ඔයාගේ DB එකේ තියෙනවා නම් විතරක් මේක පාවිච්චි කරන්න
     // await connection.execute(query, [accountId, amount, type]);
 };
 */
+
+//PIV එක ඇඩ් වෙන්නෙ මෙතනින්.//
 
 import db from '../../config/database.js';
 
@@ -64,20 +65,13 @@ export const getCustomerDetails = async (accountId) => {
                 w.nic AS nic_number,
                 w.full_name,
                 w.contact_info AS contact_no,
-                w.mailing_address AS address,
-                
-                -- Subquery to fetch the specific rate head for 'water bills' based on sabha code
-                (
-                    SELECT sb_rate_head 
-                    FROM sb_rates_new 
-                    WHERE sb_rate_head_name = 'water bills' 
-                    AND rate_sb_code = w.sabha_code
-                    LIMIT 1
-                ) AS rate_head
+                w.mailing_address AS address
 
             FROM water_customer_accounts w
             WHERE w.id = ? OR w.sabha_customer_id = ?
         `;
+
+        
 
         // Execute query using the promise-based pool directly
         const [rows] = await db.query(query, [accountId, accountId]);
@@ -95,7 +89,26 @@ export const getCustomerDetails = async (accountId) => {
  * * @param {Object} data - The invoice data object containing customer and payment details.
  * @returns {Promise<Object>} - Returns the result of the insert operation (including insertId).
  */
-export const saveTemporaryInvoice = async (data) => {
+// ✅ 1. නිලධාරියාට අදාළ Rate Heads ලබා ගැනීමේ Function එක
+export const fetchEmpSbRates = async (sabha_code, emp_nic) => {
+    try {
+        const query = `
+            SELECT iid, emp_sb_rates AS sb_rate_head
+            FROM emp_sb_rates 
+            WHERE emp_prs_code = ? 
+            AND sb_emp_nic_main = ? 
+            AND subjecttype = 'waterbill'
+        `;
+        const [rows] = await db.query(query, [sabha_code, emp_nic]);
+        return rows;
+    } catch (error) {
+        console.error("Database Error in fetchEmpSbRates:", error);
+        throw error;
+    }
+};
+
+// ✅ 2. වෙන වෙනම Rate Heads සහ Amounts සහිතව Temporary Invoice එකට සේව් කිරීම
+export const saveTemporaryInvoice = async (invoiceData) => {
     try {
         const query = `
             INSERT INTO tempory_invoice (
@@ -120,24 +133,23 @@ export const saveTemporaryInvoice = async (data) => {
         `;
 
         const params = [
-            data.sabha_code,
-            data.cus_nic,
-            data.cus_name,
-            data.cus_contact,
-            data.cus_address,
-            data.sb_rate_head,
-            data.description,
-            data.amount,
-            data.stamp,            // 0
-            data.discount,         // 0
-            data.shoptotalarrears, // 0
-            data.paymonth,
-            data.vat,              // 0
-            data.shopdid,          // 0
-            data.sub_nic
+            invoiceData.sabha_code,
+            invoiceData.cus_nic,
+            invoiceData.cus_name,
+            invoiceData.cus_contact,
+            invoiceData.cus_address,
+            invoiceData.sb_rate_head,    // ✅ ඩයිනමික් Rate Head එක
+            invoiceData.description,     // ✅ 'Water Bill - Arrears' වැනි විස්තරයක්
+            invoiceData.amount,          // ✅ බෙදී ගිය මුදල
+            invoiceData.stamp || 0,
+            invoiceData.discount || 0,
+            invoiceData.shoptotalarrears || 0,
+            invoiceData.paymonth,
+            invoiceData.vat || 0,
+            invoiceData.shopdid || 0,
+            invoiceData.sub_nic
         ];
 
-        // Execute insert query
         const [result] = await db.query(query, params);
         return result;
 

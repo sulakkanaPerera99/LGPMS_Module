@@ -151,11 +151,11 @@ export const calculateBill = async (connection, data, previousDues = 0) => {
 
     // 4. Discounts Calculation (Using Helper Function)
     // වට්ටම් ගණනය කරන්නෙත් subTotal (Bill Amount) එක මතයි
-    const discountAmount = calculateDynamicAmount(discountsList, subTotal);
+    const discountAmount = 0;
 
     // 5. Final Totals
     // මාසික ගාස්තුව = (ජල ගාස්තුව + ස්ථාවර ගාස්තුව + වෙනත් ගාස්තු) - වට්ටම්
-    const monthlyTotal = (subTotal + otherChargesTotal) - discountAmount;
+    const monthlyTotal = subTotal + otherChargesTotal;
     
     // මුළු ගෙවිය යුතු මුදල = මාසික ගාස්තුව + හිඟ මුදල්
     const totalAmount = monthlyTotal + previousDues;

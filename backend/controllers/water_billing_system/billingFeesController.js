@@ -14,7 +14,8 @@ export const addConfig = async (req, res) => {
             fixedRate, 
             unitRanges, 
             otherCharges, 
-            discounts, 
+            discounts,
+            fines, 
             sabha_code 
         } = req.body;
 
@@ -57,6 +58,7 @@ export const addConfig = async (req, res) => {
             unitRanges,
             otherCharges,
             discounts,
+            fines,
             sabha_code
         });
 
@@ -106,6 +108,7 @@ export const getConfigs = async (req, res) => {
             unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : (config.unit_ranges || []),
             otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : (config.other_charges || []),
             discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []),
+            fines: typeof config.fines === 'string' ? JSON.parse(config.fines) : (config.fines || []),
             
             status: config.status,
             createdAt: config.created_at
@@ -133,7 +136,7 @@ export const updateConfig = async (req, res) => {
         const { id } = req.params; // Old ID
         const { 
             projectCode, connectionType, isMetered, isSamurdhi, 
-            fixedRate, unitRanges, otherCharges, discounts, 
+            fixedRate, unitRanges, otherCharges, discounts, fines, 
             sabha_code, user_nic 
         } = req.body;
 
@@ -154,6 +157,7 @@ export const updateConfig = async (req, res) => {
             unitRanges,
             otherCharges,
             discounts,
+            fines,
             sabha_code
         }, user_nic);
 
