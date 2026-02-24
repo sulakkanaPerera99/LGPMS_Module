@@ -18,6 +18,7 @@ export const getPendingCustomers = async (sabhaCode, projectCode, month, year) =
                 c.full_name,
                 c.sabha_code,
                 c.project_code,
+                c.contact_info as mobile_number,
                 COALESCE(
                     (
                         SELECT current_reading

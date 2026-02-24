@@ -1,6 +1,7 @@
 import db from '../../config/database.js'; 
 import { getPendingCustomers, getProjectCodes } from '../../models/water_Billing_System/waterReadingsModel.js';
 import { calculateBill } from '../../utils/BillCalculator.js'; 
+import { sendMobitelSMS } from '../../utils/mobitelSmsService.js'; // ✅ SMS Service එක Import කළා
 
 // 1. Get Pending Customers
 export const getPendingCustomersController = async (req, res) => {
@@ -22,9 +23,9 @@ export const getPendingCustomersController = async (req, res) => {
 
 // 2. Save Batch Readings (One-by-One with Transaction for Billing)
 export const saveBatchReadingsController = async (req, res) => {
-    // Note: 'db' is already a promise pool, so we don't need db.promise()
     // We get a dedicated connection for the transaction.
     const connection = await db.getConnection();
+    const smsQueue = []; // ✅ සාර්ථක බිල්පත් සඳහා යැවිය යුතු SMS මෙහි එකතු කරගනිමු
 
     try {
         const readings = req.body;
@@ -139,15 +140,23 @@ export const saveBatchReadingsController = async (req, res) => {
             // 🟢 STEP 3: Calculate Bill
             // =========================================================
 
-            // Fetch Previous Dues
+            // ✅ Fetch Previous Dues AND Mobile Number (SMS සඳහා)
             const [customerAccount] = await connection.query(
-                `SELECT current_balance FROM water_customer_accounts WHERE id = ?`,
+                `SELECT current_balance, contact_info AS mobile_number
+                FROM water_customer_accounts WHERE id = ?`,
                 [reading.account_id]
             );
 
             let previous_dues = 0;
-            if (customerAccount.length > 0 && customerAccount[0].current_balance) {
-                previous_dues = parseFloat(customerAccount[0].current_balance);
+            let customerMobile = null;
+
+            if (customerAccount.length > 0) {
+                if (customerAccount[0].current_balance) {
+                    previous_dues = parseFloat(customerAccount[0].current_balance);
+                }
+                if (customerAccount[0].mobile_number) {
+                    customerMobile = customerAccount[0].mobile_number;
+                }
             }
 
             // Note: pass 'connection' instead of 'dbPromise' so calculateBill uses the same transaction context
@@ -175,9 +184,31 @@ export const saveBatchReadingsController = async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
             `;
 
-            const periodFrom = `${reading.year}-${reading.month}-01`;
-            // Calculate last day of the month correctly
-            const periodTo = new Date(reading.year, reading.month, 0).toISOString().split('T')[0];
+            // 1. මේ account එකට අදාළව දැනටමත් readings තියෙනවද බලන්න query එකක්
+            const [previousReadings] = await connection.query(
+                'SELECT reading_date FROM water_meter_readings WHERE account_id = ? ORDER BY reading_date DESC LIMIT 1',
+                [reading.account_id]
+            );
+
+            let periodFrom;
+
+            if (previousReadings.length > 0) {
+                // 2. දැනටමත් readings තිබේ නම්: අවසන් කියවීමේ දිනය (reading_date) ගමු
+                periodFrom = previousReadings[0].reading_date;
+            } else {
+                // 3. කිසිදු reading එකක් නැති පළමු වතාව නම්: 
+                // water_customer_accounts table එකෙන් last_reading_date එක ගමු
+                const [customer] = await connection.query(
+                    'SELECT last_reading_date FROM water_customer_accounts WHERE id = ?',
+                    [reading.account_id]
+                );
+                
+                // පාරිභෝගිකයාගේ last_reading_date එක පාවිච්චි කරනවා
+                periodFrom = customer[0].last_reading_date;
+            }
+
+            // periodTo එක කියවන දිනය (current reading date) ලෙස ගමු
+            const periodTo = reading.reading_date;
 
             await connection.query(billInsertQuery, [
                 reading.account_id,
@@ -205,11 +236,37 @@ export const saveBatchReadingsController = async (req, res) => {
                 [billData.total_amount, reading.account_id]
             );
 
+            // ✅ SMS යැවීම සඳහා දත්ත එකතු කර ගැනීම (Queue)
+            // Transaction එක මැද SMS යැවීමෙන් වළකින්න. එය Fail වුවහොත් Rollback වන නිසා
+            const formattedPeriodFrom = new Date(periodFrom).toISOString().split('T')[0];
+
+            if (customerMobile) {
+                smsQueue.push({
+                    sabha_code: reading.sabha_code,
+                    mobile: customerMobile,
+                    message: 
+                        `Bill Number: ${billNumber}\n` +
+                        `From: ${formattedPeriodFrom}\n` +
+                        `To: ${periodTo}\n` +
+                        `Prev: ${safePreviousReading} | Curr: ${reading.current_reading}\n` +
+                        `Units: ${billData.units_consumed}\n` +
+                        `Total Amount: LKR ${billData.total_amount}\n` +
+                        `Please kind enough to pay on time. Thank you!\n` +
+                        `- ${reading.sabha_code}`
+                });
+            }
+
             processedCount++;
         }
 
         await connection.commit();
         
+        // ✅ Transaction එක සාර්ථක වූ පසු SMS යැවීම ආරම්භ කිරීම
+        // මෙය Background එකේ සිදුවන නිසා Response එක ප්‍රමාද නොවේ.
+        if (smsQueue.length > 0) {
+            processSMSQueue(smsQueue); 
+        }
+
         res.json({ 
             status: 'success', 
             message: `Successfully saved ${processedCount} readings/bills.`,
@@ -228,6 +285,29 @@ export const saveBatchReadingsController = async (req, res) => {
         }
     }
 };
+
+// ✅ Helper Function: SMS Queue එක Process කිරීම
+async function processSMSQueue(queue) {
+    console.log(`Starting to send ${queue.length} SMS messages...`);
+    for (const item of queue) {
+        try {
+            // දුරකථන අංකය format කිරීම (071... -> 9471...)
+            let formattedMobile = String(item.mobile).trim();
+            if (formattedMobile.startsWith('0')) {
+                formattedMobile = '94' + formattedMobile.substring(1);
+            }
+
+            console.log(`[SMS DEBUG] Sending to ${formattedMobile}`);
+
+            // මෙහිදී await භාවිතා කිරීම වඩාත් සුදුසුයි loop එකක් ඇතුළේදී logs බලාගැනීමට
+            const result = await sendMobitelSMS(item.sabha_code, formattedMobile, item.message);
+            console.log(`SMS Sent Success for ${formattedMobile}:`, result);
+            
+        } catch (error) {
+            console.error(`Failed to send SMS to ${item.mobile}:`, error.message);
+        }
+    }
+}
 
 // 3. Get Project Codes
 export const getProjectCodesController = async (req, res) => {

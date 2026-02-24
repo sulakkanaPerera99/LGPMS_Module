@@ -10,6 +10,7 @@ import {
 
 export const registerCustomer = async (req, res) => {
     try {
+
         const {
             customerType, oldBillNumber, currentReading, lastReadingDate, fullName, nic,
             propertyAddress, mailingAddress, contactInfo, connectionType,
@@ -63,12 +64,19 @@ export const registerCustomer = async (req, res) => {
             finalSabhaCustomerId = sabhaResult.insertId;
         }
 
+        let finalReadingDate = lastReadingDate;
+
+        if (!finalReadingDate || finalReadingDate === '0000-00-00') {
+            const today = new Date();
+            finalReadingDate = today.toISOString().split('T')[0];
+        }
+
         // --- 3. Prepare Water Account Data ---
         const customerData = {
             customer_type: customerType,
             old_bill_number: oldBillNumber,
             current_reading: currentReading,
-            last_reading_date: lastReadingDate,
+            last_reading_date: finalReadingDate,
             new_bill_number: newBillNumber,
             full_name: fullName,
             nic: nic,

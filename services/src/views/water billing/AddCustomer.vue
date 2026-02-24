@@ -15,7 +15,7 @@ const form = reactive({
   customerType: 'New Customer',
   oldBillNumber: '', 
   currentReading:'',
-  lastReadingDate: '',
+  lastReadingDate: '0000-00-00',
   newBillNumber: '',
   fullName: '',
   nic: '',

@@ -112,7 +112,7 @@ export const getEmpRates = async (req, res) => {
 export const processPayment = async (req, res) => {
     try {
         // Front-end එකෙන් breakdowns Array එකක් එවනවා
-        const { account_id, payment_amount, breakdowns, sub_nic, paymonth } = req.body;
+        const { account_id, account_number, payment_amount, breakdowns, sub_nic, paymonth } = req.body;
 
         if (!account_id || !payment_amount || !breakdowns || breakdowns.length === 0) {
             return res.status(400).json({ status: 'error', message: "Invalid payment data." });
@@ -133,7 +133,7 @@ export const processPayment = async (req, res) => {
             if (item.amount > 0 && item.sb_rate_head) {
                 const invoiceData = {
                     sabha_code: customerDetails.sabha_code || customerDetails.rate_sb_code,
-                    cus_nic: customerDetails.nic_number || customerDetails.nic,
+                    cus_nic: account_number,
                     cus_name: customerDetails.full_name,
                     cus_contact: customerDetails.contact_no || "",
                     cus_address: customerDetails.address || customerDetails.mailing_address,

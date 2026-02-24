@@ -471,6 +471,7 @@ export default {
             let sub_nic = this.currentUserNIC || "UNKNOWN";
             const payload = {
                 account_id: this.accountDetails.accountId,
+                account_number: this.accountDetails.accountNumber,
                 payment_amount: this.enteredPaymentAmount,
                 sub_nic: sub_nic, 
                 paymonth: new Date().toISOString().slice(0, 7),
