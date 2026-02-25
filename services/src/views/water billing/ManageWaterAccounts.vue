@@ -175,7 +175,8 @@ const saveCustomer = async () => {
           contactInfo: editForm.contactInfo,
           isSamurdhi: editForm.isSamurdhi,
           samurdhiNumber: editForm.samurdhiNumber,
-          status: Number(editForm.status)
+          status: Number(editForm.status),
+          sabha_code: currentSabha.value
         }
         const response = await axios.put(`/update-customer/${editForm.id}`, payload)
         

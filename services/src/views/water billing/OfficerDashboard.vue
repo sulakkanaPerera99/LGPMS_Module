@@ -1,24 +1,37 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Cards array එකට අදාළ Icons මම එකතු කළා. 
-// ඔයාගේ project එකේ FontAwesome නැත්නම් install කරගන්න වෙයි, 
-// නැත්නම් කලින් Navbar එකේ තිබ්බ විදියට මේ classes වැඩ කරයි.
-const cards = ref([
+// සියලුම Cards ඇතුළත් මුල් Array එක
+const allCards = ref([
   { id: 1, title: 'Water Projects', subtitle: 'Add & Manage Projects', route: '/manage-water-projects', icon: 'fas fa-project-diagram', color: '#007bff' },
   { id: 2, title: 'Add Billing Fees', subtitle: 'Add Tariffs & Slabs', route: '/add-billing-fees', icon: 'fas fa-file-invoice-dollar', color: '#28a745' },
   { id: 3, title: 'Edit Billing Fees', subtitle: 'Edit Tariffs & Slabs', route: '/edit-billing-fees', icon: 'fas fa-pen-to-square', color: '#28a745' },
   { id: 4, title: 'Register Customer', subtitle: 'New Connections', route: '/add-customer', icon: 'fas fa-user-plus', color: '#17a2b8' },
   { id: 5, title: 'Water Accounts', subtitle: 'Manage Accounts', route: '/manage-water-accounts', icon: 'fas fa-faucet', color: '#6610f2' },
-  //{ id: 6, title: 'Meter Readings', subtitle: 'Add Manual Reading', route: '/add-meter-reading', icon: 'fas fa-tachometer-alt', color: '#fd7e14' },
+  { id: 6, title: 'Meter Readings', subtitle: 'Add Manual Reading', route: '/add-meter-reading', icon: 'fas fa-tachometer-alt', color: '#fd7e14' },
   { id: 7, title: 'Bill Payment', subtitle: 'Add PIV Payments', route: '/bill-payment', icon: 'fas fa-credit-card', color: '#e83e8c' },
   { id: 8, title: 'Print Bill', subtitle: 'Generate & Print', route: '/print-bill', icon: 'fas fa-print', color: '#6c757d' },
   { id: 9, title: 'Reports', subtitle: 'Generate Insights', route: '/water-bill-report-generation', icon: 'fas fa-chart-line', color: '#20c997' },
-  { id: 10, title: 'Customer History', subtitle: 'View Past Data', route: '/view-customer-history', icon: 'fas fa-history', color: '#ffc107' }
+  { id: 10, title: 'Customer History', subtitle: 'View Past Data', route: '/view-customer-history', icon: 'fas fa-history', color: '#ffc107' },
+  { id: 11, title: 'SMS Announcement', subtitle: 'Send Special Announcments to Customers', route: '/send_sms', icon: 'fas fa-bullhorn', color: '#fd7e14' },
+  { id: 12, title: 'SMS Settings', subtitle: 'Configure SMS Gateway', route: '/config_sms', icon: 'fas fa-tools', color: '#343a40' },
 ])
+
+const userName = ref('User');
+const userLevel = ref(null);
+
+// --- User Level එක අනුව Card Filter කරන කොටස ---
+const filteredCards = computed(() => {
+  return allCards.value.filter(card => {
+    if (card.id === 12) {
+      return userLevel.value == 5;
+    }
+    return true;
+  });
+})
 
 const navigateTo = (route) => {
   if (route) {
@@ -26,16 +39,16 @@ const navigateTo = (route) => {
   }
 }
 
-const userName = ref('User'); // Default value'User'
-
 onMounted(() => {
-    const userDataString = sessionStorage.getItem('userData');
+  const userDataString = sessionStorage.getItem('userData');
+  
+  if (userDataString) {
+    const userData = JSON.parse(userDataString);
+    userName.value = userData.name || userData.full_name || userData.userName || 'User';
     
-    if (userDataString) {
-        const userData = JSON.parse(userDataString);
-        
-        userName.value = userData.name || userData.full_name || userData.userName || 'User';
-    }
+    // Login එකේදී save කරගත් User Level එක ලබාගැනීම
+    userLevel.value = userData.userLevel;
+  }
 });
 </script>
 
@@ -43,14 +56,13 @@ onMounted(() => {
   <div class="dashboard-container">
     <header class="dashboard-header">
       <div class="header-content">
-        <h2>Water Billing Dashboard</h2>
+        <h2>Water Billing System</h2>
         <p class="sub-text">Welcome back, Officer <span class="user-highlight">{{ userName }}</span>! Select a module to proceed.</p>
       </div>
     </header>
-    
     <div class="grid-layout">
       <div 
-        v-for="card in cards" 
+        v-for="card in filteredCards" 
         :key="card.id" 
         class="card" 
         @click="navigateTo(card.route)"

@@ -136,6 +136,65 @@ export const saveBatchReadingsController = async (req, res) => {
 
             const newReadingId = readingResult.insertId;
 
+                        // =========================================================
+            // 🟢 STEP 2.5: Fetch Data for SMS and Billing Calculations
+            // =========================================================
+
+            // 1. Account Table එකෙන්: Current Balance (Before Update), Status, Name, Mobile Number සහ New Bill Number
+            const [customerAccountInfo] = await connection.query(
+                `SELECT current_balance, status, contact_info AS mobile_number, full_name, new_bill_number 
+                FROM water_customer_accounts 
+                WHERE id = ?`,
+                [reading.account_id]
+            );
+
+            let balanceBeforeUpdate = 0;
+            let customerMobile = null;
+            let customerName = 'Valued Customer';
+            let accountStatus = 'Unknown';
+            let newBillNumber = 'N/A';
+
+            if (customerAccountInfo.length > 0) {
+                balanceBeforeUpdate = parseFloat(customerAccountInfo[0].current_balance) || 0;
+                accountStatus = (customerAccountInfo[0].status == 1) ? 'Active' : 'Inactive';
+                customerMobile = customerAccountInfo[0].mobile_number;
+                const rawName = customerAccountInfo[0].full_name || 'Valued Customer';
+                customerName = rawName
+                    .toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                newBillNumber = customerAccountInfo[0].new_bill_number;
+            }
+
+            //bil year and month
+
+            const billYear = reading.year;
+            const billMonth = reading.month;
+
+            // 3. Water Bills Table (or Payments Table) එකෙන්: අවසන් වරට ගෙවූ මුදල සහ දිනය (Pending නොවන)
+            // * මෙහිදී උපකල්පනය කරන්නේ payments යාවත්කාලීන වන්නේ water_bills table එකේ paid_amount / paid_date හරහා බවයි.
+            const [lastPaymentInfo] = await connection.query(
+                `SELECT total_amount, paid_date, payment_status, paid_amount
+                FROM water_bills 
+                WHERE account_id = ? AND payment_status IN ('Paid', 'Partial') 
+                ORDER BY paid_date DESC LIMIT 1`,
+                [reading.account_id]
+            );
+
+            let lastPaymentAmount = 0;
+            let lastPaymentDate = 'N/A';
+
+            if (lastPaymentInfo.length > 0) {
+                lastPaymentAmount = parseFloat(lastPaymentInfo[0].paid_amount) || 0; 
+                
+                
+                // දිනය YYYY-MM-DD ලෙස සකස් කිරීම
+                if (lastPaymentInfo[0].paid_date) {
+                    lastPaymentDate = new Date(lastPaymentInfo[0].paid_date).toISOString().split('T')[0];
+                }
+            }
+
             // =========================================================
             // 🟢 STEP 3: Calculate Bill
             // =========================================================
@@ -148,7 +207,6 @@ export const saveBatchReadingsController = async (req, res) => {
             );
 
             let previous_dues = 0;
-            let customerMobile = null;
 
             if (customerAccount.length > 0) {
                 if (customerAccount[0].current_balance) {
@@ -239,22 +297,37 @@ export const saveBatchReadingsController = async (req, res) => {
             // ✅ SMS යැවීම සඳහා දත්ත එකතු කර ගැනීම (Queue)
             // Transaction එක මැද SMS යැවීමෙන් වළකින්න. එය Fail වුවහොත් Rollback වන නිසා
             const formattedPeriodFrom = new Date(periodFrom).toISOString().split('T')[0];
+            const formattedPeriodTo = new Date(periodTo).toISOString().split('T')[0];
+
 
             if (customerMobile) {
-                smsQueue.push({
-                    sabha_code: reading.sabha_code,
-                    mobile: customerMobile,
-                    message: 
-                        `Bill Number: ${billNumber}\n` +
-                        `From: ${formattedPeriodFrom}\n` +
-                        `To: ${periodTo}\n` +
-                        `Prev: ${safePreviousReading} | Curr: ${reading.current_reading}\n` +
-                        `Units: ${billData.units_consumed}\n` +
-                        `Total Amount: LKR ${billData.total_amount}\n` +
-                        `Please kind enough to pay on time. Thank you!\n` +
-                        `- ${reading.sabha_code}`
-                });
-            }
+    smsQueue.push({
+        sabha_code: reading.sabha_code,
+        mobile: customerMobile,
+        message: 
+`WATER BILL - ${reading.sabha_code}\n` +
+`Bill Ref : ${billYear}/${billMonth}\n` +
+`A/C No : ${newBillNumber}\n` +
+`${customerName}\n\n` +
+
+`Balance B/F (Rs) : ${balanceBeforeUpdate.toFixed(2)}\n` +
+`Last payment (Rs) : ${lastPaymentAmount.toFixed(2)}\n` +
+`Last payment Date : ${lastPaymentDate}\n\n` +
+//`Dues Previous (Rs) : ${balanceBeforeUpdate.toFixed(2)}\n\n` + 
+
+
+`Status : ${accountStatus}\n` +
+`Period : ${formattedPeriodFrom} to ${formattedPeriodTo}\n` +
+`Consumption : ${reading.current_reading} - ${safePreviousReading} = ${billData.units_consumed} units\n` +
+`Water Charge (Rs) : ${parseFloat(billData.water_consumption_charge).toFixed(2)}\n` +
+`Monthly Charges : Rs. ${parseFloat(billData.monthly_charge).toFixed(2)}\n` +
+`Total Due : Rs. ${parseFloat(billData.total_amount).toFixed(2)}\n\n` +
+
+`Please settle within 14 days !.\n` +
+`For any queries please contact ${reading.sabha_code} Water Board\n`+
+'Thank you!'
+    });
+}
 
             processedCount++;
         }

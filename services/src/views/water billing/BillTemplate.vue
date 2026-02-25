@@ -80,10 +80,6 @@
               <td>Other Charges</td>
               <td class="amount">LKR {{ formatCurrency(billDetails.otherCharges) }}</td>
             </tr>
-            <tr>
-              <td>Discounts</td>
-              <td class="amount">LKR {{ formatCurrency(billDetails.discounts) }}</td>
-            </tr>
             <tr class="sub-total">
               <td><strong>Charges for this Month</strong></td>
               <td class="amount"><strong>LKR {{ formatCurrency(calculateMonthTotal) }}</strong></td>

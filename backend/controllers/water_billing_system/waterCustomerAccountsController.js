@@ -1,4 +1,6 @@
 import { getProjectNumberByCode } from '../../models/water_billing_system/waterprojectsModel.js';
+import { sendMobitelSMS } from '../../utils/mobitelSmsService.js';
+import db from '../../config/database.js';
 import { 
     getCustomerCountBySabhaAndProject, 
     insertCustomer, 
@@ -94,6 +96,36 @@ export const registerCustomer = async (req, res) => {
         };
 
         await insertCustomer(customerData);
+        
+        try {
+
+            const isSamurdhiUser = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
+            const samurdhiStatus = isSamurdhiUser ? `Yes (No: ${samurdhiNumber})` : 'No';
+
+            const welcomeMsg = 
+`Welcome ${fullName} !
+
+Your Water Supply Account has been successfully registered.
+
+Account Details:
+ - Bill No: ${newBillNumber}
+ - property Address: ${propertyAddress}
+ - Mailing Address: ${mailingAddress}
+ - Mobile Number: ${contactInfo}
+ - NIC: ${nic}
+ - Connection Type: ${connectionType}
+ - Samurdhi: ${samurdhiStatus}
+
+Please use your Bill Number for future inquiries.
+${sabha_code} Water Board`;
+            
+            // මෙය await නොකර යැවීමෙන් response එක වේගවත් වේ (Background process)
+            sendMobitelSMS(sabha_code, contactInfo, welcomeMsg)
+                .then(() => console.log(`Registration SMS sent to ${contactInfo}`))
+                .catch(err => console.error("SMS Error:", err));
+        } catch (smsErr) {
+            console.error("SMS Trigger Error:", smsErr);
+        }
 
         return res.status(201).json({
             success: true,
@@ -157,10 +189,9 @@ export const getAllCustomers = async (req, res) => {
 
 export const editCustomerDetails = async (req, res) => {
     try {
-        const { id } = req.params; 
-        
+        const { id } = req.params;
         const {
-            fullName, nic, contactInfo, isSamurdhi, samurdhiNumber, status
+            fullName, nic, contactInfo, isSamurdhi, samurdhiNumber, status, sabha_code
         } = req.body;
 
         if (!id) {
@@ -173,11 +204,52 @@ export const editCustomerDetails = async (req, res) => {
             contact_info: contactInfo,
             is_samurdhi: (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1) ? 1 : 0,
             samurdhi_number: samurdhiNumber,
-            status: status 
+            status: status
         };
 
         const result = await updateCustomer(id, updateData);
 
+        const [customerRows] = await db.query(
+                "SELECT new_bill_number FROM water_customer_accounts WHERE id = ?", 
+                [id]
+            );
+
+            if (customerRows.length === 0) {
+                return res.status(404).json({ success: false, message: "Customer not found" });
+            }
+
+            const billNumber = customerRows[0].new_bill_number;
+
+        // Update එක සාර්ථක නම් පමණක් SMS එක යැවීමේ logic එක ක්‍රියාත්මක වේ
+            try {
+                const isSamurdhiUser = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
+                const samurdhiStatus = isSamurdhiUser ? `Yes (No: ${samurdhiNumber})` : 'No';
+
+                const updateMsg = 
+`Dear ${fullName},
+Your Water Account (Bill No: ${billNumber}) details have been updated successfully.
+
+Updated Details:
+- Name: ${fullName}
+- NIC: ${nic}
+- Contact: ${contactInfo}
+- Samurdhi: ${samurdhiStatus}
+- Status: ${status === 1 ? 'Active' : 'Inactive'}
+
+If this wasn't you, please contact our office.
+- ${sabha_code || 'LGPMS'} Water Board`;
+
+                // SMS යැවීම (Background process - no await)
+                sendMobitelSMS(sabha_code, contactInfo, updateMsg)
+                    .then(() => console.log(`Update SMS sent to ${contactInfo}`))
+                    .catch(err => console.error("SMS Sending Error:", err));
+
+            } catch (smsErr) {
+                // SMS එකේ error එකක් ආවත් update එක success නිසා return එකට බලපෑමක් නොවේ
+                console.error("SMS Generation Error:", smsErr);
+            }
+
+        // අවසාන ප්‍රතිචාරය (Response)
         return res.status(200).json({
             success: true,
             message: result.message
@@ -185,7 +257,11 @@ export const editCustomerDetails = async (req, res) => {
 
     } catch (error) {
         console.error("Error updating customer:", error);
-        return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Server Error", 
+            error: error.message 
+        });
     }
 };
 

@@ -89,6 +89,7 @@ export const processPayment = async (req, res) => {
 */
 import db from '../../config/database.js';
 import * as paymentModel from "../../models/water_billing_system/paymentModel.js";
+import { sendMobitelSMS } from "../../utils/mobitelSmsService.js";
 
 // ✅ 1. Employee Rate Heads යැවීමේ Endpoint එක
 export const getEmpRates = async (req, res) => {
@@ -111,44 +112,51 @@ export const getEmpRates = async (req, res) => {
 // ✅ 2. Payment Process කිරීම (Array එකක් ලෙස භාර ගැනීම)
 export const processPayment = async (req, res) => {
     try {
-        // Front-end එකෙන් breakdowns Array එකක් එවනවා
         const { account_id, account_number, payment_amount, breakdowns, sub_nic, paymonth } = req.body;
 
         if (!account_id || !payment_amount || !breakdowns || breakdowns.length === 0) {
             return res.status(400).json({ status: 'error', message: "Invalid payment data." });
         }
 
-        // 1. පාරිභෝගික තොරතුරු ලබාගැනීම (ඔබේ කලින් තිබූ Function එක)
-        // (සටහන: ඔබේ පවතින Model එකේ getCustomerDetails කියා එකක් ඇතැයි උපකල්පනය කරමි)
         const customerDetails = await paymentModel.getCustomerDetails(account_id);
         if (!customerDetails) {
             return res.status(404).json({ status: 'error', message: "Customer not found." });
         }
 
         let savedRecords = [];
+        
+        // SMS එකට අවශ්‍ය දත්ත ගබඩා කර ගැනීමට variables
+        let arrearsAmt = 0;
+        let finesAmt = 0;
+        let currentBillAmt = 0;
+        let excessAmt = 0;
 
-        // 2. Breakdown එකේ තියෙන හැම Item එකක්ම වෙන වෙනම Save කිරීම
         for (const item of breakdowns) {
-            // මුදල බිංදුවට වඩා වැඩි නම් සහ Rate Head එකක් තෝරා ඇත්නම් පමණක් සේව් වේ
             if (item.amount > 0 && item.sb_rate_head) {
+                // SMS එක සඳහා කාණ්ඩය අනුව මුදල් එකතු කිරීම
+                // මෙහි 'category' යන්න ඔබේ Front-end එකෙන් එන නමට අනුව ගලපා ගන්න
+                const cat = item.category.toLowerCase();
+                if (cat.includes('arrears')) arrearsAmt += item.amount;
+                else if (cat.includes('fine')) finesAmt += item.amount;
+                else if (cat.includes('current')) currentBillAmt += item.amount;
+                else if (cat.includes('excess')) excessAmt += item.amount;
+
                 const invoiceData = {
                     sabha_code: customerDetails.sabha_code || customerDetails.rate_sb_code,
                     cus_nic: account_number,
                     cus_name: customerDetails.full_name,
                     cus_contact: customerDetails.contact_no || "",
                     cus_address: customerDetails.address || customerDetails.mailing_address,
-                    
-                    sb_rate_head: item.sb_rate_head, // ✅ තෝරාගත් Rate Head එක
-                    description: `Water Bill Payment - ${item.category}`, // ✅ කාණ්ඩය
-                    amount: item.amount,             // ✅ අදාළ මුදල
-                    
-                    stamp: 0,              
-                    discount: 0,           
-                    shoptotalarrears: 0,   
+                    sb_rate_head: item.sb_rate_head,
+                    description: `Water Bill Payment - ${item.category}`,
+                    amount: item.amount,
+                    stamp: 0,
+                    discount: 0,
+                    shoptotalarrears: 0,
                     paymonth: paymonth || new Date().toISOString().slice(0, 7),
-                    vat: 0,                
-                    shopdid: 0,            
-                    sub_nic: sub_nic,      
+                    vat: 0,
+                    shopdid: 0,
+                    sub_nic: sub_nic,
                 };
 
                 const result = await paymentModel.saveTemporaryInvoice(invoiceData);
@@ -156,9 +164,42 @@ export const processPayment = async (req, res) => {
             }
         }
 
+        // --- SMS යැවීමේ කොටස ආරම්භය ---
+        if (savedRecords.length > 0) {
+            try {
+                const contactNo = customerDetails.contact_no;
+                const sabhaCode = customerDetails.sabha_code;
+
+                if (contactNo) {
+                    const smsMsg =
+`Dear ${customerDetails.full_name},
+Payment details for A/C: ${account_number}.
+Total amount to pay: Rs.${payment_amount.toFixed(2)}
+
+Breakdown:
+- Arrears: Rs.${arrearsAmt.toFixed(2)}
+- Fines: Rs.${finesAmt.toFixed(2)}
+- Current Bill: Rs.${currentBillAmt.toFixed(2)}
+- Excess: Rs.${excessAmt.toFixed(2)}
+
+Please kindly visit the cashier to pay the relevant charges for your bill.
+Thank you!
+${sabhaCode} Water Board`.trim();
+
+                    // ඔබ පාවිච්චි කරන SMS utility එක මෙහිදී කැඳවන්න
+                    sendMobitelSMS(sabhaCode, contactNo, smsMsg)
+                        .then(() => console.log(`Payment SMS sent to ${contactNo}`))
+                        .catch(err => console.error("Payment SMS Error:", err));
+                }
+            } catch (smsErr) {
+                console.error("SMS Generation Error:", smsErr);
+            }
+        }
+        // --- SMS යැවීමේ කොටස අවසානය ---
+
         return res.status(200).json({
             status: 'success',
-            message: `Payment processed successfully. Saved ${savedRecords.length} records.`,
+            message: `Payment processed successfully. Saved ${savedRecords.length} records and SMS sent.`,
             invoiceIds: savedRecords
         });
 
@@ -171,7 +212,7 @@ export const processPayment = async (req, res) => {
 export const getAccountSpecificTariffDetails = async (req, res) => {
     try {
         const { account_id } = req.params;
-
+        
         // 1. මුලින්ම පාරිභෝගිකයාගේ වර්තමාන තොරතුරු ලබා ගන්න
         const [account] = await db.query(`
             SELECT sabha_code, project_code, connection_type, is_samurdhi, is_metered 
@@ -185,14 +226,15 @@ export const getAccountSpecificTariffDetails = async (req, res) => {
         const data = account[0];
 
         // 2. එම දත්ත වලට ගැලපෙන Configuration එක සොයන්න (ඔබේ calculateBill එකේ ඇති Query එකමයි)
+        // Updated to use NULL-safe comparison (<=>) to handle NULL values properly
         const query = `
             SELECT discounts, fines FROM water_billing_configurations 
             WHERE sabha_code = ? 
             AND connection_type = ? 
             AND status = 1 
-            AND (project_code = ?)
-            AND (is_samurdhi = ? )
-            AND (is_metered = ? )
+            AND (project_code <=> ?)
+            AND (is_samurdhi <=> ?)
+            AND (is_metered <=> ?)
         `;
 
         const [configs] = await db.query(query, [

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, reactive, watch } from 'vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
@@ -7,20 +7,21 @@ import Swal from 'sweetalert2'
 const sabhaCode = ref('')
 const message = ref('')
 const recipientType = ref('ALL') 
-const customers = ref([])
+const customers = ref([]) // Filtered list for the modal
 const selectedCustomerIds = ref([])
 const isSending = ref(false)
 const isLoadingCustomers = ref(false)
 
-// --- Settings Modal State ---
-const showConfigModal = ref(false)
-const configForm = ref({
-    api_url: 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxy.php',
-    username: '',
-    password: '',
-    sender_id: ''
+// Filter & Search State for Modal
+const isFilterDialogOpen = ref(false)
+const searchQuery = ref('')
+const availableProjectCodes = ref([])
+const activeFilters = reactive({
+    projectCode: '',
+    connectionTypes: [],
+    samurdhi: [],
+    metered: []
 })
-const isSavingConfig = ref(false)
 
 // Character count
 const charCount = computed(() => message.value.length)
@@ -31,20 +32,54 @@ onMounted(() => {
     if (userData) {
         sabhaCode.value = userData.sabha || userData.sabha_code || userData.code
         fetchCustomers()
+        fetchProjects()
+    }
+})
+watch(recipientType, (newValue) => {
+    if (newValue === 'SPECIFIC') {
+        isFilterDialogOpen.value = true
+    } else {
+        selectedCustomerIds.value = [] // 'ALL' තේරුවහොත් selections clear කිරීමට (අවශ්‍ය නම් පමණක්)
     }
 })
 
-// Fetch Customers
+// Watchers for filtering inside modal
+watch([searchQuery, activeFilters], () => {
+    fetchCustomers()
+}, { deep: true })
+
+// Fetch Projects
+const fetchProjects = async () => {
+    try {
+        const response = await axios.get(`/water-payment-projects/${sabhaCode.value}`)
+        availableProjectCodes.value = response.data
+    } catch (err) { console.error(err) }
+}
+
+// Fetch Customers (with filters)
 const fetchCustomers = async () => {
     isLoadingCustomers.value = true
     try {
-        const response = await axios.get(`/water-customers/${sabhaCode.value}`)
+        const params = {
+            search: searchQuery.value,
+            projectCode: activeFilters.projectCode,
+            connectionTypes: activeFilters.connectionTypes.join(','),
+            samurdhi: activeFilters.samurdhi.join(','),
+            metered: activeFilters.metered.join(',')
+        }
+        const response = await axios.get(`/water-payment-customers/${sabhaCode.value}`, { params })
         customers.value = response.data
     } catch (error) {
         console.error("Error loading customers:", error)
     } finally {
         isLoadingCustomers.value = false
     }
+}
+
+const toggleCustomerSelection = (id) => {
+    const index = selectedCustomerIds.value.indexOf(id);
+    if (index > -1) selectedCustomerIds.value.splice(index, 1);
+    else selectedCustomerIds.value.push(id);
 }
 
 // --- SMS SENDING LOGIC ---
@@ -90,129 +125,117 @@ const sendBulkSMS = async () => {
         isSending.value = false
     }
 }
-
-// --- CONFIGURATION LOGIC ---
-const openConfigModal = async () => {
-    showConfigModal.value = true
-    try {
-        // Load existing config
-        const response = await axios.get(`/sms/config/${sabhaCode.value}`)
-        if (response.data.data) {
-            configForm.value = {
-                api_url: response.data.data.api_url,
-                username: response.data.data.username,
-                sender_id: response.data.data.sender_id,
-                password: '' // Don't show password for security
-            }
-        }
-    } catch (error) {
-        console.error("Error fetching config:", error)
-    }
+    const selectAllCustomers = () => {
+    selectedCustomerIds.value = customers.value.map(c => c.id)
 }
 
-const saveConfig = async () => {
-    if (!configForm.value.username || !configForm.value.sender_id) {
-        Swal.fire('Error', 'Username and Sender ID are required.', 'error')
-        return
-    }
-
-    isSavingConfig.value = true
-    try {
-        const payload = {
-            sabha_code: sabhaCode.value,
-            ...configForm.value
-        }
-        const response = await axios.post('/sms/config', payload)
-        if (response.data.status === 'success') {
-            Swal.fire('Saved!', 'Gateway configuration updated successfully.', 'success')
-            showConfigModal.value = false
-        }
-    } catch (error) {
-        console.error("Save Config Error:", error)
-        Swal.fire('Error', 'Failed to save configuration.', 'error')
-    } finally {
-        isSavingConfig.value = false
-    }
+const deselectAllCustomers = () => {
+    selectedCustomerIds.value = []
 }
 </script>
 
 <template>
     <div id="sms-panel-container" class="page-container">
         <header class="page-header">
-            <h2>SMS Announcement Panel</h2>
-            <div class="header-actions">
-                <button @click="openConfigModal" class="config-btn">⚙️ Gateway Settings</button>
-                <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
+            <div class="header-title">
+                <h2>SMS Announcement Panel</h2>
+                <p>Broadcast messages to your water consumers</p>
             </div>
+            <router-link to="/officer-dashboard" class="back-link"> Back to Dashboard</router-link>
         </header>
 
-        <div class="content-area">
-            <div class="card mb-4">
-                <h4>1. Select Recipients</h4>
-                <div class="radio-group">
-                    <label class="radio-item">
-                        <input type="radio" value="ALL" v-model="recipientType"> 
-                        All Active Customers ({{ customers.length }})
-                    </label>
-                    <label class="radio-item">
-                        <input type="radio" value="SPECIFIC" v-model="recipientType"> 
-                        Specific Customers
-                    </label>
-                </div>
-
-                <div v-if="recipientType === 'SPECIFIC'" class="customer-selector">
-                    <div class="scroll-box">
-                        <div v-for="c in customers" :key="c.id" class="check-item">
-                            <input type="checkbox" :value="c.id" v-model="selectedCustomerIds" :id="'cust-'+c.id">
-                            <label :for="'cust-'+c.id">{{ c.newBillNumber }} - {{ c.fullName }}</label>
-                        </div>
-                    </div>
-                    <p class="selection-count">Selected: {{ selectedCustomerIds.length }}</p>
-                </div>
+        <div class="card">
+            <div class="card-header-icon">
+                <h4>Select Recipients</h4>
             </div>
 
-            <div class="card">
-                <h4>2. Compose Message</h4>
-                <div class="form-group">
-                    <textarea v-model="message" rows="6" class="sms-textarea" placeholder="Type your announcement here..."></textarea>
-                    <div class="sms-info">
-                        <span>Characters: <strong>{{ charCount }}</strong></span>
-                        <span>Parts: <strong>{{ smsParts }}</strong></span>
-                    </div>
-                </div>
-                <button @click="sendBulkSMS" class="send-btn" :disabled="isSending || !message.trim()">
-                    <span v-if="isSending">Sending...</span>
-                    <span v-else>🚀 Broadcast Message</span>
-                </button>
+            <div class="segmented-control">
+                <label :class="{ 'active': recipientType === 'ALL' }">
+                    <input type="radio" value="ALL" v-model="recipientType">
+                    <span><i class="fas fa-globe"></i> All Customers</span>
+                </label>
+                <label :class="{ 'active': recipientType === 'SPECIFIC' }">
+                    <input type="radio" value="SPECIFIC" v-model="recipientType">
+                    <span><i class="fas fa-user-check"></i> Specific Group</span>
+                </label>
+            </div>
+
+            <div v-if="recipientType === 'SPECIFIC'" class="info-banner clickable-banner" @click="isFilterDialogOpen = true">
+                <i class="fas fa-check-circle"></i>
+                Selected Recipients: <strong>{{ selectedCustomerIds.length }}</strong> (Click to change)
+            </div>
+            
+            <div v-else class="info-banner">
+                <i class="fas fa-info-circle"></i>
+                Message will be sent to all active consumers in {{ sabhaCode }}.
             </div>
         </div>
 
-        <div v-if="showConfigModal" class="modal-overlay">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4>SMS Gateway Setup (Mobitel)</h4>
-                    <button @click="showConfigModal = false" class="close-btn">×</button>
+        <div class="card">
+            <h4>Compose Message</h4>
+            <div class="form-group">
+                <textarea v-model="message" rows="6" class="sms-textarea" placeholder="Type your announcement here..."></textarea>
+                <div class="sms-info">
+                    <span>Characters: <strong>{{ charCount }}</strong></span>
+                    <span>Parts: <strong>{{ smsParts }}</strong></span>
                 </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>API URL</label>
-                        <input type="text" v-model="configForm.api_url" class="form-control" />
+            </div>
+            <button @click="sendBulkSMS" class="send-btn" :disabled="isSending || !message.trim()">
+                <span v-if="isSending">Sending...</span>
+                <span v-else>Broadcast Message</span>
+            </button>
+        </div>
+
+        <div v-if="isFilterDialogOpen" class="modal-overlay">
+            <div class="modal-content selection-modal">
+                <div class="modal-header">
+                    <h4>Select Customers</h4>
+                </div>
+
+                <div class="modal-filters flex-filters">
+                    <div class="search-bar search-bar-custom">
+                        <i class="fas fa-search"></i>
+                        <input type="text" v-model="searchQuery" placeholder="Search name or bill no..." class="modal-input-field">
                     </div>
-                    <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" v-model="configForm.username" class="form-control" placeholder="Mobitel Username" />
+
+                    <div class="filter-controls select-controls">
+                        <select v-model="activeFilters.projectCode" class="modal-select-field">
+                            <option value="">All Projects</option>
+                            <option v-for="p in availableProjectCodes" :key="p.code" :value="p.code">
+                                {{ p.name }}
+                            </option>
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" v-model="configForm.password" class="form-control" placeholder="Leave empty to keep current password" />
+                </div>
+
+                <div class="table-wrapper">
+                    <div class="filter-controls table-action-margin">
+                        <div class="filter-controls-actions">
+                            <button @click="selectAllCustomers" class="apply-btn-select">Select All</button>
+                            <button @click="deselectAllCustomers" class="apply-btn-disselect">Clear All</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Sender ID (Alias)</label>
-                        <input type="text" v-model="configForm.sender_id" class="form-control" placeholder="e.g. PRADESHIYA" />
-                    </div>
-                    <button @click="saveConfig" class="save-btn" :disabled="isSavingConfig">
-                        {{ isSavingConfig ? 'Saving...' : 'Save Configuration' }}
-                    </button>
+                    <table class="selection-table">
+                        <thead>
+                            <tr>
+                                <th width="40">Select</th>
+                                <th>Bill No</th>
+                                <th>Customer Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in customers" :key="c.id" @click="toggleCustomerSelection(c.id)" :class="{ 'row-selected': selectedCustomerIds.includes(c.id) }">
+                                <td><input type="checkbox" :checked="selectedCustomerIds.includes(c.id)"></td>
+                                <td>{{ c.newBillNumber }}</td>
+                                <td>{{ c.fullName }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-footer">
+                    <span>Selected: <strong>{{ selectedCustomerIds.length }}</strong></span>
+                    <button class="apply-btn" @click="isFilterDialogOpen = false">Done</button>
                 </div>
             </div>
         </div>
@@ -220,33 +243,417 @@ const saveConfig = async () => {
 </template>
 
 <style scoped>
-.page-container { padding: 20px; max-width: 900px; margin: 0 auto; font-family: sans-serif; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #42b883; padding-bottom: 10px; }
-.header-actions { display: flex; gap: 15px; align-items: center; }
+/* Main Container */
+#sms-panel-container .page-container {
+    padding: 30px !important;
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+    background: #f4f7f6 !important;
+    min-height: 100vh !important;
+}
 
-.card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-h4 { margin: 0 0 15px 0; color: #2c3e50; }
+#sms-panel-container .page-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    margin-bottom: 30px !important;
+}
 
-.radio-group { display: flex; gap: 20px; margin-bottom: 15px; }
-.radio-item { cursor: pointer; font-weight: 600; }
+#sms-panel-container .header-title h2 {
+    margin: 0 !important;
+    color: #2c3e50 !important;
+    font-size: 24px !important;
+}
 
-.scroll-box { max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; background: #f9f9f9; border-radius: 4px; }
-.check-item { display: flex; gap: 10px; padding: 5px 0; font-size: 13px; }
+#sms-panel-container .header-title p {
+    margin: 5px 0 0 0 !important;
+    color: #7f8c8d !important;
+    font-size: 14px !important;
+}
 
-.sms-textarea { width: 100%; padding: 10px; border: 2px solid #eee; border-radius: 6px; resize: none; }
-.sms-info { display: flex; justify-content: flex-end; gap: 15px; font-size: 12px; color: #666; margin-top: 5px; }
+#sms-panel-container .back-link {
+    background: #fff !important;
+    padding: 8px 15px !important;
+    border-radius: 6px !important;
+    text-decoration: none !important;
+    color: #42b883 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
 
-.send-btn { background: #42b883; color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 15px; }
-.config-btn { background: #2c3e50; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-.back-link { color: #42b883; text-decoration: none; font-weight: bold; }
+/* Card Styles */
+#sms-panel-container .card {
+    background: #fff !important;
+    border-radius: 12px !important;
+    padding: 25px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.02) !important;
+    border: 1px solid #eef2f1 !important;
+    margin-bottom: 25px !important;
+}
+
+#sms-panel-container .card-header-icon {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+    color: #42b883 !important;
+}
+
+#sms-panel-container .card-header-icon h4 {
+    margin: 0 !important;
+    color: #34495e !important;
+    font-size: 17px !important;
+}
+
+/* Segmented Control (Radio buttons) */
+#sms-panel-container .segmented-control {
+    display: flex !important;
+    background: #f0f2f1 !important;
+    padding: 5px !important;
+    border-radius: 10px !important;
+    margin-bottom: 20px !important;
+}
+
+#sms-panel-container .segmented-control label {
+    flex: 1 !important;
+    text-align: center !important;
+    padding: 10px !important;
+    cursor: pointer !important;
+    border-radius: 8px !important;
+    transition: 0.3s !important;
+    color: #7f8c8d !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+}
+
+#sms-panel-container .segmented-control input {
+    display: none !important;
+}
+
+#sms-panel-container .segmented-control label.active {
+    background: #fff !important;
+    color: #42b883 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+}
+
+/* Buttons & Inputs */
+#sms-panel-container .manage-btn {
+    width: 100% !important;
+    padding: 12px !important;
+    border: 2px dashed #cbd5e0 !important;
+    background: #f8fafc !important;
+    border-radius: 8px !important;
+    color: #4a5568 !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    transition: 0.2s !important;
+}
+
+#sms-panel-container .manage-btn:hover {
+    border-color: #42b883 !important;
+    color: #42b883 !important;
+    background: #f0fff4 !important;
+}
+
+#sms-panel-container .sms-textarea {
+    width: 100% !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 15px !important;
+    font-family: inherit !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+    transition: 0.3s !important;
+}
+
+#sms-panel-container .sms-textarea:focus {
+    border-color: #42b883 !important;
+    box-shadow: 0 0 0 3px rgba(66, 184, 131, 0.1) !important;
+}
+
+#sms-panel-container .sms-stats {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 20px !important;
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
+}
+
+#sms-panel-container .sms-stats span {
+    color: #334155 !important;
+}
+
+#sms-panel-container .send-btn {
+    width: 100% !important;
+    margin-top: 20px !important;
+    padding: 15px !important;
+    background: #42b883 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: 0.5s !important;
+    box-shadow: 0 4px 12px rgba(66, 184, 131, 0.2) !important;
+}
+
+#sms-panel-container .send-btn:hover:not(:disabled) {
+    background: #38a169 !important;
+    transform: translateY(-2px) !important;
+}
+
+#sms-panel-container .send-btn:disabled {
+    background: #d95e4d !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
 
 /* Modal Styles */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background: white; padding: 25px; border-radius: 8px; width: 400px; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
-.form-control { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-.save-btn { background: #42b883; color: white; border: none; padding: 10px; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold; }
+#sms-panel-container .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0,0,0,0.4) !important;
+    backdrop-filter: blur(4px) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 2000 !important;
+}
+
+#sms-panel-container .selection-modal {
+    width: 600px !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+#sms-panel-container .modal-header {
+    padding: 20px 25px !important;
+    border-bottom: 1px solid #eee !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+#sms-panel-container .modal-filters {
+    padding: 15px 25px !important;
+    background: #f8fafc !important;
+    display: flex !important;
+    gap: 10px !important;
+    border-bottom: 1px solid #eee !important;
+}
+
+#sms-panel-container .search-bar {
+    position: relative !important;
+    flex: 1 !important;
+}
+
+#sms-panel-container .search-bar i {
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #94a3b8 !important;
+}
+
+#sms-panel-container .search-bar input {
+    width: 100% !important;
+    padding: 8px 8px 8px 35px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+}
+
+#sms-panel-container .table-wrapper {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 0 25px !important;
+}
+
+#sms-panel-container .selection-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
+}
+
+#sms-panel-container .selection-table th {
+    position: sticky !important;
+    top: 0 !important;
+    background: #bcccdc !important;
+    padding: 12px 10px !important;
+    text-align: left !important;
+    border: 1px solid #99a3b0 !important;
+    color: #181c24 !important;
+}
+
+#sms-panel-container .selection-table td {
+    padding: 10px !important;
+    border: 1px solid #99a3b0 !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}
+
+#sms-panel-container .row-selected {
+    background: #f0fff4 !important;
+}
+
+#sms-panel-container .modal-footer {
+    padding: 15px 25px !important;
+    border-top: 1px solid #eee !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: #fff !important;
+}
+
+#sms-panel-container .apply-btn {
+    background: #1e9610 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 20px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    font-size: 15px !important;
+}
+
+#sms-panel-container .info-banner {
+    background: #e3f2fd !important;
+    color: #1976d2 !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    display: flex !important;
+    gap: 10px !important;
+    align-items: center !important;
+}
+
+#sms-panel-container .filter-controls-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    margin-top: 15px !important;
+    padding: 0 15px !important;
+}
+
+#sms-panel-container .apply-btn-select, 
+#sms-panel-container .apply-btn-disselect {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 10px 18px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+}
+
+#sms-panel-container .apply-btn-select {
+    background-color: #0a79e7 !important;
+    color: #ffffff !important;
+}
+
+#sms-panel-container .apply-btn-select:hover {
+    background-color: #354554 !important;
+    transform: translateY(-1px) !important;
+}
+
+#sms-panel-container .apply-btn-disselect {
+    background-color: #ff0505 !important;
+    color: #ffffff !important;
+}
+
+#sms-panel-container .apply-btn-disselect:hover {
+    background-color: #bb4f4f !important;
+    transform: translateY(-1px) !important;
+}
+
+#sms-panel-container .apply-btn-select:active, 
+#sms-panel-container .apply-btn-disselect:active {
+    transform: translateY(0) !important;
+}
+
+#sms-panel-container .clickable-banner {
+    cursor: pointer !important;
+    background: #e6fffa !important;
+    color: #2d3748 !important;
+    border: 1px solid #38a169 !important;
+}
+
+#sms-panel-container .clickable-banner i {
+    color: #38a169 !important;
+}
+
+#sms-panel-container .flex-filters {
+    display: flex !important;
+    gap: 15px !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+#sms-panel-container .search-bar-custom {
+    flex: 0 0 60% !important;
+    position: relative !important;
+}
+
+#sms-panel-container .search-bar-custom i {
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #64748b !important;
+    font-size: 14px !important;
+}
+
+#sms-panel-container .modal-input-field {
+    width: 100% !important;
+    padding: 12px 12px 12px 40px !important;
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    font-size: 14px !important;
+}
+
+#sms-panel-container .select-controls {
+    flex: 0 0 40% !important;
+}
+
+#sms-panel-container .modal-select-field {
+    width: 100% !important;
+    padding: 12px !important;
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    font-size: 14px !important;
+}
+
+#sms-panel-container .modal-select-field option {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+}
+
+#sms-panel-container .table-action-margin {
+    margin-top: 15px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    margin: 10px !important;
+}
 </style>
