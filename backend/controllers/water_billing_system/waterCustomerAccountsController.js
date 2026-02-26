@@ -102,8 +102,10 @@ export const registerCustomer = async (req, res) => {
             const isSamurdhiUser = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
             const samurdhiStatus = isSamurdhiUser ? `Yes (No: ${samurdhiNumber})` : 'No';
 
+            const camelCaseName = toTitleCase(fullName);
+
             const welcomeMsg = 
-`Welcome ${fullName} !
+`Welcome ${camelCaseName} !
 
 Your Water Supply Account has been successfully registered.
 
@@ -225,8 +227,10 @@ export const editCustomerDetails = async (req, res) => {
                 const isSamurdhiUser = (isSamurdhi === true || isSamurdhi === 'true' || isSamurdhi === 1);
                 const samurdhiStatus = isSamurdhiUser ? `Yes (No: ${samurdhiNumber})` : 'No';
 
+                const camelCaseName = toTitleCase(fullName);
+
                 const updateMsg = 
-`Dear ${fullName},
+`Dear ${camelCaseName},
 Your Water Account (Bill No: ${billNumber}) details have been updated successfully.
 
 Updated Details:
@@ -291,4 +295,16 @@ export const checkSabhaCustomer = async (req, res) => {
         console.error("Error fetching sabha customer:", error);
         return res.status(500).json({ success: false, message: "Server Error" });
     }
+};
+
+//camel case
+
+const toTitleCase = (str) => {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .split(' ')
+        .filter(word => word.length > 0) // වචන අතර වැඩිපුර spaces තිබේ නම් ඒවා ඉවත් කරයි
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' '); // මෙතනදී space එකක් සහිතව වචන එකතු කරයි
 };

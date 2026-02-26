@@ -3,6 +3,10 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { fileURLToPath } from 'url';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // --- Routes Imports ---
 import router from "./routes/routes.js";
@@ -20,7 +24,8 @@ import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes
 import eachCustomerPaymentHistoryRoutes from './routes/water_billing_system/EachCustomerpaymentHistoryRoutes.js';
 import waterProgressRoutes from './routes/water_billing_system/meterReadingsProgressRoute.js';
 import waterBillRoutes from "./routes/water_billing_system/BillTemplateRoutes.js"; 
-
+//sms
+import smsRoutes from './routes/SMS/smsRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -32,15 +37,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- CORS Config ---
 app.use(cors({
-    origin: ["http://localhost:8080", "https://elgservices.lk"],
+    origin: ["http://localhost:8080", "https://elgservices.lk","http://localhost:8081"],
     credentials: true
 }));
 
-// --- Route Registration ---
-
-// *** 2. මෙම කොටස අලුතින් එකතු කරන්න (Route Mount කිරීම) ***
 app.use('/api', waterBillRoutes); 
-// මෙය දැමූ පසු ඔබේ URL එක වනුයේ: http://localhost:3000/api/water-bills/:id
 
 app.use('/api', billingFeesRoute);
 app.use(router);
@@ -56,6 +57,8 @@ app.use('/api', paymentHistoryRoutes);
 app.use('/api/reports', waterBillingReportRoutes);
 app.use('/api', eachCustomerPaymentHistoryRoutes);
 app.use('/api', waterProgressRoutes);
+//sms
+app.use('/api/sms', smsRoutes);
 
 app.get('/api/getserverdate', (req, res) => {
   const serverDate = new Date();

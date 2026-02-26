@@ -176,9 +176,9 @@ const deselectAllCustomers = () => {
             <div class="form-group">
                 <textarea v-model="message" rows="6" class="sms-textarea" placeholder="Type your announcement here..."></textarea>
                 <div class="sms-info">
-                    <span>Characters: <strong>{{ charCount }}</strong></span>
-                    <span>Parts: <strong>{{ smsParts }}</strong></span>
-                </div>
+                <span style="margin-right: 20px;">Characters: <strong>{{ charCount }}</strong></span>
+                <span>Parts: <strong>{{ smsParts }}</strong></span>
+            </div>
             </div>
             <button @click="sendBulkSMS" class="send-btn" :disabled="isSending || !message.trim()">
                 <span v-if="isSending">Sending...</span>
@@ -244,12 +244,14 @@ const deselectAllCustomers = () => {
 
 <style scoped>
 /* Main Container */
-#sms-panel-container .page-container {
-    padding: 30px !important;
-    max-width: 1000px !important;
-    margin: 0 auto !important;
+#sms-panel-container.page-container {
+    padding: 40px 20px !important; 
+    max-width: 1100px !important; 
+    margin: 40px auto !important;
     background: #f4f7f6 !important;
-    min-height: 100vh !important;
+    min-height: calc(100vh - 80px) !important;
+    border-radius: 15px !important; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
 }
 
 #sms-panel-container .page-header {
@@ -263,6 +265,15 @@ const deselectAllCustomers = () => {
     margin: 0 !important;
     color: #2c3e50 !important;
     font-size: 24px !important;
+}
+
+#sms-panel-container .sms-info {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 20px !important;
+    margin-top: 10px !important;
+    font-size: 13px !important;
+    color: #64748b !important;
 }
 
 #sms-panel-container .header-title p {
@@ -435,6 +446,7 @@ const deselectAllCustomers = () => {
     flex-direction: column !important;
     padding: 0 !important;
     overflow: hidden !important;
+    border-radius: 8px !important;
 }
 
 #sms-panel-container .modal-header {

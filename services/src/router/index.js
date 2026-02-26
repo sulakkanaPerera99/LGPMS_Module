@@ -41,6 +41,9 @@ import PaymentInterface from "../views/water billing/PaymentInterface.vue";
 import ManageBillingFees from "../views/water billing/ManageBillingFees.vue";
 import AddBillingFees from "@/views/water billing/AddBillingFees.vue";
 import fetchCustomerHistory from "../views/water billing/CustomerPaymentHistory.vue";
+//sms
+import BulkSMS from "@/views/SMS/BulkSMS.vue";
+import SMSConfig from "@/views/SMS/SMSConfig.vue";
 
 
 //UnderDevelopment 
@@ -161,6 +164,11 @@ const routes = [
        component: ViewCustomerHistory
       },
       {
+        path:'/config_sms',
+        name:'config_sms',
+        component: SMSConfig
+      },
+      {
         path: '/water-bill-report-generation',
         name: 'water-bill-report-generation',
         component: WaterBillReportGeneration
@@ -267,6 +275,11 @@ const routes = [
         name: 'PaymentHistoryView',
         component: fetchCustomerHistory,
         props: true
+      },
+      {
+        path: '/send_sms',
+        name: 'send_sms',
+        component: BulkSMS
       }
 ];
 

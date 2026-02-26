@@ -95,7 +95,7 @@ export const getConfigs = async (req, res) => {
 
         const configs = await BillingFeesModel.getBillingConfigs(sabha_code, search, sort);
 
-        // Data Mapping (snake_case DB fields -> camelCase Frontend fields)
+        // 1. Data Mapping (snake_case -> camelCase)
         const processedConfigs = configs.map(config => ({
             id: config.id,
             projectCode: config.project_code,
@@ -103,16 +103,17 @@ export const getConfigs = async (req, res) => {
             isMetered: Boolean(config.is_metered),
             isSamurdhi: Boolean(config.is_samurdhi),
             fixedRate: config.fixed_rate,
-            
-            // Safe JSON Parsing checks
             unitRanges: typeof config.unit_ranges === 'string' ? JSON.parse(config.unit_ranges) : (config.unit_ranges || []),
             otherCharges: typeof config.other_charges === 'string' ? JSON.parse(config.other_charges) : (config.other_charges || []),
             discounts: typeof config.discounts === 'string' ? JSON.parse(config.discounts) : (config.discounts || []),
             fines: typeof config.fines === 'string' ? JSON.parse(config.fines) : (config.fines || []),
-            
             status: config.status,
             createdAt: config.created_at
         }));
+
+        // 2. sort according to Status
+        
+        processedConfigs.sort((a, b) => b.status - a.status);
 
         return res.status(200).json({
             status: 'success',

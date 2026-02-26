@@ -1,5 +1,6 @@
 import axios from 'axios';
 import db from '../config/database.js';
+import { decrypt } from '../utils/cryptoHelper.js';
 
 const formatPhoneNumber = (phone) => {
     let cleaned = phone.replace(/\D/g, '');
@@ -24,27 +25,29 @@ export const sendMobitelSMS = async (sabhaCode, mobileNumber, message) => {
         const config = configs[0];
         const formattedMobile = formatPhoneNumber(mobileNumber);
 
-        // API එක බලාපොරොත්තු වන පරාමිතීන් (Query Parameters)
+        //decryption
+        let plainPassword;
+        try {
+            plainPassword = decrypt(config.password);
+        } catch (decErr) {
+            console.error("[SMS DEBUG] Decryption failed. Possibly not encrypted yet:", decErr.message);
+            plainPassword = config.password; 
+        }
+
+        // API (Query Parameters) - Use plainPassword and URL-encode message
         const params = new URLSearchParams({
             u: config.username,
-            p: config.password,
+            p: plainPassword, // FIX: Use decrypted password instead of encrypted
             a: config.sender_id,
             r: formattedMobile,
-            m: message, // Axios විසින් මෙය ස්වයංක්‍රීයව encode කරයි, නමුත් URLSearchParams වඩාත් සුරක්ෂිතයි
+            m: encodeURIComponent(message), // FIX: URL-encode the message
             t: 0
         });
 
         const fullUrl = `${config.api_url}?${params.toString()}`;
-        //console.log(`[SMS DEBUG] Attempting to send via: ${fullUrl}`);
 
         // Axios GET request එක full URL එක සමඟ යවන්න
         const response = await axios.get(fullUrl);
-
-        /* Mobitel Response eka terminal eke print karanna
-        console.log("--- Mobitel API Response Start ---");
-        console.log("Status Code:", response.status);
-        console.log("Data:", response.data); 
-        console.log("--- Mobitel API Response End ---");*/
 
         // Mobitel eken '0' enne nathuwa wena ekak awoth eka failed widiyata log karamu
         const apiStatus = (response.status === 200 && String(response.data).trim() === '0') ? 'SENT' : 'FAILED';

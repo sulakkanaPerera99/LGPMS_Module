@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'
 const sabhaCode = ref('')
 const isSavingConfig = ref(false)
 const configForm = ref({
-    api_url: 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxy.php',
+    api_url: '',
     username: '',
     password: '',
     sender_id: ''
@@ -99,6 +99,7 @@ const saveConfig = async () => {
 <style scoped>
 #SMS-config.page-container { 
     padding: 20px !important; 
+    padding-top: 70px !important;
     max-width: 600px !important; 
     margin: 0 auto !important; 
 }

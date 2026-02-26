@@ -142,7 +142,7 @@ export const processPayment = async (req, res) => {
                 else if (cat.includes('excess')) excessAmt += item.amount;
 
                 const invoiceData = {
-                    sabha_code: customerDetails.sabha_code || customerDetails.rate_sb_code,
+                    sabha_code: customerDetails.sabha_code,
                     cus_nic: account_number,
                     cus_name: customerDetails.full_name,
                     cus_contact: customerDetails.contact_no || "",

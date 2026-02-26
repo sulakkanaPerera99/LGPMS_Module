@@ -35,27 +35,43 @@
       <div class="card mb-3" v-if="accountDetails.pendingBills.length > 0"> 
         <div class="card-header bg-light">Pending Bills Breakdown (Oldest First)</div>
         <div class="table-responsive">
-          <table class="table table-sm table-striped mb-0">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Bill No</th>
-                <th class="text-end">Bill Total</th>
-                <th class="text-end">Paid</th>
-                <th class="text-end">Due</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="bill in accountDetails.pendingBills" :key="bill.bill_number">
-                <td>{{ formatDate(bill.billing_date) }}</td>
-                <td>{{ bill.bill_number }}</td>
-                <td class="text-end">{{ formatCurrency(bill.monthly_charge) }}</td>
-                <td class="text-end">{{ formatCurrency(bill.paid_amount) }}</td>
-                <td class="text-end text-danger font-weight-bold">{{ formatCurrency(bill.due_amount) }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <table class="table table-sm table-striped mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Bill No</th>
+              <th class="text-end">Bill Total</th>
+              <th class="text-end">Paid</th>
+              <th class="text-end">Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="bill in paginatedBills" :key="bill.bill_number">
+              <td>{{ formatDate(bill.billing_date) }}</td>
+              <td>{{ bill.bill_number }}</td>
+              <td class="text-end">{{ formatCurrency(bill.monthly_charge) }}</td>
+              <td class="text-end">{{ formatCurrency(bill.paid_amount) }}</td>
+              <td class="text-end text-danger font-weight-bold">{{ formatCurrency(bill.due_amount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div v-if="totalPages > 1" class="d-flex justify-content-center mt-2 pb-2 pt-2 border-top">
+          <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                <button class="page-link" @click.prevent="currentPage--">Previous</button>
+              </li>
+              <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+                <button class="page-link" @click.prevent="currentPage = page">{{ page }}</button>
+              </li>
+              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                <button class="page-link" @click.prevent="currentPage++">Next</button>
+              </li>
+            </ul>
+          </nav>
         </div>
+      </div>
       </div>
       <div v-else class="alert alert-success">No pending bills! Account is clear.</div>
 
@@ -271,7 +287,9 @@ export default {
         arrears: '',
         current: '',
         excess: ''
-      }
+      },
+      currentPage: 1,
+      itemsPerPage: 9
     };
   },
   async mounted() {
@@ -501,8 +519,32 @@ export default {
             this.isProcessing = false;
         }
     }
+  },computed: {
+  paginatedBills() {
+    if (!this.accountDetails || !this.accountDetails.pendingBills) return [];
+
+    // සම්පූර්ණ බිල්පත් ලැයිස්තුව (Oldest to Newest)
+    let bills = [...this.accountDetails.pendingBills];
+
+    // අලුත්ම බිල්පත් 10 පමණක් තෝරා ගැනීම
+    let latestTen = bills.slice(-10);
+
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    const end = start + this.itemsPerPage;
+    
+    return latestTen.slice(start, end);
+  },
+  totalPages() {
+    if (!this.accountDetails || !this.accountDetails.pendingBills) return 0;
+    
+    // බිල්පත් 10කට සීමා කර ඇත්නම්:
+    const count = Math.min(this.accountDetails.pendingBills.length, 10);
+    return Math.ceil(count / this.itemsPerPage);
   }
+}
 };
+
+
 </script>
 
 <style scoped>
@@ -773,5 +815,17 @@ export default {
 }
 #water-payment-interface-container .back-link:hover {
     text-decoration: underline !important;
+}
+#water-payment-interface-container .pagination .page-link {
+    color: #11211a !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 5px 15px !important;
+    cursor: pointer !important;
+}
+#water-payment-interface-container .pagination .page-item.active .page-link {
+    background-color: #42b883 !important;
+    border-color: #42b883 !important;
+    color: white !important;
 }
 </style>

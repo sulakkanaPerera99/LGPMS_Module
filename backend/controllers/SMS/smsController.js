@@ -1,29 +1,46 @@
 import db from '../../config/database.js';
 import { sendMobitelSMS } from '../../utils/mobitelSmsService.js';
 import * as SmsModel from '../../models/SMS/smsModel.js';
+import { encrypt } from '../../utils/cryptoHelper.js';
 
 // 1. Save or Update Configuration
 export const saveConfiguration = async (req, res) => {
-    try {
-        const { sabha_code, api_url, username, password, sender_id } = req.body;
+    const { sabha_code, api_url, username, password, sender_id } = req.body;
 
-        if (!sabha_code || !api_url || !username || !sender_id) {
-            return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+    try {
+        // 1. මේ සභාවට දැනටමත් config එකක් තියෙනවාද කියා බලන්න
+        const [existing] = await db.query("SELECT id FROM sms_configs WHERE sabha_code = ?", [sabha_code]);
+
+        if (existing.length === 0) {
+            // 2. අලුතින්ම ඇතුළත් කිරීම (Insert)
+            console.log("No existing config. Inserting new record...");
+            const encryptedPassword = password ? encrypt(password) : '';
+            await db.query(
+                `INSERT INTO sms_configs (sabha_code, api_url, username, password, sender_id, status) VALUES (?, ?, ?, ?, ?, 1)`,
+                [sabha_code, api_url, username, encryptedPassword, sender_id]
+            );
+        } else {
+            // 3. දැනට ඇති එක වෙනස් කිරීම (Update)
+            console.log("Existing config found. Updating...");
+            let query;
+            let params;
+
+            if (password && password.trim() !== '') {
+                const encryptedPassword = encrypt(password);
+                query = `UPDATE sms_configs SET api_url=?, username=?, password=?, sender_id=? WHERE sabha_code=?`;
+                params = [api_url, username, encryptedPassword, sender_id, sabha_code];
+            } else {
+                query = `UPDATE sms_configs SET api_url=?, username=?, sender_id=? WHERE sabha_code=?`;
+                params = [api_url, username, sender_id, sabha_code];
+            }
+            await db.query(query, params);
         }
 
-        await SmsModel.upsertSmsConfig({
-            sabhaCode: sabha_code,
-            apiUrl: api_url,
-            username: username,
-            password: password, // Can be empty if updating without changing password
-            senderId: sender_id
-        });
-
-        res.json({ status: 'success', message: 'SMS Configuration saved successfully.' });
+        res.json({ status: 'success', message: 'Configuration saved successfully' });
 
     } catch (error) {
-        console.error("Save Config Error:", error);
-        res.status(500).json({ status: 'error', message: 'Failed to save configuration.' });
+        console.error("--- SMS CONFIG ERROR ---", error);
+        res.status(500).json({ status: 'error', message: error.message });
     }
 };
 

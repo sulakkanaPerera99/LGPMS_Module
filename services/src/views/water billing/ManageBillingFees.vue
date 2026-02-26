@@ -258,7 +258,11 @@ const updateForm = async () => {
             <tr v-if="billingFeesList.length === 0">
               <td colspan="8" style="text-align: center; padding: 20px;">No configurations found.</td>
             </tr>
-            <tr v-for="config in billingFeesList" :key="config.id">
+            <tr 
+                v-for="config in billingFeesList" 
+                :key="config.id"
+                :class="{ 'inactive-row': config.status === 0 }"
+              >
               <td>{{ config.projectCode }}</td>
               <td>{{ config.connectionType }}</td>
               <td>{{ config.isMetered ? 'Yes' : 'No' }}</td>
@@ -285,7 +289,14 @@ const updateForm = async () => {
                 </div>
               </td>
               <td>
-                <button class="action-btn" @click="openEditModal(config)">Edit</button>
+                <button 
+                  class="action-btn" 
+                  @click="openEditModal(config)" 
+                  :disabled="config.status === 0"
+                  :title="config.status === 0 ? 'This configuration is inactive and cannot be edited' : ''"
+                >
+                  {{ config.status === 0 ? 'Inactive' : 'Edit' }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -581,6 +592,22 @@ const updateForm = async () => {
     font-size: 13px !important; 
     background-color: white !important;
     cursor: pointer !important;
+}
+
+#edit-billing-fees-container .inactive-row {
+    background-color: #d7cec3 !important;
+    color: #707a88 !important;
+}
+
+#edit-billing-fees-container .inactive-row td {
+    border-color: #edf2f7 !important;
+}
+
+#edit-billing-fees-container .action-btn:disabled {
+    background-color: #cbd5e0 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* --- DYNAMIC SECTIONS --- */
