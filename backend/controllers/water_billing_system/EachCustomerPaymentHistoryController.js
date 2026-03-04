@@ -1,4 +1,4 @@
-import * as EachCustomerPaymentHistoryModel from '../../models/water_Billing_System/EachCustomerPaymentHistoryModel.js';
+import * as EachCustomerPaymentHistoryModel from '../../models/water_billing_system/EachCustomerPaymentHistoryModel.js';
 
 /**
  * Controller: Get Payment History

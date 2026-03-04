@@ -148,7 +148,15 @@ export const processPayment = async (req, res) => {
                     cus_contact: customerDetails.contact_no || "",
                     cus_address: customerDetails.address || customerDetails.mailing_address,
                     sb_rate_head: item.sb_rate_head,
-                    description: `Water Bill Payment - ${item.category}`,
+                    description: `
+Payment details for A/C: ${account_number}.
+Total amount to pay: Rs.${payment_amount.toFixed(2)}
+
+Breakdown:
+- Arrears: Rs.${arrearsAmt.toFixed(2)}
+- Fines: Rs.${finesAmt.toFixed(2)}
+- Current Bill: Rs.${currentBillAmt.toFixed(2)}
+- Excess: Rs.${excessAmt.toFixed(2)}`,
                     amount: item.amount,
                     stamp: 0,
                     discount: 0,

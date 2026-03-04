@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -24,6 +24,78 @@ const activeFilters = reactive({
   metered: [],
   status: []
 })
+// දත්ත ගබඩා කිරීමට ref එකක්
+const selectedAccounts = ref([]);
+
+// Session එකෙන් ලොග් වී සිටින පරිශීලකයාගේ NIC එක ලබා ගැනීම
+const getLoggedUserNIC = () => {
+    const userDataString = sessionStorage.getItem('userData');
+    if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        // මෙහි nic හෝ sub_nic ලෙස ඔබේ session එකේ ඇති පරිදි නිවැරදි key එක යොදන්න
+        return userData.nic || userData.sub_nic; 
+    }
+    return null;
+};
+
+// API එක මගින් දත්ත ලබා ගැනීම
+const fetchTempInvoices = async () => {
+    const subNic = getLoggedUserNIC();
+    if (!subNic) return;
+
+    try {
+        const response = await axios.get(`/temp-invoices/${subNic}`);
+        selectedAccounts.value = response.data; // මෙහි දැන් cus_name, cus_nic, amount අඩංගුයි
+    } catch (error) {
+        console.error("Error loading temp invoices:", error);
+    }
+};
+
+// Page එක load වන විට function එක call කිරීම
+onMounted(async () => {
+    // දැනට ඇති දේට අමතරව මෙය එක් කරන්න
+    await fetchTempInvoices();
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 4;
+
+// Computed Property to get Paginated Data
+const paginatedAccounts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return accounts.value.slice(start, end);
+});
+
+// Total Pages Calculation
+const totalPages = computed(() => {
+  return Math.ceil(accounts.value.length / itemsPerPage) || 1;
+});
+
+// Reset pagination when data changes
+watch(accounts, () => {
+  currentPage.value = 1;
+});
+
+const removeFromSummary = async (invoice, index) => {
+    const subNic = getLoggedUserNIC();
+    
+    if (confirm("Are you sure you want to permanently delete this record from database?")) {
+        try {
+            // Backend එකට delete request එක යැවීම
+            const response = await axios.delete(`/temp-invoices/${subNic}/${invoice.cus_nic}`);
+            
+            if (response.data.success) {
+                // Database එකෙන් මැකුණු පසු පමණක් Frontend Table එකෙන් ඉවත් කිරීම
+                selectedAccounts.value.splice(index, 1);
+                alert("Record deleted successfully.");
+            }
+        } catch (error) {
+            console.error("Error deleting record:", error);
+            alert("Failed to delete record from database.");
+        }
+    }
+};
 
 // 4. Fetch Data on Load
 onMounted(async () => {
@@ -163,7 +235,7 @@ const openPaymentModal = (account) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="acc in accounts" :key="acc.id">
+            <tr v-for="acc in paginatedAccounts" :key="acc.id">
               <td>{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
               <td style="text-align: left; font-weight: bold;">
@@ -178,9 +250,66 @@ const openPaymentModal = (account) => {
             </tr>
           </tbody>
         </table>
-      </div>
+        <div class="pagination-controls" v-if="accounts.length > itemsPerPage">
+  <small>Showing page {{ currentPage }} of {{ totalPages }}</small>
+  <nav class="pagination-nav">
+    <button 
+      class="pag-btn" 
+      :disabled="currentPage === 1" 
+      @click="currentPage--"
+    >Previous</button>
+
+    <div class="page-numbers">
+      <button 
+        v-for="page in totalPages" 
+        :key="page" 
+        class="page-num-btn"
+        :class="{ active: currentPage === page }"
+        @click="currentPage = page"
+      >{{ page }}</button>
     </div>
 
+    <button 
+      class="pag-btn" 
+      :disabled="currentPage === totalPages" 
+      @click="currentPage++"
+    >Next</button>
+  </nav>
+</div>
+      </div>
+    </div>
+    <div class="card table-card mt-4">
+  <h4>Temporary Invoice Summary</h4>
+  <div class="table-responsive">
+    <table class="accounts-table">
+      <thead>
+        <tr>
+          <th>Customer NIC</th>
+          <th>Customer Name</th>
+          <th style="text-align: right;">Amount (Rs.)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(invoice, index) in selectedAccounts" :key="index">
+          <td>{{ invoice.cus_nic }}</td>
+          <td>{{ invoice.cus_name }}</td>
+          <td style="text-align: right; font-weight: bold;">
+            {{ invoice.amount ? Number(invoice.amount).toFixed(2) : '0.00' }}
+          </td>
+          <td style="text-align: center;">
+          <button class="delete-btn" @click="removeFromSummary(invoice, index)" title="Permanently Delete">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+        </td>
+        </tr>
+        <tr v-if="selectedAccounts.length === 0">
+          <td colspan="3" style="text-align:center; padding: 20px;">No records found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
     <div v-if="isFilterDialogOpen" class="modal-overlay">
       <div class="modal-content">
         <h4>Filter Accounts</h4>
@@ -482,5 +611,63 @@ const openPaymentModal = (account) => {
     background-color: #fdedec !important;
     padding: 4px 8px !important;
     border-radius: 4px !important;
+}
+
+/* Pagination Styles */
+ #payable-accounts-container .pagination-controls {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-top: 15px !important;
+    padding: 10px 0 !important;
+}
+
+#payable-accounts-container .pagination-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+#payable-accounts-container .page-numbers {
+    display: flex !important;
+    gap: 5px !important;
+}
+
+#payable-accounts-container .pag-btn {
+    padding: 6px 12px !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+}
+
+#payable-accounts-container .pag-btn:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+#payable-accounts-container .page-num-btn {
+    width: 30px !important;
+    height: 30px !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 12px !important;
+}
+
+#payable-accounts-container .page-num-btn.active {
+    background-color: #42b883 !important;
+    color: white !important;
+    border-color: #42b883 !important;
+    font-weight: bold !important;
+}
+
+#payable-accounts-container .page-num-btn:hover:not(.active) {
+    background-color: #f0f0f0 !important;
 }
 </style>

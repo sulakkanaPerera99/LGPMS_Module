@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
@@ -30,6 +30,27 @@ const activeFilters = reactive({
   metered: [],
   status: []
 })
+
+// Pagination State
+const currentPage = ref(1);
+const itemsPerPage = 4;
+
+// Computed Property to get Paginated Data
+const paginatedAccounts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return accounts.value.slice(start, end);
+});
+
+// Total Pages Calculation
+const totalPages = computed(() => {
+  return Math.ceil(accounts.value.length / itemsPerPage) || 1;
+});
+
+// Reset pagination when data changes
+watch(accounts, () => {
+  currentPage.value = 1;
+});
 
 // 4. Fetch Data on Load
 onMounted(async () => {
@@ -167,7 +188,7 @@ const formatBillingMonth = (dateString) => {
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="page-container" id="print-bill">
     <header class="page-header">
       <h3>Print Bill</h3>
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
@@ -202,7 +223,7 @@ const formatBillingMonth = (dateString) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="acc in accounts" :key="acc.id">
+            <tr v-for="acc in paginatedAccounts" :key="acc.id">
               <td>{{ acc.newBillNumber }}</td>
               <td>{{ acc.fullName }}</td>
               <td>
@@ -219,6 +240,32 @@ const formatBillingMonth = (dateString) => {
             </tr>
           </tbody>
         </table>
+        <div class="pagination-controls" v-if="accounts.length > itemsPerPage">
+  <small>Showing page {{ currentPage }} of {{ totalPages }}</small>
+  <nav class="pagination-nav">
+    <button 
+      class="pag-btn" 
+      :disabled="currentPage === 1" 
+      @click="currentPage--"
+    >Previous</button>
+
+    <div class="page-numbers">
+      <button 
+        v-for="page in totalPages" 
+        :key="page" 
+        class="page-num-btn"
+        :class="{ active: currentPage === page }"
+        @click="currentPage = page"
+      >{{ page }}</button>
+    </div>
+
+    <button 
+      class="pag-btn" 
+      :disabled="currentPage === totalPages" 
+      @click="currentPage++"
+    >Next</button>
+  </nav>
+</div>
       </div>
     </div>
 
@@ -320,304 +367,359 @@ const formatBillingMonth = (dateString) => {
 <style scoped>
 /* Page Styles */
 .page-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: sans-serif;
+    padding: 20px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    font-family: sans-serif !important;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 10px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 10px !important;
 }
 
 .back-link {
-  color: #42b883;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 14px;
+    color: #42b883 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 20px;
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    margin-bottom: 20px !important;
 }
 
 .controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  gap: 15px;
-  flex-wrap: wrap;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 15px !important;
+    gap: 15px !important;
+    flex-wrap: wrap !important;
 }
 
 .search-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
+    position: relative !important;
+    flex: 1 !important;
+    min-width: 200px !important;
 }
 
 .search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: #888;
-  pointer-events: none;
+    position: absolute !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 14px !important;
+    color: #888 !important;
+    pointer-events: none !important;
 }
 
 .search-input {
-  width: 100%;
-  padding: 10px 10px 10px 30px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  box-sizing: border-box;
+    width: 100% !important;
+    padding: 10px 10px 10px 30px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
 }
 
 .sort-select {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  background-color: white;
-  cursor: pointer;
+    padding: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    background-color: white !important;
+    cursor: pointer !important;
 }
 
 .filter-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 13px;
+    background-color: #2c3e50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 16px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
 }
 
 .table-responsive {
-  overflow-x: auto;
+    overflow-x: auto !important;
 }
 
 .accounts-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  min-width: 600px;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
+    min-width: 600px !important;
 }
 
 .accounts-table th,
 .accounts-table td {
-  text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  color: #2c3e50;
-  vertical-align: top;
-  border: 2px solid #99a3b0 !important;
+    text-align: left !important;
+    padding: 12px !important;
+    border-bottom: 1px solid #eee !important;
+    color: #2c3e50 !important;
+    vertical-align: top !important;
+    border: 2px solid #99a3b0 !important;
 }
 
 .accounts-table th {
-  background-color: #bcccdc;
-  font-weight: 600;
-  white-space: nowrap;
+    background-color: #bcccdc !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
 }
 
 .accounts-table tr:hover {
-  background-color: #f9f9f9;
+    background-color: #f9f9f9 !important;
 }
 
 .action-btn {
-  background: transparent;
-  border: 1px solid #42b883;
-  color: #42b883;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
+    background: transparent !important;
+    border: 1px solid #42b883 !important;
+    color: #42b883 !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
 }
 
 .action-btn:hover {
-  background: #42b883;
-  color: white;
+    background: #42b883 !important;
+    color: white !important;
 }
 
 .status-active {
-  color: #27ae60;
-  font-weight: bold;
-  background-color: #eafaf1;
-  padding: 4px 8px;
-  border-radius: 4px;
+    color: #27ae60 !important;
+    font-weight: bold !important;
+    background-color: #eafaf1 !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 
 .status-inactive {
-  color: #c0392b;
-  font-weight: bold;
-  background-color: #fdedec;
-  padding: 4px 8px;
-  border-radius: 4px;
+    color: #c0392b !important;
+    font-weight: bold !important;
+    background-color: #fdedec !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
 }
 
 /* Modal Styles */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 1000 !important;
 }
 
 .modal-content {
-  background: white;
-  padding: 25px;
-  border-radius: 8px;
-  width: 350px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: white !important;
+    padding: 25px !important;
+    border-radius: 8px !important;
+    width: 350px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .modal-content h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #2c3e50;
-  border-bottom: 2px solid #42b883;
-  display: inline-block;
-  padding-bottom: 5px;
-  font-size: 16px;
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    font-size: 16px !important;
 }
 
 .filter-section {
-  margin-bottom: 15px;
+    margin-bottom: 15px !important;
 }
 
 .filter-section h5 {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  color: #2c3e50;
-  text-transform: uppercase;
-  font-weight: bold;
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important;
+    color: #2c3e50 !important;
+    text-transform: uppercase !important;
+    font-weight: bold !important;
 }
 
 .checkbox-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
 }
 
 .checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #2c3e50;
-  cursor: pointer;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 13px !important;
+    color: #2c3e50 !important;
+    cursor: pointer !important;
 }
 
 .modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 25px;
-  border-top: 1px solid #eee;
-  padding-top: 15px;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    margin-top: 25px !important;
+    border-top: 1px solid #eee !important;
+    padding-top: 15px !important;
 }
 
 .modal-btn {
-  padding: 8px 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: bold;
+    padding: 8px 16px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    background: white !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
 }
 
 .modal-btn.primary {
-  background-color: #42b883;
-  color: white;
-  border-color: #42b883;
+    background-color: #42b883 !important;
+    color: white !important;
+    border-color: #42b883 !important;
 }
 
 .loading-state {
-  text-align: center;
-  padding: 20px;
-  font-size: 14px;
-  color: #42b883;
+    text-align: center !important;
+    padding: 20px !important;
+    font-size: 14px !important;
+    color: #42b883 !important;
 }
 
 /* ✅ NEW STYLES FOR BILL HISTORY MODAL */
 .bill-history-modal {
-  width: 600px;
-  max-width: 90%;
+    width: 600px !important;
+    max-width: 90% !important;
 }
 
 .customer-name-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 15px;
-  font-weight: bold;
+    font-size: 14px !important;
+    color: #666 !important;
+    margin-bottom: 15px !important;
+    font-weight: bold !important;
 }
 
 .bill-list-container {
-  max-height: 400px;
-  overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    border: 1px solid #eee !important;
+    border-radius: 4px !important;
 }
 
 .bill-list-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
 }
 
 .bill-list-table th,
 .bill-list-table td {
-  padding: 12px;
-  text-align: left;
-  border: 2px solid #99a3b0 !important;
+    padding: 12px !important;
+    text-align: left !important;
+    border: 2px solid #99a3b0 !important;
 }
 
 .bill-list-table th {
-  background-color: #bcccdc;
-  position: sticky;
-  top: 0;
-  color: #2c3e50;
-  font-weight: bold;
+    background-color: #bcccdc !important;
+    position: sticky !important;
+    top: 0 !important;
+    color: #2c3e50 !important;
+    font-weight: bold !important;
 }
 
 .clickable-row {
-  cursor: pointer;
-  transition: background 0.2s;
+    cursor: pointer !important;
+    transition: background 0.2s !important;
 }
 
 .clickable-row:hover {
-  background-color: #eafaf1;
+    background-color: #eafaf1 !important;
 }
 
 .select-icon {
-  color: #42b883;
-  font-weight: bold;
-  font-size: 16px;
+    color: #42b883 !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
 }
 
 .empty-state {
-  text-align: center;
-  padding: 20px;
-  color: #888;
-  font-style: italic;
+    text-align: center !important;
+    padding: 20px !important;
+    color: #888 !important;
+    font-style: italic !important;
+}
+
+/* Pagination Styles with !important already present in your request */
+.pagination-controls {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-top: 15px !important;
+    padding: 10px 0 !important;
+}
+
+.pagination-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+.page-numbers {
+    display: flex !important;
+    gap: 5px !important;
+}
+.pag-btn {
+    padding: 6px 12px !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+}
+
+.pag-btn:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+.page-num-btn {
+    width: 30px !important;
+    height: 30px !important;
+    border: 1px solid #ccc !important;
+    background: white !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 12px !important;
+}
+
+.page-num-btn.active {
+    background-color: #42b883 !important;
+    color: white !important;
+    border-color: #42b883 !important;
+    font-weight: bold !important;
+}
+
+.page-num-btn:hover:not(.active) {
+    background-color: #f0f0f0 !important;
 }
 </style>

@@ -111,9 +111,9 @@ const fetchBillingConfigs = async () => {
 const removeEditUnitRange = (index) => editForm.value.unitRanges.splice(index, 1)
 const addEditOtherCharge = () => editForm.value.otherCharges.push({ name: '', amount: 0, type: 'fixed' })
 const removeEditOtherCharge = (index) => editForm.value.otherCharges.splice(index, 1)
-const addEditDiscount = () => editForm.value.discounts.push({ name: '', amount: 0, type: 'fixed' })
+const addEditDiscount = () => editForm.value.discounts.push({ name: '', amount: 0, type: 'fixed', date: ''})
 const removeEditDiscount = (index) => editForm.value.discounts.splice(index, 1)
-const addEditFine = () => editForm.value.fines.push({ name: '', amount: 0, type: 'fixed' })
+const addEditFine = () => editForm.value.fines.push({ name: '', amount: 0, type: 'fixed', date: ''})
 const removeEditFine = (index) => editForm.value.fines.splice(index, 1)
 
 
@@ -282,10 +282,10 @@ const updateForm = async () => {
                   <span style="color:#e74c3c">+ {{ charge.name }} ({{ charge.amount }}{{ charge.type === 'percentage' ? '%' : '' }})</span>
                 </div>
                 <div v-for="(disc, idx) in config.discounts" :key="'d'+idx">
-                   <span style="color:#27ae60">- {{ disc.name }} ({{ disc.amount }}{{ disc.type === 'percentage' ? '%' : '' }})</span>
+                   <span style="color:#27ae60">- {{ disc.name }} ({{ disc.amount }}{{ disc.type === 'percentage' ? '%' : '' }})({{ disc.date }})</span>
                 </div>
                 <div v-for="(fine, idx) in config.fines" :key="'d'+idx">
-                   <span style="color:#FF7F11">- {{ fine.name }} ({{ fine.amount }}{{ fine.type === 'percentage' ? '%' : '' }})</span>
+                   <span style="color:#FF7F11">- {{ fine.name }} ({{ fine.amount }}{{ fine.type === 'percentage' ? '%' : '' }})({{ fine.date }})</span>
                 </div>
               </td>
               <td>
@@ -395,6 +395,7 @@ const updateForm = async () => {
                    <option value="percentage">%</option>
                 </select>
                 <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+                <input v-model="item.date" type="number" min="1" max="27" placeholder="Day" />
                 <button type="button" @click="removeEditDiscount(index)" class="remove-btn">Remove</button>
               </div>
               <button type="button" @click="addEditDiscount" class="add-btn">Add Discount</button>
@@ -408,6 +409,7 @@ const updateForm = async () => {
                    <option value="percentage">%</option>
                 </select>
                 <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
+                <input v-model="item.date" type="number" min="1" max="27" placeholder="Day" />
                 <button type="button" @click="removeEditFine(index)" class="remove-btn">Remove</button>
               </div>
               <button type="button" @click="addEditFine" class="add-btn">Add Fine</button>
@@ -651,7 +653,7 @@ const updateForm = async () => {
 
 #edit-billing-fees-container .dynamic-row-other {
     display: grid !important;
-    grid-template-columns: 1.5fr 1fr 1fr auto !important; 
+    grid-template-columns: 1.25fr 1fr 1fr 1fr auto !important; 
     gap: 8px !important;
     margin-bottom: 8px !important;
     align-items: center !important;

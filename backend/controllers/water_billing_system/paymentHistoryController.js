@@ -1,4 +1,4 @@
-import { getCustomersHistoryBySabha1 } from '../../models/water_Billing_System/paymentHistoryModel.js';
+import { getCustomersHistoryBySabha1 } from '../../models/water_billing_system/paymentHistoryModel.js';
 
 /**
  * Controller: Get All Customers with Payment History

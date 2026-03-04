@@ -1,4 +1,4 @@
-import { getProjectProgressModel } from '../../models/water_Billing_System/meterReadingsProgressModel.js'; 
+import { getProjectProgressModel } from '../../models/water_billing_system/meterReadingsProgressModel.js'; 
 
 /**
  * Controller: Get Project Meter Reading Progress

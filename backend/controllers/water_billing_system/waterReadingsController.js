@@ -1,5 +1,5 @@
 import db from '../../config/database.js'; 
-import { getPendingCustomers, getProjectCodes } from '../../models/water_Billing_System/waterReadingsModel.js';
+import { getPendingCustomers, getProjectCodes } from '../../models/water_billing_system/waterReadingsModel.js';
 import { calculateBill } from '../../utils/BillCalculator.js'; 
 import { sendMobitelSMS } from '../../utils/mobitelSmsService.js'; // ✅ SMS Service එක Import කළා
 
@@ -234,6 +234,48 @@ export const saveBatchReadingsController = async (req, res) => {
             // =========================================================
             // 🟢 STEP 4: Save Bill
             // =========================================================
+            let periodFrom;
+
+            // 1. කලින් readings තිබේදැයි බැලීම
+            const [previousReadings] = await connection.query(
+                'SELECT reading_date FROM water_meter_readings WHERE account_id = ? ORDER BY reading_date DESC LIMIT 1 OFFSET 1',
+                [reading.account_id]
+            );
+
+            if (previousReadings.length > 0) {
+                periodFrom = previousReadings[0].reading_date;
+            } else {
+                // 2. පළමු කියවීම නම්
+                const [customerRows] = await connection.query(
+                    'SELECT customer_type, created_at, last_reading_date FROM water_customer_accounts WHERE id = ?',
+                    [reading.account_id]
+                );
+
+                if (customerRows.length > 0) {
+                    const customer = customerRows[0];
+                    // .toLowerCase() භාවිතා කිරීමෙන් 'New Customer' හෝ 'new customer' යන දෙකම පරීක්ෂා කළ හැක
+                    if (customer.customer_type && customer.customer_type.toLowerCase() === 'new customer') {
+                        periodFrom = customer.created_at;
+                    } else {
+                        periodFrom = customer.last_reading_date;
+                    }
+                } else {
+                    periodFrom = new Date(); 
+                }
+            }
+            const getSLDate = (dateVal) => {
+                if (!dateVal) return null;
+                let d = new Date(dateVal);
+                // ශ්‍රී ලංකාවේ වේලාව (UTC+5:30) නිසා ඇති වන පරතරය අතින් එකතු කරමු
+                const offset = 5.5 * 60 * 60 * 1000; 
+                const slDate = new Date(d.getTime() + offset);
+                return slDate.toISOString().split('T')[0];
+            };
+
+            // දින ආකෘතිය YYYY-MM-DD ලෙස සකස් කිරීම (වැදගත්)
+            let formattedPeriodFrom = getSLDate(periodFrom);
+            let formattedPeriodTo = getSLDate(reading.reading_date);
+
             const billInsertQuery = `
                 INSERT INTO water_bills 
                 (account_id, customer_history_id, tariff_id, bill_number, reading_id, sabha_code, billing_date, period_from, period_to, 
@@ -242,32 +284,6 @@ export const saveBatchReadingsController = async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
             `;
 
-            // 1. මේ account එකට අදාළව දැනටමත් readings තියෙනවද බලන්න query එකක්
-            const [previousReadings] = await connection.query(
-                'SELECT reading_date FROM water_meter_readings WHERE account_id = ? ORDER BY reading_date DESC LIMIT 1',
-                [reading.account_id]
-            );
-
-            let periodFrom;
-
-            if (previousReadings.length > 0) {
-                // 2. දැනටමත් readings තිබේ නම්: අවසන් කියවීමේ දිනය (reading_date) ගමු
-                periodFrom = previousReadings[0].reading_date;
-            } else {
-                // 3. කිසිදු reading එකක් නැති පළමු වතාව නම්: 
-                // water_customer_accounts table එකෙන් last_reading_date එක ගමු
-                const [customer] = await connection.query(
-                    'SELECT last_reading_date FROM water_customer_accounts WHERE id = ?',
-                    [reading.account_id]
-                );
-                
-                // පාරිභෝගිකයාගේ last_reading_date එක පාවිච්චි කරනවා
-                periodFrom = customer[0].last_reading_date;
-            }
-
-            // periodTo එක කියවන දිනය (current reading date) ලෙස ගමු
-            const periodTo = reading.reading_date;
-
             await connection.query(billInsertQuery, [
                 reading.account_id,
                 customerHistoryId, 
@@ -275,8 +291,8 @@ export const saveBatchReadingsController = async (req, res) => {
                 billNumber,
                 newReadingId,
                 reading.sabha_code,
-                periodFrom,
-                periodTo,
+                formattedPeriodFrom, 
+                formattedPeriodTo,   
                 safePreviousReading,
                 reading.current_reading,
                 billData.units_consumed,
@@ -296,8 +312,8 @@ export const saveBatchReadingsController = async (req, res) => {
 
             // ✅ SMS යැවීම සඳහා දත්ත එකතු කර ගැනීම (Queue)
             // Transaction එක මැද SMS යැවීමෙන් වළකින්න. එය Fail වුවහොත් Rollback වන නිසා
-            const formattedPeriodFrom = new Date(periodFrom).toISOString().split('T')[0];
-            const formattedPeriodTo = new Date(periodTo).toISOString().split('T')[0];
+            formattedPeriodFrom = new Date(formattedPeriodFrom).toISOString().split('T')[0];
+            formattedPeriodTo = new Date(formattedPeriodTo).toISOString().split('T')[0];
 
 
             if (customerMobile) {

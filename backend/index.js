@@ -24,6 +24,7 @@ import waterBillingReportRoutes from './routes/water_billing_system/reportRoutes
 import eachCustomerPaymentHistoryRoutes from './routes/water_billing_system/EachCustomerpaymentHistoryRoutes.js';
 import waterProgressRoutes from './routes/water_billing_system/meterReadingsProgressRoute.js';
 import waterBillRoutes from "./routes/water_billing_system/BillTemplateRoutes.js"; 
+import onlineCustomerPaymentRoutes from './routes/water_billing_system/onlineCustomerPaymentRoutes.js';
 //sms
 import smsRoutes from './routes/SMS/smsRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -57,6 +58,7 @@ app.use('/api', paymentHistoryRoutes);
 app.use('/api/reports', waterBillingReportRoutes);
 app.use('/api', eachCustomerPaymentHistoryRoutes);
 app.use('/api', waterProgressRoutes);
+app.use('/api/water_bill',onlineCustomerPaymentRoutes);
 //sms
 app.use('/api/sms', smsRoutes);
 

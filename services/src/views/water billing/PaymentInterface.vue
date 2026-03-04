@@ -1,21 +1,17 @@
 <template>
   <div id="water-payment-interface-container" class="payment-interface">
-    
     <div v-if="loading" class="loading-state">
       <p>Loading Account details...</p>
     </div>
-
     <div v-else-if="error" class="error-state">
       <div class="alert alert-danger">{{ error }}</div>
       <button @click="$router.go(-1)" class="btn btn-secondary mt-3">Go Back</button>
     </div>
-
     <div v-else-if="accountDetails" class="bill-content">
       <div class="page-header">
         <h2>Account Payment (Add PIV)</h2>
         <router-link to="/bill-payment" class="back-link">Back to bill payment</router-link>
       </div>
-      
       <div class="card mb-3 mt-3"> 
         <div class="card-header">Customer Account Details</div>
         <div class="card-body">
@@ -29,94 +25,30 @@
               <h4 class="text-danger">Total Outstanding: {{ formatCurrency(accountDetails.totalOutstanding) }}</h4>
             </div>
           </div>
-        </div>
+          </div>
+          </div>
       </div>
-
-      <div class="card mb-3" v-if="accountDetails.pendingBills.length > 0"> 
-        <div class="card-header bg-light">Pending Bills Breakdown (Oldest First)</div>
-        <div class="table-responsive">
-        <table class="table table-sm table-striped mb-0">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Bill No</th>
-              <th class="text-end">Bill Total</th>
-              <th class="text-end">Paid</th>
-              <th class="text-end">Due</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="bill in paginatedBills" :key="bill.bill_number">
-              <td>{{ formatDate(bill.billing_date) }}</td>
-              <td>{{ bill.bill_number }}</td>
-              <td class="text-end">{{ formatCurrency(bill.monthly_charge) }}</td>
-              <td class="text-end">{{ formatCurrency(bill.paid_amount) }}</td>
-              <td class="text-end text-danger font-weight-bold">{{ formatCurrency(bill.due_amount) }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="totalPages > 1" class="d-flex justify-content-center mt-2 pb-2 pt-2 border-top">
-          <nav aria-label="Page navigation">
-            <ul class="pagination pagination-sm mb-0">
-              <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                <button class="page-link" @click.prevent="currentPage--">Previous</button>
-              </li>
-              <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
-                <button class="page-link" @click.prevent="currentPage = page">{{ page }}</button>
-              </li>
-              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                <button class="page-link" @click.prevent="currentPage++">Next</button>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </div>
-      </div>
-      <div v-else class="alert alert-success">No pending bills! Account is clear.</div>
-
       <div class="card mb-3 config-card"> 
+        <div class="card-header bg-light">
+          <strong>Automated Billing Adjustments</strong>
+        </div>
         <div class="card-body">
-          
-          <div class="row mb-3 config-row">
-            <div class="col-md-6 form-group">
-              <label>Applicable Discounts</label>
-              <select class="form-control" v-model="selectedConfig.discount" @change="applyCalculations">
-                <option :value="null">-- Select Discount --</option>
-                <option v-for="(discount, index) in availableTariffConfigs.discounts" :key="'d-'+index" :value="discount">
-                  {{ discount.name }} - ({{ discount.type === 'percentage' ? discount.amount + '%' : 'Rs.' + discount.amount }})
-                </option>
-              </select>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="alert alert-success" style="padding: 10px; margin-bottom: 0;">
+                <strong>Discount Applied:</strong> LKR {{ formatCurrency(appliedDiscount) }}
+                <div v-if="appliedDiscount > 0" class="text-muted" style="font-size: 12px;">Applied for paying on or before the due date.</div>
+                <div v-else class="text-muted" style="font-size: 12px;">No discounts applicable.</div>
+              </div>
             </div>
-            <div class="col-md-6 form-group">
-              <label>Bill Amount for Discount</label>
-              <div class="form-control read-only-box">
-                LKR {{ formatCurrency(selectedBillAmounts.discount) }}
+            <div class="col-md-6">
+              <div class="alert alert-warning" style="padding: 10px; margin-bottom: 0;">
+                <strong>Fine / Penalty Applied:</strong> LKR {{ formatCurrency(requiredAmounts.fine) }}
+                <div v-if="requiredAmounts.fine > 0" class="text-muted" style="font-size: 12px;">Applied due to arrears or late payment.</div>
+                <div v-else class="text-muted" style="font-size: 12px;">No fines applicable.</div>
               </div>
             </div>
           </div>
-
-          <div class="row mb-4 config-row">
-            <div class="col-md-6 form-group">
-              <label>Applicable Fines</label>
-              <select class="form-control" v-model="selectedConfig.fine" @change="applyCalculations">
-                <option :value="null">-- Select Fine --</option>
-                <option v-for="(fine, index) in availableTariffConfigs.fines" :key="'f-'+index" :value="fine">
-                  {{ fine.name }} - ({{ fine.type === 'percentage' ? fine.amount + '%' : 'Rs.' + fine.amount }})
-                </option>
-              </select>
-            </div>
-            <div class="col-md-6 form-group">
-              <label>Select Bill Amount for Fine</label>
-              <select class="form-control" v-model="selectedBillAmounts.fine" @change="applyCalculations">
-                <option :value="0">-- Select Due Amount --</option>
-                <option v-for="(bill, index) in accountDetails.pendingBills" :key="'bf-'+index" :value="parseFloat(bill.due_amount)">
-                  {{ formatCurrency(bill.due_amount) }}
-                </option>
-              </select>
-            </div>
-          </div>
-
           <div class="payment-input-section mt-4 mb-4">
              <label for="totalPaymentInput" class="text-primary font-weight-bold">Enter Payment Amount (LKR)</label>
              <input 
@@ -130,13 +62,11 @@
                 step="0.01"
              >
           </div>
-
           <div class="breakdown-section p-3" v-if="enteredPaymentAmount > 0">
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 2px solid #ddd;">
               <h5 style="margin: 0; color: #2c3e50;">Amount Breakdown & Account Allocation</h5>
               <h4 class="text-success m-0">Total Payment: LKR {{ formatCurrency(enteredPaymentAmount) }}</h4>
             </div>
-            
             <div class="table-responsive">
               <table class="table table-sm table-bordered mb-0" style="background: white;">
                 <thead style="background-color: #bcccdc;">
@@ -163,7 +93,6 @@
                       </select>
                     </td>
                   </tr>
-
                   <tr v-if="requiredAmounts.arrears > 0">
                     <td class="align-middle" style="text-align: left;"><strong>Arrears</strong></td>
                     <td class="text-end align-middle text-muted">{{ formatCurrency(requiredAmounts.arrears) }}</td>
@@ -179,7 +108,6 @@
                       </select>
                     </td>
                   </tr>
-
                   <tr v-if="requiredAmounts.current > 0">
                     <td class="align-middle" style="text-align: left;"><strong>Current Bill</strong></td>
                     <td class="text-end align-middle text-muted">{{ formatCurrency(requiredAmounts.current) }}</td>
@@ -195,7 +123,6 @@
                       </select>
                     </td>
                   </tr>
-
                   <tr v-if="breakdownInputs.excess > 0">
                     <td class="align-middle" style="text-align: left;" colspan="2"><strong>Excess Payment</strong></td>
                     <td class="text-end align-middle">
@@ -214,7 +141,6 @@
               </table>
             </div>
           </div>
-
           <div class="mt-4" style="text-align: right;">
             <button 
               @click="proceedToPayment" 
@@ -226,12 +152,9 @@
               <span v-else>Confirm Payment ({{ formatCurrency(enteredPaymentAmount) }})</span>
             </button>
           </div>
-
         </div>
       </div>
-      
     </div>
-  </div>
 </template>
 
 <script>
@@ -246,42 +169,28 @@ export default {
       loading: true,
       error: null,
       isProcessing: false,
-
       currentSabha: '',
       currentUserNIC: '',
       empSbRates: [],
-      
       availableTariffConfigs: {
         discounts: [],
         fines: []
       },
-
-      selectedConfig: {
-        discount: null,
-        fine: null
-      },
-      selectedBillAmounts: {
-        discount: 0,
-        fine: 0
-      },
-
       enteredPaymentAmount: 0,
-
+      appliedDiscount: 0,
       requiredAmounts: {
         fine: 0,
         arrears: 0,
         current: 0
       },
-
       breakdownInputs: {
         fine: 0,
         arrears: 0,
         current: 0,
         excess: 0
       },
-      
       originalCurrentAmount: 0,
-
+      originalArrearsAmount: 0,
       selectedRateHeads: {
         fine: '',
         arrears: '',
@@ -289,7 +198,7 @@ export default {
         excess: ''
       },
       currentPage: 1,
-      itemsPerPage: 9
+      itemsPerPage: 4,
     };
   },
   async mounted() {
@@ -299,11 +208,9 @@ export default {
       this.currentSabha = userData.sabha || userData.sabha_code;
       this.currentUserNIC = userData.nic || userData.emp_nic;
     }
-
     const accountId = this.$route.params.accountId;
     if (accountId) {
       await this.fetchAccountDetails(accountId);
-      
       if (this.currentSabha && this.currentUserNIC) {
         await this.fetchEmpRates();
         await this.fetchTariffConfigs(accountId); 
@@ -320,40 +227,31 @@ export default {
         if (response.data.status === 'success') {
           this.availableTariffConfigs.discounts = response.data.data.discounts;
           this.availableTariffConfigs.fines = response.data.data.fines;
+          this.applyAutomaticCalculations();
         }
       } catch (err) {
         console.error("Error fetching tariff configs:", err);
       }
     },
-
     async fetchAccountDetails(accountId) {
       try {
         this.loading = true;
         this.error = null;
         const response = await axios.get(`/water-account-payment-details/${accountId}`);
-        
         if (response.data.success) {
           this.accountDetails = response.data.data;
           let pending = this.accountDetails.pendingBills;
-          
           if (pending.length > 0) {
             let lastBill = pending[pending.length - 1];
             let currMonthlyCharge = parseFloat(lastBill.monthly_charge || 0);
-            
-            this.selectedBillAmounts.discount = currMonthlyCharge;
-
             let totalOutstanding = parseFloat(this.accountDetails.totalOutstanding || 0);
             let totalArrears = totalOutstanding - currMonthlyCharge;
-
             this.originalCurrentAmount = currMonthlyCharge;
-            
-            this.requiredAmounts.current = currMonthlyCharge;
-            this.requiredAmounts.arrears = totalArrears > 0 ? totalArrears : 0;
+            this.originalArrearsAmount = totalArrears > 0 ? totalArrears : 0;
+            this.requiredAmounts.current = this.originalCurrentAmount;
+            this.requiredAmounts.arrears = this.originalArrearsAmount;
             this.requiredAmounts.fine = 0;
           }
-
-          this.applyCalculations();
-
         } else {
           this.error = response.data.message;
         }
@@ -364,75 +262,71 @@ export default {
         this.loading = false;
       }
     },
-
-    applyCalculations() {
-      if (this.selectedConfig.discount && this.selectedBillAmounts.discount > 0) {
-        let discObj = this.selectedConfig.discount;
-        let baseAmount = this.selectedBillAmounts.discount;
-        let calculatedDiscount = 0;
-
-        if (discObj.type === 'percentage') {
-          calculatedDiscount = (baseAmount * parseFloat(discObj.amount)) / 100;
-        } else {
-          calculatedDiscount = parseFloat(discObj.amount);
+    applyAutomaticCalculations() {
+      const today = new Date().toISOString().split('T')[0];
+      let calcDiscount = 0;
+      let calcFine = 0;
+      if (this.availableTariffConfigs.discounts && this.availableTariffConfigs.discounts.length > 0) {
+        const discConf = this.availableTariffConfigs.discounts[0];
+        if (discConf.date && today <= discConf.date) {
+          if (discConf.type === 'percentage') {
+            calcDiscount = (this.originalCurrentAmount * parseFloat(discConf.amount)) / 100;
+          } else {
+            calcDiscount = parseFloat(discConf.amount);
+          }
         }
-
-        let newCurrent = this.originalCurrentAmount - calculatedDiscount;
-        this.requiredAmounts.current = newCurrent > 0 ? newCurrent : 0; 
-      } else {
-        this.requiredAmounts.current = this.originalCurrentAmount; 
       }
-
-      if (this.selectedConfig.fine && this.selectedBillAmounts.fine > 0) {
-        let fineObj = this.selectedConfig.fine;
-        let baseAmount = this.selectedBillAmounts.fine;
-        let calculatedFine = 0;
-
-        if (fineObj.type === 'percentage') {
-          calculatedFine = (baseAmount * parseFloat(fineObj.amount)) / 100;
-        } else {
-          calculatedFine = parseFloat(fineObj.amount);
+      if (this.availableTariffConfigs.fines && this.availableTariffConfigs.fines.length > 0) {
+        const fineConf = this.availableTariffConfigs.fines[0];
+        let fineOnArrears = 0;
+        let fineOnCurrent = 0;
+        if (this.originalArrearsAmount > 0) {
+          if (fineConf.type === 'percentage') {
+             fineOnArrears = (this.originalArrearsAmount * parseFloat(fineConf.amount)) / 100;
+          } else {
+             fineOnArrears = parseFloat(fineConf.amount); 
+          }
         }
-
-        this.requiredAmounts.fine = calculatedFine;
-      } else {
-        this.requiredAmounts.fine = 0; 
+        if (fineConf.date && today > fineConf.date) {
+          if (fineConf.type === 'percentage') {
+             fineOnCurrent = (this.originalCurrentAmount * parseFloat(fineConf.amount)) / 100;
+          } else {
+             fineOnCurrent = parseFloat(fineConf.amount);
+          }
+        }
+        calcFine = fineOnArrears + fineOnCurrent;
       }
-
+      this.appliedDiscount = calcDiscount;
+      this.requiredAmounts.fine = calcFine;
+      let newCurrent = this.originalCurrentAmount - calcDiscount;
+      this.requiredAmounts.current = newCurrent > 0 ? newCurrent : 0;
       this.distributePayment();
     },
-
     distributePayment() {
       let remainingPayment = parseFloat(this.enteredPaymentAmount) || 0;
-
       this.breakdownInputs.fine = 0;
       this.breakdownInputs.arrears = 0;
       this.breakdownInputs.current = 0;
       this.breakdownInputs.excess = 0;
-
       if (remainingPayment > 0 && this.requiredAmounts.fine > 0) {
         let alloc = Math.min(remainingPayment, this.requiredAmounts.fine);
         this.breakdownInputs.fine = alloc;
         remainingPayment -= alloc;
       }
-
       if (remainingPayment > 0 && this.requiredAmounts.arrears > 0) {
         let alloc = Math.min(remainingPayment, this.requiredAmounts.arrears);
         this.breakdownInputs.arrears = alloc;
         remainingPayment -= alloc;
       }
-
       if (remainingPayment > 0 && this.requiredAmounts.current > 0) {
         let alloc = Math.min(remainingPayment, this.requiredAmounts.current);
         this.breakdownInputs.current = alloc;
         remainingPayment -= alloc;
       }
-
       if (remainingPayment > 0) {
         this.breakdownInputs.excess = remainingPayment;
       }
     },
-    
     async fetchEmpRates() {
       try {
         const res = await axios.get(`/emp-rates/${this.currentSabha}/${this.currentUserNIC}`);
@@ -443,34 +337,24 @@ export default {
         console.error("Error fetching emp rates:", error);
       }
     },
-
-    formatDate(dateString) {
-        if(!dateString) return '';
-        return new Date(dateString).toLocaleDateString();
-    },
-    
     formatCurrency(value) {
         return parseFloat(value || 0).toFixed(2);
     },
-
     async proceedToPayment() {
         if (this.enteredPaymentAmount <= 0) {
             Swal.fire('Invalid Amount', 'Please ensure payment amount is valid.', 'warning');
             return;
         }
-
         const breakdownsArray = [
             { category: 'Fine', amount: this.breakdownInputs.fine, sb_rate_head: this.selectedRateHeads.fine },
             { category: 'Arrears', amount: this.breakdownInputs.arrears, sb_rate_head: this.selectedRateHeads.arrears },
             { category: 'Current Bill', amount: this.breakdownInputs.current, sb_rate_head: this.selectedRateHeads.current },
             { category: 'Excess', amount: this.breakdownInputs.excess, sb_rate_head: this.selectedRateHeads.excess }
         ];
-
         const invalidSelection = breakdownsArray.find(b => parseFloat(b.amount) > 0 && !b.sb_rate_head);
         if (invalidSelection) {
             return Swal.fire("Required", `Please select a Rate Head for ${invalidSelection.category}`, "warning");
         }
-
         const result = await Swal.fire({
             title: 'Confirm Payment?',
             text: `Are you sure you want to process LKR ${this.formatCurrency(this.enteredPaymentAmount)}?`,
@@ -480,11 +364,8 @@ export default {
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, Process it!'
         });
-
         if (!result.isConfirmed) return;
-
         this.isProcessing = true;
-
         try {
             let sub_nic = this.currentUserNIC || "UNKNOWN";
             const payload = {
@@ -495,9 +376,7 @@ export default {
                 paymonth: new Date().toISOString().slice(0, 7),
                 breakdowns: breakdownsArray 
             };
-
             const response = await axios.post('/payments/process', payload);
-
             if (response.data.success || response.data.status === 'success') {
                 await Swal.fire({
                     icon: 'success',
@@ -519,35 +398,24 @@ export default {
             this.isProcessing = false;
         }
     }
-  },computed: {
-  paginatedBills() {
-    if (!this.accountDetails || !this.accountDetails.pendingBills) return [];
-
-    // සම්පූර්ණ බිල්පත් ලැයිස්තුව (Oldest to Newest)
-    let bills = [...this.accountDetails.pendingBills];
-
-    // අලුත්ම බිල්පත් 10 පමණක් තෝරා ගැනීම
-    let latestTen = bills.slice(-10);
-
+  },
+  computed: {
+  // වර්තමාන පිටුවට අදාළ දත්ත පමණක් වෙන් කර ලබා ගැනීම
+  paginatedRates() {
     const start = (this.currentPage - 1) * this.itemsPerPage;
     const end = start + this.itemsPerPage;
-    
-    return latestTen.slice(start, end);
+    return this.empSbRates.slice(start, end);
   },
+  // සම්පූර්ණ පිටු ගණන ගණනය කිරීම
   totalPages() {
-    if (!this.accountDetails || !this.accountDetails.pendingBills) return 0;
-    
-    // බිල්පත් 10කට සීමා කර ඇත්නම්:
-    const count = Math.min(this.accountDetails.pendingBills.length, 10);
-    return Math.ceil(count / this.itemsPerPage);
+    return Math.ceil(this.empSbRates.length / this.itemsPerPage);
   }
-}
+},
 };
-
-
 </script>
 
 <style scoped>
+
 /* --- Main Container --- */
 #water-payment-interface-container.payment-interface {
     max-width: 950px !important;
@@ -603,36 +471,6 @@ export default {
     font-size: 17px !important; 
     font-weight: bold !important;
     margin-bottom: 0 !important;
-}
-
-/* --- Table Styles --- */
-#water-payment-interface-container .table-responsive {
-    overflow-x: auto !important;
-}
-
-#water-payment-interface-container .table {
-    width: 100% !important;
-    margin: 0 !important;
-}
-
-#water-payment-interface-container .table th {
-    font-size: 14px !important;
-    padding: 10px !important;
-    background-color: #bcccdc !important;
-    text-align: center !important;
-    border: 1px solid #99a3b0 !important;
-}
-
-#water-payment-interface-container .table td {
-    font-size: 14px !important;
-    padding: 10px !important;
-    vertical-align: middle !important;
-    text-align: center !important;
-    border: 1px solid #99a3b0 !important;
-}
-
-#water-payment-interface-container .text-end {
-    text-align: right !important;
 }
 
 /* --- Form Input Section --- */
@@ -827,5 +665,130 @@ export default {
     background-color: #42b883 !important;
     border-color: #42b883 !important;
     color: white !important;
+}
+#water-payment-interface-container.payment-interface {
+    max-width: 950px !important;
+    margin: 15px auto !important;
+    padding: 15px !important; 
+    font-family: sans-serif !important;
+}
+
+#water-payment-interface-container .loading-state, 
+#water-payment-interface-container .error-state {
+    text-align: center !important;
+    padding: 30px !important; 
+    font-size: 15px !important;
+    font-weight: bold !important;
+    color: #555 !important;
+}
+
+#water-payment-interface-container .card {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05) !important;
+    border: 1px solid #e1e8ed !important;
+    border-radius: 10px !important;
+    margin-bottom: 15px !important;
+}
+
+#water-payment-interface-container .card-header {
+    font-size: 16px !important;
+    font-weight: bold !important;
+    padding: 12px 15px !important;
+    background-color: #f8fafd !important;
+    border-bottom: 1px solid #e1e8ed !important;
+}
+
+#water-payment-interface-container .card-body {
+    padding: 20px !important;
+}
+
+#water-payment-interface-container .form-group {
+    padding: 0 10px !important; 
+    margin-bottom: 15px !important;
+}
+
+#water-payment-interface-container .card-body p {
+    font-size: 14px !important; 
+    margin-bottom: 5px !important; 
+    color: #333 !important;
+}
+
+#water-payment-interface-container .text-danger {
+    color: #dc3545 !important;
+    font-size: 17px !important; 
+    font-weight: bold !important;
+    margin-bottom: 0 !important;
+}
+
+#water-payment-interface-container label {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #2c3e50 !important;
+    display: block !important;
+    margin-bottom: 8px !important;
+}
+
+#water-payment-interface-container select.form-control,
+#water-payment-interface-container input.form-control {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    height: 45px !important; 
+    padding: 8px 15px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 6px !important;
+    width: 100% !important;
+    background-color: #fff !important;
+    transition: border-color 0.2s ease-in-out !important;
+}
+
+
+
+#water-payment-interface-container select.form-control:focus,
+#water-payment-interface-container input.form-control:focus {
+    border-color: #80bdff !important;
+    outline: none !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+/* Container එක ඇතුළත ඇති Reading Details Box එක සඳහා */
+#water-payment-interface-container .reading-details-box {
+  background-color: #fcfcfc !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid #eee !important;
+  margin-top: 15px !important;
+}
+
+/* දින පෙන්වන Badge එක සඳහා */
+#water-payment-interface-container .reading-details-box .badge {
+  font-weight: 500 !important;
+  letter-spacing: 0.5px !important;
+  padding: 5px 8px !important;
+}
+
+/* Reading අගයන් (Numbers) පෙන්වන Font එක සඳහා */
+#water-payment-interface-container .reading-details-box .fw-bold {
+  font-size: 1.1rem !important;
+  display: block !important;
+}
+
+/* කුඩා අකුරු (Labels) සඳහා අමතර පැහැදිලි බවක් */
+#water-payment-interface-container .reading-details-box small {
+  color: #6c757d !important;
+  font-weight: 600 !important;
+  margin-bottom: 4px !important;
+  display: inline-block !important;
+}
+
+/* බිල්පත් විස්තර කොටු මත Mouse එක ගෙන ගිය විට (Hover) */
+#water-payment-interface-container .reading-details-box .border:hover {
+  border-color: #0d6efd !important;
+  transition: 0.3s ease-in-out !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+/* Units Consumed කොටුව සඳහා විශේෂිත වර්ණ */
+#water-payment-interface-container .bg-success-light {
+  background-color: #e8f5e9 !important;
+  border-color: #c8e6c9 !important;
 }
 </style>

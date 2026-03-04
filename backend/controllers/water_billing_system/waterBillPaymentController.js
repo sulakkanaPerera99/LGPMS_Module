@@ -1,7 +1,9 @@
 import { 
     fetchCustomersModel, 
     fetchProjectsModel, 
-    fetchAccountPaymentDetails 
+    fetchAccountPaymentDetails, 
+    fetchTempInvoicesBySubNIC,
+    deleteTempInvoiceModel
 } from "../../models/water_billing_system/waterBillPaymentModel.js";
 
 /**
@@ -91,5 +93,34 @@ export const getProjectList = async (req, res) => {
     } catch (error) {
         console.error("Controller Error (getProjectList):", error);
         return res.status(500).json({ error: error.message });
+    }
+};
+
+
+export const getTempInvoices = async (req, res) => {
+    try {
+        const { sub_nic } = req.params;
+        if (!sub_nic) {
+            return res.status(400).json({ success: false, message: 'Sub NIC is required' });
+        }
+        const invoices = await fetchTempInvoicesBySubNIC(sub_nic);
+        return res.status(200).json(invoices);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const deleteTempInvoice = async (req, res) => {
+    try {
+        const { sub_nic, cus_nic } = req.params;
+        const result = await deleteTempInvoiceModel(sub_nic, cus_nic);
+        
+        if (result.affectedRows > 0) {
+            return res.status(200).json({ success: true, message: 'Record deleted successfully' });
+        } else {
+            return res.status(404).json({ success: false, message: 'Record not found' });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
     }
 };

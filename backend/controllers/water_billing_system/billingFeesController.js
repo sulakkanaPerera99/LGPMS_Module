@@ -1,4 +1,4 @@
-import * as BillingFeesModel from '../../models/water_Billing_System/BillingfeesModel.js';
+import * as BillingFeesModel from '../../models/water_billing_system/BillingfeesModel.js';
 import db from '../../config/database.js'; 
 
 /**

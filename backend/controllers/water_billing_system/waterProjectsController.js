@@ -3,7 +3,7 @@ import {
     getProjectsBySabha, 
     getProjectList as getProjectListModel, 
     updateProjectModel 
-} from "../../models/water_Billing_System/waterprojectsModel.js";
+} from "../../models/water_billing_system/waterprojectsModel.js";
 
 /**
  * Helper Function: Handles database errors, specifically targeting duplicate entries.

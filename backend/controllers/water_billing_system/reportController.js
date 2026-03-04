@@ -1,4 +1,4 @@
-import { getProjectCollectionReportModel } from '../../models/water_Billing_System/reportModel.js';
+import { getProjectCollectionReportModel } from '../../models/water_billing_system/reportModel.js';
 
 /**
  * Controller: Get Project Collection Report

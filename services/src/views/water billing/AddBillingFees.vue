@@ -15,10 +15,9 @@ const fixedRate = ref(null)
 
 // ✅ 1. Script Change: Added 'fixed_charge: 0' to default state
 const unitRanges = ref([{ min: 0, max: 0, rate: 0, fixed_charge: 0 }])
-
-const otherCharges = ref([{ name: '', amount: 0, type: 'fixed' }])
-const discounts = ref([{ name: '', amount: 0, type: 'fixed' }])
-const fines = ref([{ name: '', amount: 0, type: 'fixed' }])
+const otherCharges = ref([{ name: '', amount: '', type: 'fixed'}])
+const discounts = ref([{ name: '', amount: '', type: 'fixed', date: '' }])
+const fines = ref([{ name: '', amount: '', type: 'fixed', date: '' }])
 
 
 const availableProjectCodes = ref([])
@@ -87,11 +86,11 @@ const removeUnitRange = (index) => {
   validateSlabs();
 }
 
-const addOtherCharge = () => otherCharges.value.push({ name: '', amount: 0, type: 'fixed' })
+const addOtherCharge = () => otherCharges.value.push({ name: '', amount: '', type: 'fixed' })
 const removeOtherCharge = (index) => otherCharges.value.splice(index, 1)
-const addDiscount = () => discounts.value.push({ name: '', amount: 0, type: 'fixed' })
+const addDiscount = () => discounts.value.push({ name: '', amount: '', type: 'fixed', date: ''})
 const removeDiscount = (index) => discounts.value.splice(index, 1)
-const addFine = () => fines.value.push({ name: '', amount: 0, type: 'fixed' })
+const addFine = () => fines.value.push({ name: '', amount: '', type: 'fixed', date: ''})
 const removeFine = (index) => fines.value.splice(index, 1)
 
 
@@ -131,8 +130,8 @@ const submitForm = async () => {
       fixedRate.value = null
       unitRanges.value = [{ min: 0, max: 0, rate: 0, fixed_charge: 0 }]
       otherCharges.value = [{ name: '', amount: 0, type: 'fixed' }]
-      discounts.value = [{ name: '', amount: 0, type: 'fixed' }]
-      fines.value = [{ name: '', amount: 0, type: 'fixed' }]
+      discounts.value = [{ name: '', amount: 0, type: 'fixed', date: 0}]
+      fines.value = [{ name: '', amount: 0, type: 'fixed', date: 0}]
     }
   } catch (error) {
     console.error("Error saving:", error)
@@ -218,60 +217,59 @@ const submitForm = async () => {
 
             <div v-for="(item, index) in unitRanges" :key="index" class="dynamic-row">
               <input v-model.number="item.min" type="number" placeholder="Min" class="small-input" :readonly="index !== 0"
-              :style="index !== 0 ? 'background-color: #f4f4f4; cursor: not-allowed; color: #666;' : ''"
-               />
-      
+              :style="index !== 0 ? 'background-color: #f4f4f4; cursor: not-allowed; color: #666;' : ''"/>
               <input v-model="item.max" type="number" class="small-input" />
               <input v-model="item.rate" type="number" step="0.01" placeholder="Rate" />
               <input v-model="item.fixed_charge" type="number" step="0.01" placeholder="Fixed Rates Per Slab" />
-              
               <button type="button" @click="removeUnitRange(index)" class="remove-btn" v-if="unitRanges.length > 1">Remove</button>
             </div>
             <button type="button" @click="addUnitRange" class="add-btn">Add Slab</button>
           </div>
 
           <div class="side-by-side-row">
-    <div class="dynamic-section">
-        <div class="section-header">Taxes & Service Charges</div>
-        <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row-other">
-            <input v-model="item.name" type="text" placeholder="Charge Name" />
-            <select v-model="item.type" class="small-select">
-                <option value="fixed">Fixed (Rs)</option>
-                <option value="percentage">%</option>
-            </select>
-            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
-            <button type="button" @click="removeOtherCharge(index)" class="remove-btn" v-if="otherCharges.length > 1">Remove</button>
-        </div>
-        <button type="button" @click="addOtherCharge" class="add-btn">Add Charge</button>
-    </div>
+          <div class="dynamic-section">
+              <div class="section-header">Taxes & Service Charges</div>
+              <div v-for="(item, index) in otherCharges" :key="index" class="dynamic-row-other">
+                  <input v-model="item.name" type="text" placeholder="Charge Name" />
+                  <select v-model="item.type" class="small-select">
+                      <option value="fixed">Fixed (Rs)</option>
+                      <option value="percentage">%</option>
+                  </select>
+                  <input v-model="item.amount" type="number" step="0.01" placeholder="Value" />
+                  <button type="button" @click="removeOtherCharge(index)" class="remove-btn" v-if="otherCharges.length > 1">Remove</button>
+              </div>
+              <button type="button" @click="addOtherCharge" class="add-btn">Add Charge</button>
+          </div>
 
-    <div class="dynamic-section discount-section">
-        <div class="section-header">Discounts</div>
-        <div v-for="(item, index) in discounts" :key="index" class="dynamic-row-other">
-            <input v-model="item.name" type="text" placeholder="Discount Name" />
-            <select v-model="item.type" class="small-select">
-                <option value="fixed">Fixed (Rs)</option>
-                <option value="percentage">%</option>
-            </select>
-            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
-            <button type="button" @click="removeDiscount(index)" class="remove-btn" v-if="discounts.length > 1">Remove</button>
+          <div class="dynamic-section discount-section">
+              <div class="section-header">Discounts</div>
+              <div v-for="(item, index) in discounts" :key="index" class="dynamic-row-other">
+                  <input v-model="item.name" type="text" placeholder="Discount Name" />
+                  <select v-model="item.type" class="small-select">
+                      <option value="fixed">Fixed (Rs)</option>
+                      <option value="percentage">%</option>
+                  </select>
+                  <input v-model="item.amount" type="number" step="0.01" placeholder="Value" />
+                  <input v-model="item.date" type="number" min="1" max="27" placeholder="Day" />
+                  <button type="button" @click="removeDiscount(index)" class="remove-btn" v-if="discounts.length > 1">Remove</button>
+              </div>
+              <button type="button" @click="addDiscount" class="add-btn">Add Discount</button>
+          </div>
+          <div class="dynamic-section fine-section">
+              <div class="section-header">Fines</div>
+              <div v-for="(item, index) in fines" :key="index" class="dynamic-row-other">
+                  <input v-model="item.name" type="text" placeholder="Fine Name" />
+                  <select v-model="item.type" class="small-select">
+                      <option value="fixed">Fixed (Rs)</option>
+                      <option value="percentage">%</option>
+                  </select>
+                  <input v-model="item.amount" type="number" step="0.01" placeholder="Value" />
+                  <input v-model="item.date" type="number" min="1" max="27" placeholder="Day" />
+                  <button type="button" @click="removeFine(index)" class="remove-btn" v-if="fines.length > 1">Remove</button>
+              </div>
+              <button type="button" @click="addFine" class="add-btn">Add Fine</button>
+          </div>
         </div>
-        <button type="button" @click="addDiscount" class="add-btn">Add Discount</button>
-    </div>
-    <div class="dynamic-section fine-section">
-        <div class="section-header">Fines</div>
-        <div v-for="(item, index) in fines" :key="index" class="dynamic-row-other">
-            <input v-model="item.name" type="text" placeholder="Fine Name" />
-            <select v-model="item.type" class="small-select">
-                <option value="fixed">Fixed (Rs)</option>
-                <option value="percentage">%</option>
-            </select>
-            <input v-model="item.amount" type="number" step="0.01" placeholder="Val" />
-            <button type="button" @click="removeFine(index)" class="remove-btn" v-if="fines.length > 1">Remove</button>
-        </div>
-        <button type="button" @click="addFine" class="add-btn">Add Fine</button>
-    </div>
-</div>
 
           <button type="submit" class="submit-btn">Save Configuration</button>
         </form>

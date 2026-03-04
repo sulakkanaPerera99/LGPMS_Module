@@ -146,3 +146,29 @@ export const fetchProjectsModel = async (sabha_code) => {
         throw error;
     }
 };
+
+export const fetchTempInvoicesBySubNIC = async (sub_nic) => {
+    try {
+        const query = `
+            SELECT cus_name, cus_nic, amount 
+            FROM tempory_invoice 
+            WHERE sub_nic = ?
+        `;
+        const [rows] = await db.query(query, [sub_nic]);
+        return rows;
+    } catch (error) {
+        console.error("Database Error in fetchTempInvoicesBySubNIC:", error);
+        throw error;
+    }
+};
+
+export const deleteTempInvoiceModel = async (sub_nic, cus_nic) => {
+    try {
+        const query = `DELETE FROM tempory_invoice WHERE sub_nic = ? AND cus_nic = ?`;
+        const [result] = await db.query(query, [sub_nic, cus_nic]);
+        return result;
+    } catch (error) {
+        console.error("Database Error in deleteTempInvoiceModel:", error);
+        throw error;
+    }
+};
