@@ -44,6 +44,7 @@ import fetchCustomerHistory from "../views/water billing/CustomerPaymentHistory.
 //sms
 import BulkSMS from "@/views/SMS/BulkSMS.vue";
 import SMSConfig from "@/views/SMS/SMSConfig.vue";
+import ConfigVotes from "@/views/water billing/ConfigVotes.vue";
 
 
 //UnderDevelopment 
@@ -106,13 +107,6 @@ const routes = [
     name: "Vote",
     component:Vote,
   },
-  
- 
-  {
-    path: '/:pathMatch(.*)*',
-    component: Login,
-    // https://stackoverflow.com/questions/68504803/how-can-i-make-a-catch-all-other-route-in-vue-router-also-catch-the-url-when-p
-  },
   {
         path: '/home',
         name: 'home',
@@ -172,6 +166,11 @@ const routes = [
         path: '/water-bill-report-generation',
         name: 'water-bill-report-generation',
         component: WaterBillReportGeneration
+      },
+      {
+        path:'/vote_setup',
+        name:'vote_setup',
+        component: ConfigVotes
       },
       {
         path: '/tax/street',
@@ -280,7 +279,11 @@ const routes = [
         path: '/send_sms',
         name: 'send_sms',
         component: BulkSMS
-      }
+      },
+      {
+    path: '/:pathMatch(.*)*',
+    component: Login,
+    }
 ];
 
 const router = createRouter({

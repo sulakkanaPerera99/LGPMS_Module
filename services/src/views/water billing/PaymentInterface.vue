@@ -12,6 +12,7 @@
         <h2>Account Payment (Add PIV)</h2>
         <router-link to="/bill-payment" class="back-link">Back to bill payment</router-link>
       </div>
+      
       <div class="card mb-3 mt-3"> 
         <div class="card-header">Customer Account Details</div>
         <div class="card-body">
@@ -25,9 +26,9 @@
               <h4 class="text-danger">Total Outstanding: {{ formatCurrency(accountDetails.totalOutstanding) }}</h4>
             </div>
           </div>
-          </div>
-          </div>
+        </div>
       </div>
+
       <div class="card mb-3 config-card"> 
         <div class="card-header bg-light">
           <strong>Automated Billing Adjustments</strong>
@@ -49,6 +50,7 @@
               </div>
             </div>
           </div>
+
           <div class="payment-input-section mt-4 mb-4">
              <label for="totalPaymentInput" class="text-primary font-weight-bold">Enter Payment Amount (LKR)</label>
              <input 
@@ -62,6 +64,7 @@
                 step="0.01"
              >
           </div>
+
           <div class="breakdown-section p-3" v-if="enteredPaymentAmount > 0">
             <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 2px solid #ddd;">
               <h5 style="margin: 0; color: #2c3e50;">Amount Breakdown & Account Allocation</h5>
@@ -74,53 +77,38 @@
                     <th style="text-align: left;">Category</th>
                     <th class="text-end">Required Amount</th>
                     <th class="text-end">Allocated (Paying)</th>
-                    <th style="text-align: left;">Select Rate Head</th>
+                    <th style="text-align: left;">Automated Vote Head</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="requiredAmounts.fine > 0">
+                  <tr v-if="breakdownInputs.fine > 0">
                     <td class="align-middle" style="text-align: left;"><strong>Fine / Penalty</strong></td>
                     <td class="text-end align-middle text-muted">{{ formatCurrency(requiredAmounts.fine) }}</td>
                     <td class="text-end align-middle">
                       <input type="number" v-model.number="breakdownInputs.fine" class="form-control text-end text-danger fw-bold readonly-input" readonly>
                     </td>
-                    <td>
-                      <select v-model="selectedRateHeads.fine" class="form-control small-select">
-                        <option value="" disabled>Select Rate Head</option>
-                        <option v-for="rate in empSbRates" :key="'r-fine-'+rate.sb_rate_head" :value="rate.sb_rate_head">
-                          {{ rate.sb_rate_head }} - {{ rate.rate_head_name || 'Rate Head' }}
-                        </option>
-                      </select>
+                    <td class="align-middle">
+                      <span class="badge" style="font-size: 14px;">{{ selectedRateHeads.fine }}</span>
                     </td>
                   </tr>
-                  <tr v-if="requiredAmounts.arrears > 0">
+                  <tr v-if="breakdownInputs.arrears > 0">
                     <td class="align-middle" style="text-align: left;"><strong>Arrears</strong></td>
                     <td class="text-end align-middle text-muted">{{ formatCurrency(requiredAmounts.arrears) }}</td>
                     <td class="text-end align-middle">
-                      <input type="number" v-model.number="breakdownInputs.arrears" class="form-control text-end readonly-input" style="color: #d35400; font-weight: bold;" readonly>
+                      <input type="number" v-model.number="breakdownInputs.arrears" class="form-control text-end readonly-input" style="font-weight: bold;" readonly>
                     </td>
-                    <td>
-                      <select v-model="selectedRateHeads.arrears" class="form-control small-select">
-                        <option value="" disabled>Select Rate Head</option>
-                        <option v-for="rate in empSbRates" :key="'r-arr-'+rate.sb_rate_head" :value="rate.sb_rate_head">
-                          {{ rate.sb_rate_head }} - {{ rate.rate_head_name || 'Rate Head' }}
-                        </option>
-                      </select>
+                    <td class="align-middle">
+                      <span class="badge" style="font-size: 14px;">{{ selectedRateHeads.arrears }}</span>
                     </td>
                   </tr>
-                  <tr v-if="requiredAmounts.current > 0">
+                  <tr v-if="breakdownInputs.current > 0">
                     <td class="align-middle" style="text-align: left;"><strong>Current Bill</strong></td>
                     <td class="text-end align-middle text-muted">{{ formatCurrency(requiredAmounts.current) }}</td>
                     <td class="text-end align-middle">
                       <input type="number" v-model.number="breakdownInputs.current" class="form-control text-end readonly-input" style="color: #27ae60; font-weight: bold;" readonly>
                     </td>
-                    <td>
-                      <select v-model="selectedRateHeads.current" class="form-control small-select">
-                        <option value="" disabled>Select Rate Head</option>
-                        <option v-for="rate in empSbRates" :key="'r-cur-'+rate.sb_rate_head" :value="rate.sb_rate_head">
-                          {{ rate.sb_rate_head }} - {{ rate.rate_head_name || 'Rate Head' }}
-                        </option>
-                      </select>
+                    <td class="align-middle">
+                      <span class="badge" style="font-size: 14px;">{{ selectedRateHeads.current }}</span>
                     </td>
                   </tr>
                   <tr v-if="breakdownInputs.excess > 0">
@@ -128,19 +116,15 @@
                     <td class="text-end align-middle">
                       <input type="number" v-model.number="breakdownInputs.excess" class="form-control text-end readonly-input" style="color: #2980b9; font-weight: bold;" readonly>
                     </td>
-                    <td>
-                      <select v-model="selectedRateHeads.excess" class="form-control small-select">
-                        <option value="" disabled>Select Rate Head</option>
-                        <option v-for="rate in empSbRates" :key="'r-exc-'+rate.sb_rate_head" :value="rate.sb_rate_head">
-                          {{ rate.sb_rate_head }} - {{ rate.rate_head_name || 'Rate Head' }}
-                        </option>
-                      </select>
+                    <td class="align-middle">
+                      <span class="badge" style="font-size: 14px;">{{ selectedRateHeads.excess }}</span>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
+
           <div class="mt-4" style="text-align: right;">
             <button 
               @click="proceedToPayment" 
@@ -155,6 +139,7 @@
         </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script>
@@ -171,34 +156,14 @@ export default {
       isProcessing: false,
       currentSabha: '',
       currentUserNIC: '',
-      empSbRates: [],
-      availableTariffConfigs: {
-        discounts: [],
-        fines: []
-      },
+      availableTariffConfigs: { discounts: [], fines: [] },
       enteredPaymentAmount: 0,
       appliedDiscount: 0,
-      requiredAmounts: {
-        fine: 0,
-        arrears: 0,
-        current: 0
-      },
-      breakdownInputs: {
-        fine: 0,
-        arrears: 0,
-        current: 0,
-        excess: 0
-      },
+      requiredAmounts: { fine: 0, arrears: 0, current: 0 },
+      breakdownInputs: { fine: 0, arrears: 0, current: 0, excess: 0 },
       originalCurrentAmount: 0,
       originalArrearsAmount: 0,
-      selectedRateHeads: {
-        fine: '',
-        arrears: '',
-        current: '',
-        excess: ''
-      },
-      currentPage: 1,
-      itemsPerPage: 4,
+      selectedRateHeads: { fine: '', arrears: '', current: '', excess: '' }
     };
   },
   async mounted() {
@@ -211,8 +176,8 @@ export default {
     const accountId = this.$route.params.accountId;
     if (accountId) {
       await this.fetchAccountDetails(accountId);
-      if (this.currentSabha && this.currentUserNIC) {
-        await this.fetchEmpRates();
+      if (this.currentSabha) {
+        await this.fetchAutomatedVotes(); // Vote heads ස්වයංක්‍රීයව ලබා ගැනීම
         await this.fetchTariffConfigs(accountId); 
       }
     } else {
@@ -221,6 +186,27 @@ export default {
     }
   },
   methods: {
+    // 1. සභාවට අදාළ Vote Heads ලබාගෙන Fallback Logic එක ක්‍රියාත්මක කිරීම
+    async fetchAutomatedVotes() {
+      try {
+        const response = await axios.get(`/water-votes/${this.currentSabha}`);
+        if (response.data) {
+          const config = response.data;
+          
+          // ප්‍රධාන Current Month Vote එක
+          const mainVote = config.current_vote;
+          this.selectedRateHeads.current = mainVote;
+
+          // අනෙකුත් ඒවා නොමැති නම් Main Vote එක ආදේශ කිරීම (Fallback)
+          this.selectedRateHeads.fine = config.fine_vote || mainVote;
+          this.selectedRateHeads.arrears = config.arrears_vote || mainVote;
+          this.selectedRateHeads.excess = config.excess_vote || mainVote;
+        }
+      } catch (error) {
+        console.error("Error fetching automated vote configuration:", error);
+      }
+    },
+
     async fetchTariffConfigs(accountId) {
       try {
         const response = await axios.get(`/account-tariff-details/${accountId}`);
@@ -233,6 +219,7 @@ export default {
         console.error("Error fetching tariff configs:", err);
       }
     },
+
     async fetchAccountDetails(accountId) {
       try {
         this.loading = true;
@@ -250,7 +237,6 @@ export default {
             this.originalArrearsAmount = totalArrears > 0 ? totalArrears : 0;
             this.requiredAmounts.current = this.originalCurrentAmount;
             this.requiredAmounts.arrears = this.originalArrearsAmount;
-            this.requiredAmounts.fine = 0;
           }
         } else {
           this.error = response.data.message;
@@ -262,155 +248,111 @@ export default {
         this.loading = false;
       }
     },
+
     applyAutomaticCalculations() {
       const today = new Date().toISOString().split('T')[0];
       let calcDiscount = 0;
       let calcFine = 0;
-      if (this.availableTariffConfigs.discounts && this.availableTariffConfigs.discounts.length > 0) {
+
+      if (this.availableTariffConfigs.discounts?.length > 0) {
         const discConf = this.availableTariffConfigs.discounts[0];
         if (discConf.date && today <= discConf.date) {
-          if (discConf.type === 'percentage') {
-            calcDiscount = (this.originalCurrentAmount * parseFloat(discConf.amount)) / 100;
-          } else {
-            calcDiscount = parseFloat(discConf.amount);
-          }
+          calcDiscount = discConf.type === 'percentage' 
+            ? (this.originalCurrentAmount * parseFloat(discConf.amount)) / 100 
+            : parseFloat(discConf.amount);
         }
       }
-      if (this.availableTariffConfigs.fines && this.availableTariffConfigs.fines.length > 0) {
+
+      if (this.availableTariffConfigs.fines?.length > 0) {
         const fineConf = this.availableTariffConfigs.fines[0];
-        let fineOnArrears = 0;
-        let fineOnCurrent = 0;
-        if (this.originalArrearsAmount > 0) {
-          if (fineConf.type === 'percentage') {
-             fineOnArrears = (this.originalArrearsAmount * parseFloat(fineConf.amount)) / 100;
-          } else {
-             fineOnArrears = parseFloat(fineConf.amount); 
-          }
-        }
-        if (fineConf.date && today > fineConf.date) {
-          if (fineConf.type === 'percentage') {
-             fineOnCurrent = (this.originalCurrentAmount * parseFloat(fineConf.amount)) / 100;
-          } else {
-             fineOnCurrent = parseFloat(fineConf.amount);
-          }
-        }
-        calcFine = fineOnArrears + fineOnCurrent;
+        let fArrears = this.originalArrearsAmount > 0 
+          ? (fineConf.type === 'percentage' ? (this.originalArrearsAmount * parseFloat(fineConf.amount)) / 100 : parseFloat(fineConf.amount)) 
+          : 0;
+        let fCurrent = (fineConf.date && today > fineConf.date)
+          ? (fineConf.type === 'percentage' ? (this.originalCurrentAmount * parseFloat(fineConf.amount)) / 100 : parseFloat(fineConf.amount))
+          : 0;
+        calcFine = fArrears + fCurrent;
       }
+
       this.appliedDiscount = calcDiscount;
       this.requiredAmounts.fine = calcFine;
-      let newCurrent = this.originalCurrentAmount - calcDiscount;
-      this.requiredAmounts.current = newCurrent > 0 ? newCurrent : 0;
+      this.requiredAmounts.current = Math.max(0, this.originalCurrentAmount - calcDiscount);
       this.distributePayment();
     },
+
     distributePayment() {
-      let remainingPayment = parseFloat(this.enteredPaymentAmount) || 0;
+      let remaining = parseFloat(this.enteredPaymentAmount) || 0;
       this.breakdownInputs.fine = 0;
       this.breakdownInputs.arrears = 0;
       this.breakdownInputs.current = 0;
       this.breakdownInputs.excess = 0;
-      if (remainingPayment > 0 && this.requiredAmounts.fine > 0) {
-        let alloc = Math.min(remainingPayment, this.requiredAmounts.fine);
-        this.breakdownInputs.fine = alloc;
-        remainingPayment -= alloc;
-      }
-      if (remainingPayment > 0 && this.requiredAmounts.arrears > 0) {
-        let alloc = Math.min(remainingPayment, this.requiredAmounts.arrears);
-        this.breakdownInputs.arrears = alloc;
-        remainingPayment -= alloc;
-      }
-      if (remainingPayment > 0 && this.requiredAmounts.current > 0) {
-        let alloc = Math.min(remainingPayment, this.requiredAmounts.current);
-        this.breakdownInputs.current = alloc;
-        remainingPayment -= alloc;
-      }
-      if (remainingPayment > 0) {
-        this.breakdownInputs.excess = remainingPayment;
-      }
+
+      // Allocation Priority: Fine -> Arrears -> Current -> Excess
+      const allocFine = Math.min(remaining, this.requiredAmounts.fine);
+      this.breakdownInputs.fine = allocFine;
+      remaining -= allocFine;
+
+      const allocArrears = Math.min(remaining, this.requiredAmounts.arrears);
+      this.breakdownInputs.arrears = allocArrears;
+      remaining -= allocArrears;
+
+      const allocCurrent = Math.min(remaining, this.requiredAmounts.current);
+      this.breakdownInputs.current = allocCurrent;
+      remaining -= allocCurrent;
+
+      if (remaining > 0) this.breakdownInputs.excess = remaining;
     },
-    async fetchEmpRates() {
+
+    formatCurrency(value) {
+      return parseFloat(value || 0).toFixed(2);
+    },
+
+    async proceedToPayment() {
+      if (this.enteredPaymentAmount <= 0) return;
+
+      const breakdownsArray = [
+        { category: 'Fine', amount: this.breakdownInputs.fine, sb_rate_head: this.selectedRateHeads.fine },
+        { category: 'Arrears', amount: this.breakdownInputs.arrears, sb_rate_head: this.selectedRateHeads.arrears },
+        { category: 'Current Bill', amount: this.breakdownInputs.current, sb_rate_head: this.selectedRateHeads.current },
+        { category: 'Excess', amount: this.breakdownInputs.excess, sb_rate_head: this.selectedRateHeads.excess }
+      ].filter(b => b.amount > 0);
+
+      const result = await Swal.fire({
+        title: 'Confirm Payment?',
+        text: `Are you sure you want to process LKR ${this.formatCurrency(this.enteredPaymentAmount)}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#42b883',
+        confirmButtonText: 'Yes, Process it!'
+      });
+
+      if (!result.isConfirmed) return;
+
+      this.isProcessing = true;
       try {
-        const res = await axios.get(`/emp-rates/${this.currentSabha}/${this.currentUserNIC}`);
-        if (res.data && res.data.data) {
-          this.empSbRates = res.data.data;
+        const payload = {
+          account_id: this.accountDetails.accountId,
+          account_number: this.accountDetails.accountNumber,
+          payment_amount: this.enteredPaymentAmount,
+          sub_nic: this.currentUserNIC || "UNKNOWN",
+          paymonth: new Date().toISOString().slice(0, 7),
+          breakdowns: breakdownsArray 
+        };
+
+        const response = await axios.post('/payments/process', payload);
+        if (response.data.status === 'success') {
+          await Swal.fire({ icon: 'success', title: 'Payment Recorded!', timer: 2000, showConfirmButton: false });
+          this.$router.push('/officer-dashboard'); 
+        } else {
+          throw new Error(response.data.message || "Payment failed");
         }
       } catch (error) {
-        console.error("Error fetching emp rates:", error);
+        Swal.fire({ icon: 'error', title: 'Payment Failed', text: error.message });
+      } finally {
+        this.isProcessing = false;
       }
-    },
-    formatCurrency(value) {
-        return parseFloat(value || 0).toFixed(2);
-    },
-    async proceedToPayment() {
-        if (this.enteredPaymentAmount <= 0) {
-            Swal.fire('Invalid Amount', 'Please ensure payment amount is valid.', 'warning');
-            return;
-        }
-        const breakdownsArray = [
-            { category: 'Fine', amount: this.breakdownInputs.fine, sb_rate_head: this.selectedRateHeads.fine },
-            { category: 'Arrears', amount: this.breakdownInputs.arrears, sb_rate_head: this.selectedRateHeads.arrears },
-            { category: 'Current Bill', amount: this.breakdownInputs.current, sb_rate_head: this.selectedRateHeads.current },
-            { category: 'Excess', amount: this.breakdownInputs.excess, sb_rate_head: this.selectedRateHeads.excess }
-        ];
-        const invalidSelection = breakdownsArray.find(b => parseFloat(b.amount) > 0 && !b.sb_rate_head);
-        if (invalidSelection) {
-            return Swal.fire("Required", `Please select a Rate Head for ${invalidSelection.category}`, "warning");
-        }
-        const result = await Swal.fire({
-            title: 'Confirm Payment?',
-            text: `Are you sure you want to process LKR ${this.formatCurrency(this.enteredPaymentAmount)}?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#42b883',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, Process it!'
-        });
-        if (!result.isConfirmed) return;
-        this.isProcessing = true;
-        try {
-            let sub_nic = this.currentUserNIC || "UNKNOWN";
-            const payload = {
-                account_id: this.accountDetails.accountId,
-                account_number: this.accountDetails.accountNumber,
-                payment_amount: this.enteredPaymentAmount,
-                sub_nic: sub_nic, 
-                paymonth: new Date().toISOString().slice(0, 7),
-                breakdowns: breakdownsArray 
-            };
-            const response = await axios.post('/payments/process', payload);
-            if (response.data.success || response.data.status === 'success') {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Payment Recorded!',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                this.$router.push('/officer-dashboard'); 
-            } else {
-                throw new Error(response.data.message || "Payment failed");
-            }
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Payment Failed',
-                text: error.message
-            });
-        } finally {
-            this.isProcessing = false;
-        }
     }
-  },
-  computed: {
-  // වර්තමාන පිටුවට අදාළ දත්ත පමණක් වෙන් කර ලබා ගැනීම
-  paginatedRates() {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.empSbRates.slice(start, end);
-  },
-  // සම්පූර්ණ පිටු ගණන ගණනය කිරීම
-  totalPages() {
-    return Math.ceil(this.empSbRates.length / this.itemsPerPage);
   }
-},
 };
 </script>
 
@@ -482,7 +424,6 @@ export default {
     margin-bottom: 8px !important; /* FIXED: Added space below label */
 }
 
-#water-payment-interface-container select.form-control,
 #water-payment-interface-container input.form-control {
     font-size: 15px !important;
     font-weight: 600 !important;
@@ -495,7 +436,6 @@ export default {
     transition: border-color 0.2s ease-in-out !important;
 }
 
-#water-payment-interface-container select.form-control:focus,
 #water-payment-interface-container input.form-control:focus {
     border-color: #80bdff !important;
     outline: none !important;
@@ -563,7 +503,6 @@ export default {
 }
 
 #water-payment-interface-container .readonly-input {
-    background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
@@ -759,7 +698,7 @@ export default {
 
 /* දින පෙන්වන Badge එක සඳහා */
 #water-payment-interface-container .reading-details-box .badge {
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   letter-spacing: 0.5px !important;
   padding: 5px 8px !important;
 }

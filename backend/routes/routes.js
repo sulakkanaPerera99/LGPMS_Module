@@ -232,6 +232,7 @@ router.get("/api/incomehead",AllIncomeHeads);
 // get single Income Heads 
 router.get("/api/incomehead/:id", showIncomeHead);
 
+router.get("/api/usergraterdanfive/:sbcode/:nic", UserByLevel);
 
 ////////////////////////// Shop Rent ////////////////////////////////
 // get all Shop Rent

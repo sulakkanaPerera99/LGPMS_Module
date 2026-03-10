@@ -6,7 +6,7 @@ import Swal from 'sweetalert2'
 const sabhaCode = ref('')
 const isSavingConfig = ref(false)
 const configForm = ref({
-    api_url: '',
+    api_url: 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxy.php',
     username: '',
     password: '',
     sender_id: ''
