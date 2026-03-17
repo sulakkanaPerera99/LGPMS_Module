@@ -1,4 +1,4 @@
-import { getConnection } from "../config/database.js";
+import { getConnection } from "../config/database1.js";
 
 // Get all receipts
 export const getReceipt = async (result) => {

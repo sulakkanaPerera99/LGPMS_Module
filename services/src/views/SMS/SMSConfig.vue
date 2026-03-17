@@ -122,7 +122,7 @@ const saveConfig = async () => {
 }
 
 #SMS-config .form-group { 
-    margin-bottom: 20px !important; 
+    margin: 20px !important; 
 }
 
 #SMS-config .form-group label { 

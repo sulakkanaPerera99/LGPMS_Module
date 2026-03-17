@@ -411,3 +411,180 @@ export const getProjectCodesController = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
+export const generateUnmeteredBills = async (req, res) => {
+    const connection = await db.getConnection();
+    let generatedCount = 0;
+    const smsQueue = []; // ✅ SMS එකතු කර ගැනීමට Queue එකක්
+    
+    const { sabha_code, project_code } = req.body;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    try {
+        await connection.beginTransaction();
+
+        // 1. පාරිභෝගිකයන් තෝරා ගැනීම (Customer details සහ Mobile number එකත් සමඟ)
+        const [unmeteredCustomers] = await connection.query(`
+            SELECT 
+                c.id as account_id, c.sabha_code, c.project_code, 
+                c.connection_type, c.is_samurdhi, c.is_metered,
+                c.new_bill_number, c.current_balance, c.last_reading_date,
+                c.created_at, c.full_name, c.contact_info as mobile_number,c.status,
+                ch.id as customer_history_id
+            FROM water_customer_accounts c
+            LEFT JOIN water_customer_history ch ON c.id = ch.customer_id AND ch.is_active = 1
+            WHERE c.is_metered = 0 
+            AND c.status = 1 
+            AND c.sabha_code = ? 
+            AND (c.project_code <=> ?)
+        `, [sabha_code, project_code]);
+
+        if (unmeteredCustomers.length === 0) {
+            await connection.rollback();
+            return res.json({ status: 'success', message: 'No unmetered customers found for the selection.' });
+        }
+
+        for (const customer of unmeteredCustomers) {
+            // 2. Duplicate Check
+            const [existingBill] = await connection.query(
+                `SELECT id FROM water_bills 
+                 WHERE account_id = ? AND YEAR(billing_date) = ? AND MONTH(billing_date) = ?`,
+                [customer.account_id, currentYear, currentMonth]
+            );
+
+            if (existingBill.length > 0) continue;
+
+            // 3. Bill Calculation
+            const billData = await calculateBill(connection, {
+                current_reading: 0,
+                previous_reading: 0, 
+                sabha_code: customer.sabha_code,
+                project_code: customer.project_code,
+                connection_type: customer.connection_type,
+                is_samurdhi: customer.is_samurdhi,
+                is_metered: customer.is_metered
+            }, parseFloat(customer.current_balance || 0));
+
+            const billNumber = `${customer.new_bill_number}-${currentYear}-${currentMonth}`;
+            
+            const formattedPeriodFrom = new Date(customer.last_reading_date || customer.created_at).toISOString().slice(0, 10);
+            const formattedPeriodTo = new Date().toISOString().slice(0, 10);
+
+            // 5. Insert Bill
+            const billInsertQuery = `
+                INSERT INTO water_bills 
+                (account_id, customer_history_id, tariff_id, bill_number, sabha_code, billing_date, period_from, period_to, 
+                 previous_reading, current_reading, units_consumed, water_consumption_charge, fixed_charge, 
+                 monthly_charge, other_charges, discounts, previous_dues, total_amount, payment_status, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            `;
+
+            await connection.query(billInsertQuery, [
+                customer.account_id,
+                customer.customer_history_id,
+                billData.applied_config_id,
+                billNumber,
+                customer.sabha_code,
+                formattedPeriodFrom,
+                formattedPeriodTo,
+                billData.fixed_charge,
+                billData.monthly_charge,
+                billData.other_charges,
+                billData.discounts,
+                billData.previous_dues,
+                billData.total_amount
+            ]);
+
+            // 6. Update Customer Balance
+            await connection.query(
+                `UPDATE water_customer_accounts SET current_balance = ?, last_reading_date = NOW() WHERE id = ?`,
+                [billData.total_amount, customer.account_id]
+            );
+
+            // 7. ✅ SMS දත්ත Queue එකට එකතු කිරීම
+// ... (Insert Bill සහ Update Balance පියවර වලින් පසුව)
+
+// 7. ✅ SMS දත්ත Queue එකට එකතු කිරීම
+if (customer.mobile_number) {
+    // නම Format කිරීම (Capitalize)
+    const customerName = (customer.full_name || 'Valued Customer')
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+    // පාරිභෝගිකයාගේ තත්වය (Status) - පළමු function එකේ භාවිතා කළ ආකාරයටම
+    const accountStatus = (customer.status == 1) ? 'Active' : 'Inactive';
+
+    // 🔴 අවසන් ගෙවීම් විස්තර ලබා ගැනීම
+    // පළමු function එකේ ආකාරයටම 'Paid' හෝ 'Partial' බිල්පත් වලින් අවසන් ගෙවීම ලබා ගනී
+    const [lastPaymentInfo] = await connection.query(
+        `SELECT paid_amount, paid_date 
+         FROM water_bills 
+         WHERE account_id = ? AND payment_status IN ('Paid', 'Partial') 
+         ORDER BY paid_date DESC LIMIT 1`,
+        [customer.account_id]
+    );
+
+    let lastPaymentAmount = 0;
+    let lastPaymentDate = 'N/A';
+    if (lastPaymentInfo.length > 0) {
+        lastPaymentAmount = parseFloat(lastPaymentInfo[0].paid_amount) || 0;
+        lastPaymentDate = new Date(lastPaymentInfo[0].paid_date).toISOString().split('T')[0];
+    }
+
+    // දින නිවැරදිව format කිරීම (ISO String හරහා YYYY-MM-DD ලබා ගැනීම)
+    const finalPeriodFrom = new Date(formattedPeriodFrom).toISOString().split('T')[0];
+    const finalPeriodTo = new Date(formattedPeriodTo).toISOString().split('T')[0];
+
+    smsQueue.push({
+        sabha_code: customer.sabha_code,
+        mobile: customer.mobile_number,
+        message: 
+            `WATER BILL - ${customer.sabha_code}\n` +
+            `Bill Ref : ${currentYear}/${currentMonth}\n` +
+            `A/C No : ${customer.new_bill_number}\n` +
+            `${customerName}\n\n` +
+
+            // Balance Before Update: මෙය පාරිභෝගිකයාගේ පෙර පැවති ශේෂයයි
+            `Balance B/F (Rs) : ${parseFloat(customer.current_balance || 0).toFixed(2)}\n` +
+            `Last payment (Rs) : ${lastPaymentAmount.toFixed(2)}\n` +
+            `Last payment Date : ${lastPaymentDate}\n\n` +
+
+            `Status : ${accountStatus}\n` +
+            `Period : ${finalPeriodFrom} to ${finalPeriodTo}\n` +
+            // Unmetered නිසා Consumption පේළිය මෙතනට අවශ්‍ය නොවේ (0 units බැවින්)
+            `Monthly Charges : Rs. ${parseFloat(billData.monthly_charge).toFixed(2)}\n` +
+            `Total Due : Rs. ${parseFloat(billData.total_amount).toFixed(2)}\n\n` +
+
+            `Please settle within 14 days !.\n` +
+            `For any queries please contact ${customer.sabha_code} Water Board\n` +
+            `Thank you!`
+    });
+}
+
+            generatedCount++;
+        }
+
+        await connection.commit();
+
+        // 8. ✅ Transaction එක සාර්ථක නම් පමණක් SMS යැවීම ආරම්භ කරන්න
+        if (smsQueue.length > 0) {
+            processSMSQueue(smsQueue); 
+        }
+
+        res.json({ 
+            status: 'success', 
+            message: `Successfully generated ${generatedCount} automated bills.`,
+            data: { generatedCount }
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error("Automated Billing Error:", error);
+        res.status(500).json({ status: 'error', message: error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+};

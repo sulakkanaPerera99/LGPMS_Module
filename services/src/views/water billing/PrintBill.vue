@@ -11,11 +11,20 @@ const availableProjectCodes = ref([])
 const currentSabha = ref('')
 const isLoading = ref(false)
 
-// ✅ 1.1 New State for Bill History Modal
+// 1.1 State for Bill History Modal
 const isBillHistoryModalOpen = ref(false)
 const selectedAccountBills = ref([])
 const isHistoryLoading = ref(false)
 const selectedCustomerName = ref('')
+
+// ✅ 1.2 NEW: State for Bulk Bill Printing
+const bulkFilters = reactive({
+  projectCode: '',
+  year: new Date().getFullYear(), // Default current year
+  month: '' // Optional
+})
+const bulkBillResults = ref([])
+const isBulkLoading = ref(false)
 
 // 2. Search & Sort State
 const searchQuery = ref('')
@@ -61,7 +70,6 @@ onMounted(async () => {
     currentSabha.value = userData.sabha || userData.sabha_code || userData.code;
 
     if (currentSabha.value) {
-      // ✅ Accounts සහ Projects දෙකම එකවර Load කරන්න
       await Promise.all([
         fetchAccounts(),
         fetchProjects()
@@ -82,7 +90,6 @@ watch(activeFilters, () => fetchAccounts(), { deep: true, immediate: false });
 // --- 5.1 Fetch Projects Function ---
 const fetchProjects = async () => {
   try {
-    // Backend Route: /water-project-list/:sabha_code
     const response = await axios.get(`/water-project-list/${currentSabha.value}`);
     availableProjectCodes.value = response.data;
   } catch (error) {
@@ -95,35 +102,13 @@ const fetchAccounts = async () => {
   isLoading.value = true;
   try {
     const params = {};
-
-    if (searchQuery.value && searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim();
-    }
-
-    if (sortBy.value) {
-      params.sort = sortBy.value;
-    }
-
-    // --- Filters ---
-    if (activeFilters.projectCode) {
-      params.projectCode = activeFilters.projectCode;
-    }
-
-    if (activeFilters.connectionTypes && activeFilters.connectionTypes.length > 0) {
-      params.connectionTypes = activeFilters.connectionTypes.join(',');
-    }
-
-    if (activeFilters.samurdhi && activeFilters.samurdhi.length > 0) {
-      params.samurdhi = activeFilters.samurdhi.join(',');
-    }
-
-    if (activeFilters.metered && activeFilters.metered.length > 0) {
-      params.metered = activeFilters.metered.join(',');
-    }
-
-    if (activeFilters.status && activeFilters.status.length > 0) {
-      params.status = activeFilters.status.join(',');
-    }
+    if (searchQuery.value && searchQuery.value.trim()) params.search = searchQuery.value.trim();
+    if (sortBy.value) params.sort = sortBy.value;
+    if (activeFilters.projectCode) params.projectCode = activeFilters.projectCode;
+    if (activeFilters.connectionTypes?.length > 0) params.connectionTypes = activeFilters.connectionTypes.join(',');
+    if (activeFilters.samurdhi?.length > 0) params.samurdhi = activeFilters.samurdhi.join(',');
+    if (activeFilters.metered?.length > 0) params.metered = activeFilters.metered.join(',');
+    if (activeFilters.status?.length > 0) params.status = activeFilters.status.join(',');
 
     const response = await axios.get(`/water-customers/${currentSabha.value}`, { params });
     accounts.value = response.data;
@@ -135,22 +120,54 @@ const fetchAccounts = async () => {
   }
 };
 
+// ✅ 5.2 NEW: API Call Function (Fetch Bulk Bills)
+const fetchBulkBills = async () => {
+  if (!bulkFilters.projectCode || !bulkFilters.year) {
+    alert("Please select at least a Project and a Year.");
+    return;
+  }
+  
+  isBulkLoading.value = true;
+  try {
+    const response = await axios.get('/bulk-water-bills', {
+      params: {
+        sabhaCode: currentSabha.value,
+        projectCode: bulkFilters.projectCode,
+        year: bulkFilters.year,
+        month: bulkFilters.month
+      }
+    });
+
+    if (response.data.success) {
+      bulkBillResults.value = response.data.data;
+      if (bulkBillResults.value.length === 0) {
+        alert("No bills found for the selected period.");
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching bulk bills:", error);
+    alert("Failed to load bulk bills.");
+  } finally {
+    isBulkLoading.value = false;
+  }
+};
+
 // 6. Filter Logic
 const applyFilters = () => {
-  isFilterDialogOpen.value = false
+  isFilterDialogOpen.value = false;
   fetchAccounts();
 }
 
 const clearFilters = () => {
-  activeFilters.projectCode = ''
-  activeFilters.connectionTypes = []
-  activeFilters.samurdhi = []
-  activeFilters.metered = []
-  activeFilters.status = []
+  activeFilters.projectCode = '';
+  activeFilters.connectionTypes = [];
+  activeFilters.samurdhi = [];
+  activeFilters.metered = [];
+  activeFilters.status = [];
   fetchAccounts();
 }
 
-// 7. New Logic: Open Modal & Fetch Bill History
+// 7. Open Modal & Fetch Bill History
 const openBillSelectionModal = async (account) => {
   selectedCustomerName.value = account.fullName;
   isBillHistoryModalOpen.value = true;
@@ -158,7 +175,6 @@ const openBillSelectionModal = async (account) => {
   selectedAccountBills.value = [];
 
   try {
-    // Backend Route: /water-bill-history/:accountId
     const response = await axios.get(`/water-bill-history/${account.id}`);
     if (response.data.success) {
       selectedAccountBills.value = response.data.data;
@@ -171,11 +187,26 @@ const openBillSelectionModal = async (account) => {
   }
 }
 
-// 8. Navigate to Template (Final Step)
+// 8. Navigate to Single Bill Template
 const selectBillAndPrint = (billId) => {
   router.push({
     name: 'BillTemplate',
     params: { id: billId }
+  });
+}
+
+// ✅ 9. NEW: Navigate to Bulk Bill Template
+const printBulkBills = () => {
+  if (bulkBillResults.value.length === 0) return;
+  
+  router.push({
+    name: 'BulkBillTemplate',
+    query: {
+      sabhaCode: currentSabha.value,
+      projectCode: bulkFilters.projectCode,
+      year: bulkFilters.year,
+      month: bulkFilters.month
+    }
   });
 }
 
@@ -194,18 +225,77 @@ const formatBillingMonth = (dateString) => {
       <router-link to="/officer-dashboard" class="back-link">Back to Dashboard</router-link>
     </header>
 
+    <div class="card table-card" style="border-top: 4px solid #42b883; margin-bottom: 30px;">
+      <h4 style="margin-top: 0; color: #2c3e50;">Bulk Bill Printing</h4>
+      
+      <div class="bulk-controls-row">
+        <select v-model="bulkFilters.projectCode" class="sort-select">
+          <option value="">-- Select Project --</option>
+          <option v-for="project in availableProjectCodes" :key="project.code" :value="project.code">
+            {{ project.code }} - {{ project.name }}
+          </option>
+        </select>
+
+        <input type="number" v-model="bulkFilters.year" placeholder="Year" class="search-input year-input" />
+
+        <select v-model="bulkFilters.month" class="sort-select">
+          <option value="">All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+
+        <button class="filter-btn dark-btn" @click="fetchBulkBills" :disabled="isBulkLoading">
+          {{ isBulkLoading ? 'Searching...' : 'Search Bills' }}
+        </button>
+      </div>
+
+      <div class="table-responsive" v-if="bulkBillResults.length > 0">
+        <table class="accounts-table" style="margin-top: 15px;">
+          <thead>
+            <tr>
+              <th>Account Number</th>
+              <th>Customer Name</th>
+              <th>Total (LKR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="bill in bulkBillResults" :key="bill.bill_id">
+              <td>{{ bill.account_no }}</td>
+              <td>{{ bill.full_name }}</td>
+              <td class="amount-cell">{{ Number(bill.account_balance).toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: right;">
+          <button class="print-bulk-btn" @click="printBulkBills">
+            🖨️ Print {{ bulkBillResults.length }} Bills (PDF)
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="card table-card">
+      <h4 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px;">Single Bill Printing</h4>
       <div class="controls-row">
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
-          <input type="text" v-model="searchQuery" placeholder="Search by Name, NIC, Old or New Bill No..." class="search-input" />
+          <input type="text" v-model="searchQuery" placeholder="Search Customers..." class="search-input" />
         </div>
         <div class="sort-wrapper">
           <select v-model="sortBy" class="sort-select">
             <option value="name_asc">Name (A-Z)</option>
-            <option value="name_desc">Name (Z-A)</option>
-            <option value="bill_asc">New Bill No (Asc)</option>
-            <option value="bill_desc">New Bill No (Desc)</option>
+            <option value="bill_asc">New Bill No</option>
           </select>
         </div>
         <button class="filter-btn" @click="isFilterDialogOpen = true">Filter</button>
@@ -235,37 +325,49 @@ const formatBillingMonth = (dateString) => {
                 <button class="action-btn" @click="openBillSelectionModal(acc)">Print Bill</button>
               </td>
             </tr>
-            <tr v-if="accounts.length === 0">
-              <td colspan="4" style="text-align:center; padding: 20px;">No customers found.</td>
-            </tr>
           </tbody>
         </table>
+        
         <div class="pagination-controls" v-if="accounts.length > itemsPerPage">
-  <small>Showing page {{ currentPage }} of {{ totalPages }}</small>
-  <nav class="pagination-nav">
-    <button 
-      class="pag-btn" 
-      :disabled="currentPage === 1" 
-      @click="currentPage--"
-    >Previous</button>
-
-    <div class="page-numbers">
-      <button 
-        v-for="page in totalPages" 
-        :key="page" 
-        class="page-num-btn"
-        :class="{ active: currentPage === page }"
-        @click="currentPage = page"
-      >{{ page }}</button>
+          <small>Showing page {{ currentPage }} of {{ totalPages }}</small>
+          <nav class="pagination-nav">
+            <button class="pag-btn" :disabled="currentPage === 1" @click="currentPage--">Previous</button>
+            <div class="page-numbers">
+              <button v-for="page in totalPages" :key="page" class="page-num-btn" :class="{ active: currentPage === page }" @click="currentPage = page">{{ page }}</button>
+            </div>
+            <button class="pag-btn" :disabled="currentPage === totalPages" @click="currentPage++">Next</button>
+          </nav>
+        </div>
+      </div>
     </div>
 
-    <button 
-      class="pag-btn" 
-      :disabled="currentPage === totalPages" 
-      @click="currentPage++"
-    >Next</button>
-  </nav>
-</div>
+    <div v-if="isBillHistoryModalOpen" class="modal-overlay">
+      <div class="modal-content history-modal">
+        <h4>Bill History: {{ selectedCustomerName }}</h4>
+        <div v-if="isHistoryLoading" class="loading-state">Loading History...</div>
+        <div v-else class="table-responsive">
+          <table class="accounts-table">
+            <thead>
+              <tr>
+                <th>Bill No</th>
+                <th>Month</th>
+                <th>Amount</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="bill in selectedAccountBills" :key="bill.id">
+                <td>{{ bill.bill_number }}</td>
+                <td>{{ formatBillingMonth(bill.billing_date) }}</td>
+                <td>{{ Number(bill.monthly_charge).toFixed(2) }}</td>
+                <td>
+                  <button class="action-btn small" @click="selectBillAndPrint(bill.id)">Select & Print</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button @click="isBillHistoryModalOpen = false" class="btn-close-modal">Close</button>
       </div>
     </div>
 
@@ -323,49 +425,10 @@ const formatBillingMonth = (dateString) => {
       </div>
     </div>
 
-    <div v-if="isBillHistoryModalOpen" class="modal-overlay">
-      <div class="modal-content bill-history-modal">
-        <h4>Select Bill to Print</h4>
-        <p class="customer-name-label">Customer: {{ selectedCustomerName }}</p>
-
-        <div v-if="isHistoryLoading" class="loading-state">Loading bills...</div>
-
-        <div v-else-if="selectedAccountBills.length === 0" class="empty-state">
-          No billing history found for this customer.
-        </div>
-
-        <div v-else class="bill-list-container">
-          <table class="bill-list-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Bill No</th>
-                <th>Amount (LKR)</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="bill in selectedAccountBills" :key="bill.id" @click="selectBillAndPrint(bill.id)" class="clickable-row">
-                <td><strong>{{ formatBillingMonth(bill.billing_date) }}</strong></td>
-                <td>{{ bill.bill_number }}</td>
-                <td>{{ bill.monthly_charge }}</td>
-                <td><span class="select-icon">➔</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="modal-actions">
-          <button class="modal-btn" @click="isBillHistoryModalOpen = false">Close</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <style scoped>
-/* Page Styles */
 .page-container {
     padding: 20px !important;
     max-width: 1200px !important;
@@ -398,6 +461,15 @@ const formatBillingMonth = (dateString) => {
     margin-bottom: 20px !important;
 }
 
+/* --- Bulk Section Single Row Style --- */
+.bulk-controls-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-bottom: 15px !important;
+    flex-wrap: nowrap !important; /* Forces single row */
+}
+
 .controls-row {
     display: flex !important;
     justify-content: space-between !important;
@@ -418,9 +490,7 @@ const formatBillingMonth = (dateString) => {
     left: 10px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    font-size: 14px !important;
     color: #888 !important;
-    pointer-events: none !important;
 }
 
 .search-input {
@@ -429,7 +499,11 @@ const formatBillingMonth = (dateString) => {
     border: 1px solid #ccc !important;
     border-radius: 4px !important;
     font-size: 13px !important;
-    box-sizing: border-box !important;
+}
+
+.year-input {
+    width: 120px !important;
+    padding-left: 10px !important;
 }
 
 .sort-select {
@@ -438,7 +512,6 @@ const formatBillingMonth = (dateString) => {
     border-radius: 4px !important;
     font-size: 13px !important;
     background-color: white !important;
-    cursor: pointer !important;
 }
 
 .filter-btn {
@@ -452,6 +525,21 @@ const formatBillingMonth = (dateString) => {
     font-size: 13px !important;
 }
 
+.dark-btn {
+    background-color: #2c3e50 !important;
+}
+
+.print-bulk-btn {
+    background-color: #e74c3c !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 20px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+}
+
+/* --- Table Original Styles --- */
 .table-responsive {
     overflow-x: auto !important;
 }
@@ -483,6 +571,11 @@ const formatBillingMonth = (dateString) => {
     background-color: #f9f9f9 !important;
 }
 
+.amount-cell {
+    font-weight: bold !important;
+    color: #c0392b !important;
+}
+
 .action-btn {
     background: transparent !important;
     border: 1px solid #42b883 !important;
@@ -500,18 +593,98 @@ const formatBillingMonth = (dateString) => {
 
 .status-active {
     color: #27ae60 !important;
-    font-weight: bold !important;
     background-color: #eafaf1 !important;
     padding: 4px 8px !important;
     border-radius: 4px !important;
+    font-weight: bold !important;
 }
 
 .status-inactive {
     color: #c0392b !important;
-    font-weight: bold !important;
     background-color: #fdedec !important;
     padding: 4px 8px !important;
     border-radius: 4px !important;
+    font-weight: bold !important;
+}
+/*History model*/
+
+.history-modal h4 {
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    color: #2c3e50 !important;
+    border-bottom: 2px solid #42b883 !important;
+    display: inline-block !important;
+    padding-bottom: 5px !important;
+    font-size: 16px !important;
+}
+
+.modal-content.history-modal {
+    width: 700px !important;
+    max-width: 95% !important;
+    padding: 30px !important;
+}
+
+.bill-list-container {
+    max-height: 450px !important;
+    overflow-y: auto !important;
+    border: 1px solid #ddd !important;
+    border-radius: 6px !important;
+    margin-top: 15px !important;
+    background: #fdfdfd !important;
+}
+
+.bill-list-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 14px !important;
+}
+
+.bill-list-table th {
+    background-color: #bcccdc !important;
+    color: #2c3e50 !important;
+    padding: 14px !important;
+    text-align: left !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    border-bottom: 2px solid #99a3b0 !important;
+    border-right: 1px solid #99a3b0 !important;
+}
+
+.bill-list-table td {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid #eee !important;
+    border-right: 1px solid #99a3b0 !important;
+    color: #2c3e50 !important;
+}
+
+.clickable-row {
+    cursor: pointer !important;
+    transition: background 0.2s ease !important;
+}
+
+.clickable-row:hover {
+    background-color: #eafaf1 !important;
+}
+
+.select-icon {
+    color: #42b883 !important;
+    font-weight: bold !important;
+    font-size: 18px !important;
+}
+
+/* Empty State / Loading State */
+.empty-state, .loading-state {
+    text-align: center !important;
+    padding: 40px !important;
+    font-style: italic !important;
+    color: #888 !important;
+    font-size: 15px !important;
+}
+
+.bill-list-table td strong {
+    color: #2c3e50 !important;
+    font-weight: 600 !important;
 }
 
 /* Modal Styles */
@@ -598,6 +771,30 @@ const formatBillingMonth = (dateString) => {
     border-color: #42b883 !important;
 }
 
+.action-btn.small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+}
+
+.btn-close-modal {
+    display: block !important; 
+    margin: 20px auto 0 !important; 
+    padding: 6px 12px !important;  
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    background: white !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 12px !important;  
+    float: none !important;         
+    width: fit-content !important;   
+}
+
+.btn-close-modal:hover {
+    background-color: #7fafe6 !important;
+    border-color: #999 !important;
+}
+
 .loading-state {
     text-align: center !important;
     padding: 20px !important;
@@ -668,58 +865,25 @@ const formatBillingMonth = (dateString) => {
     font-style: italic !important;
 }
 
-/* Pagination Styles with !important already present in your request */
+/* Pagination */
 .pagination-controls {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    margin-top: 15px !important;
-    padding: 10px 0 !important;
+    margin-top: 20px !important;
+    border-top: 1px solid #eee !important;
+    padding-top: 15px !important;
 }
 
-.pagination-nav {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-}
-.page-numbers {
-    display: flex !important;
-    gap: 5px !important;
-}
-.pag-btn {
-    padding: 6px 12px !important;
-    border: 1px solid #ccc !important;
-    background: white !important;
-    cursor: pointer !important;
-    border-radius: 4px !important;
-    font-size: 12px !important;
-}
-
-.pag-btn:disabled {
-    cursor: not-allowed !important;
-    opacity: 0.5 !important;
-}
+.pagination-nav { display: flex !important; gap: 8px !important; }
 .page-num-btn {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important; height: 32px !important;
     border: 1px solid #ccc !important;
     background: white !important;
     cursor: pointer !important;
     border-radius: 4px !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    font-size: 12px !important;
 }
-
-.page-num-btn.active {
-    background-color: #42b883 !important;
-    color: white !important;
-    border-color: #42b883 !important;
-    font-weight: bold !important;
-}
-
-.page-num-btn:hover:not(.active) {
-    background-color: #f0f0f0 !important;
-}
+.page-num-btn.active { background: #42b883 !important; color: white !important; border-color: #42b883 !important; }
+.pag-btn { padding: 6px 12px !important; border: 1px solid #ccc !important; border-radius: 4px !important; background: white !important; cursor: pointer !important; }
+.loading-state { text-align: center !important; padding: 20px !important; color: #42b883 !important; }
 </style>

@@ -6,5 +6,6 @@ const router = express.Router();
 // Route to get single bill details by ID
 router.get('/water-bills/:id', waterBillController.getBillDetails);
 router.get('/water-bill-history/:accountId', getBillHistory);
+router.get('/bulk-water-bills', waterBillController.getBulkBillDetails);
 
 export default router;

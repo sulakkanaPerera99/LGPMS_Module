@@ -11,10 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FontAwesome } from '@expo/vector-icons'; // Icon සඳහා
+import { FontAwesome } from '@expo/vector-icons'; // Icon
 
 
-const API_BASE_URL = 'http://10.10.35.59:3000/api'; 
+const API_BASE_URL = 'https://elgservices.lk/api'; 
 
 export default function ProgressScreen() {
   const [data, setData] = useState([]);
@@ -36,12 +36,11 @@ export default function ProgressScreen() {
     loadUserData();
   }, []);
 
-  // 2. User Data ගත්තට පස්සේ Progress එක ගන්න
   useEffect(() => {
     if (userData) {
       fetchProgress();
     }
-  }, [userData, sortBy, order]); // Sort වෙනස් වෙනකොටත් Auto refresh වෙනවා
+  }, [userData, sortBy, order]); //  refresh
 
   const loadUserData = async () => {
     try {

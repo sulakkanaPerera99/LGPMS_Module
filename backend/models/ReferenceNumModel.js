@@ -1,4 +1,4 @@
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 export const getSabhaRefNum = (refsabha,result) => {
     db.query("SELECT * FROM reference_num WHERE sb_code = ? ",[refsabha], (err,results)=> {

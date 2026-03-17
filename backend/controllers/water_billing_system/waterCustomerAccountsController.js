@@ -16,7 +16,7 @@ export const registerCustomer = async (req, res) => {
         const {
             customerType, oldBillNumber, currentReading, lastReadingDate, fullName, nic,
             propertyAddress, mailingAddress, contactInfo, connectionType,
-            projectCode, isSamurdhi, samurdhiNumber, isMetered,
+            projectCode, isSamurdhi, samurdhiNumber, isMetered,currentBalance,
             sabha_code, sabhaCustomerId
         } = req.body;
 
@@ -90,6 +90,7 @@ export const registerCustomer = async (req, res) => {
             is_samurdhi: isSamurdhiBool ? 1 : 0,
             samurdhi_number: samurdhiNumber,
             is_metered: isMeteredBool ? 1 : 0,
+            current_balance: currentBalance,
             sabha_code: sabha_code,
             status: 1,
             sabha_customer_id: finalSabhaCustomerId 
@@ -117,6 +118,7 @@ Account Details:
  - NIC: ${nic}
  - Connection Type: ${connectionType}
  - Samurdhi: ${samurdhiStatus}
+ - Current Balance : Rs.${currentBalance}
 
 Please use your Bill Number for future inquiries.
 ${sabha_code} Water Board`;
@@ -304,7 +306,7 @@ const toTitleCase = (str) => {
     return str
         .toLowerCase()
         .split(' ')
-        .filter(word => word.length > 0) // වචන අතර වැඩිපුර spaces තිබේ නම් ඒවා ඉවත් කරයි
+        .filter(word => word.length > 0) 
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' '); // මෙතනදී space එකක් සහිතව වචන එකතු කරයි
+        .join(' '); 
 };

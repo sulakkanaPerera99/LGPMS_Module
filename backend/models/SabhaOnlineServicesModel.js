@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 export const getonlineServices = (scode,result) => {
     db.query("SELECT * FROM sabha_online_services WHERE sabha_code = ?",[scode], (err,results)=> {

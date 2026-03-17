@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 // get all icome head
 export const getAllIncomeHeads = (result) => {

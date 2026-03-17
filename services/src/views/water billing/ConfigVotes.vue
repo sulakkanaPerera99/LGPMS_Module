@@ -6,36 +6,31 @@ import Swal from 'sweetalert2'
 // State variables
 const currentSabha = ref('')
 const currentUserNIC = ref('')
-const allVoteHeads = ref([]) // මෙය empSbRates ලෙසද හැඳින්විය හැක
+const allVoteHeads = ref([]) 
 
 const fineVote = ref('')
 const arrearsVote = ref('')
 const currentMonthVote = ref('')
 const excessVote = ref('')
 
-// පද්ධතියට ලොග් වී ඇති සභාවේ සහ පරිශීලකයාගේ දත්ත ලබා ගැනීම
+
 onMounted(async () => {
   const userDataString = sessionStorage.getItem('userData');
   if (userDataString) {
     const userData = JSON.parse(userDataString);
-    // ඔබ කලින් file එකේ භාවිතා කළ key ම මෙතැනටත් යොදන්න
     currentSabha.value = userData.sabha || userData.sabha_code;
     currentUserNIC.value = userData.nic || userData.emp_nic;
     
-    // 1. මුලින්ම Dropdown එකට අවශ්‍ය Rate Heads (Vote Heads) ලැයිස්තුව ගෙන්වා ගන්න
     await fetchEmpRates();
     
-    // 2. පසුව දැනටමත් Save කර ඇති Config ඇත්නම් ඒවා ලබාගන්න
     await fetchExistingVotes();
   } else {
     Swal.fire('Session Expired', 'Please login again.', 'error');
   }
 });
 
-// ඔබ කලින් file එකේ භාවිතා කළ එම API එකම මෙහිදීත් භාවිතා කරමු
 const fetchEmpRates = async () => {
   try {
-    // පවතින file එකේ තිබූ endpoint එක: `/emp-rates/${this.currentSabha}/${this.currentUserNIC}`
     const res = await axios.get(`/emp-rates/${currentSabha.value}/${currentUserNIC.value}`);
     if (res.data && res.data.data) {
       allVoteHeads.value = res.data.data;
@@ -46,7 +41,6 @@ const fetchEmpRates = async () => {
   }
 };
 
-// දැනට පද්ධතියේ Config කර ඇති අගයන් ලබා ගැනීම
 const fetchExistingVotes = async () => {
   try {
     const response = await axios.get(`/water-votes/${currentSabha.value}`);
@@ -61,7 +55,6 @@ const fetchExistingVotes = async () => {
   }
 };
 
-// දත්ත සුරැකීමේ Logic එක
 const submitForm = async () => {
   const payload = {
     sabha_code: currentSabha.value,
@@ -233,6 +226,7 @@ const submitForm = async () => {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
+    margin:10px !important;
 }
 
 #water-votes-config-container label {

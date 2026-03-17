@@ -45,7 +45,8 @@ import fetchCustomerHistory from "../views/water billing/CustomerPaymentHistory.
 import BulkSMS from "@/views/SMS/BulkSMS.vue";
 import SMSConfig from "@/views/SMS/SMSConfig.vue";
 import ConfigVotes from "@/views/water billing/ConfigVotes.vue";
-
+import AddMeterReadingManually from "@/views/water billing/AddMeterReadingManually.vue";
+import BulkBillTemplate from "@/views/water billing/BulkBillTemplate.vue";
 
 //UnderDevelopment 
 
@@ -171,6 +172,16 @@ const routes = [
         path:'/vote_setup',
         name:'vote_setup',
         component: ConfigVotes
+      },
+      {
+        path:'/add-meter-reading-manual',
+        name:'add-meter-reading-manual',
+        component: AddMeterReadingManually
+      },
+      {
+        path: '/bulk-bill-template',
+        name: 'BulkBillTemplate',
+        component: BulkBillTemplate
       },
       {
         path: '/tax/street',

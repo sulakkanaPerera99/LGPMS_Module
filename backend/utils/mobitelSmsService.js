@@ -22,6 +22,14 @@ export const sendMobitelSMS = async (sabhaCode, mobileNumber, message) => {
             return { success: false, message: "Configuration not found" };
         }
 
+        if (!configs || configs.length === 0) {
+            
+            return { 
+                success: false, 
+                message: "Gateway not configured" 
+            };
+        }
+
         const config = configs[0];
         const formattedMobile = formatPhoneNumber(mobileNumber);
 

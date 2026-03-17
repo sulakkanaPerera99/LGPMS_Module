@@ -16,7 +16,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-const API_BASE_URL = 'http://10.10.35.59:3000/api'; 
+const API_BASE_URL = 'https://elgservices.lk/api';
 const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {

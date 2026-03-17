@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 //tempory table insert
 export const insertTempSubject = (data,result) => {

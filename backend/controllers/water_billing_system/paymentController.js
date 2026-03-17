@@ -145,7 +145,15 @@ export const processPayment = async (req, res) => {
                     cus_contact: customerDetails.contact_no || "",
                     cus_address: customerDetails.address || customerDetails.mailing_address,
                     sb_rate_head: item.sb_rate_head,
-                    description: `Payment for A/C: ${account_number}. Total: Rs.${payment_amount.toFixed(2)}`,
+                    description: `
+Payment details for A/C: ${account_number}.
+Total amount to pay: Rs.${payment_amount.toFixed(2)}
+
+Breakdown:
+- Arrears: Rs.${arrearsAmt.toFixed(2)}
+- Fines: Rs.${finesAmt.toFixed(2)}
+- Current Bill: Rs.${currentBillAmt.toFixed(2)}
+- Excess: Rs.${excessAmt.toFixed(2)}`,
                     amount: item.amount,
                     stamp: 0,
                     discount: 0,
@@ -160,11 +168,36 @@ export const processPayment = async (req, res) => {
             }
         }
 
-        if (savedRecords.length > 0 && customerDetails.contact_no) {
-            const smsMsg = `Dear ${customerDetails.full_name}, Payment for A/C: ${account_number}. Total: Rs.${payment_amount.toFixed(2)}. Breakdown: Arrears: ${arrearsAmt.toFixed(2)}, Fine: ${finesAmt.toFixed(2)}, Current: ${currentBillAmt.toFixed(2)}. Thank you!`.trim();
-            sendMobitelSMS(customerDetails.sabha_code, customerDetails.contact_no, smsMsg)
-                .catch(err => console.error("Payment SMS Error:", err));
-        }
+        if (savedRecords.length > 0) {
+                    try {
+                        const contactNo = customerDetails.contact_no;
+                        const sabhaCode = customerDetails.sabha_code;
+        
+                        if (contactNo) {
+                            const smsMsg =
+`Dear ${customerDetails.full_name},
+Payment details for A/C: ${account_number}.
+Total amount to pay: Rs.${payment_amount.toFixed(2)}
+
+Breakdown:
+- Arrears: Rs.${arrearsAmt.toFixed(2)}
+- Fines: Rs.${finesAmt.toFixed(2)}
+- Current Bill: Rs.${currentBillAmt.toFixed(2)}
+- Excess: Rs.${excessAmt.toFixed(2)}
+
+Please kindly visit the cashier to pay the relevant charges for your bill.
+Thank you!
+${sabhaCode} Water Board`.trim();
+        
+                            // ඔබ පාවිච්චි කරන SMS utility එක මෙහිදී කැඳවන්න
+                            sendMobitelSMS(sabhaCode, contactNo, smsMsg)
+                                .then(() => console.log(`Payment SMS sent to ${contactNo}`))
+                                .catch(err => console.error("Payment SMS Error:", err));
+                        }
+                    } catch (smsErr) {
+                        console.error("SMS Generation Error:", smsErr);
+                    }
+                }
 
         return res.status(200).json({
             status: 'success',

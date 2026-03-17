@@ -1,11 +1,10 @@
 {
   "expo": {
-    "name": "WaterMeterApp",
+    "name": "Water Meter App",
     "slug": "WaterMeterApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    
-    "icon": "./assets/images/icon.png", 
+    "icon": "./assets/images/icon.png",
     "scheme": "watermeterapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,12 +12,24 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sulakkana.watermeterapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png", 
-        "backgroundColor": "#ffffff" 
+        "foregroundImage": "./assets/images/splash_icon.png",
+        "backgroundColor": "#ffffff",
+        "softwareKeyboardLayoutMode": "resize"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
+    },
+    "splash": {
+      "image": "./assets/images/splash_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d1df066b-63cb-4f98-8ffc-2dde99370024"
+      }
     },
     "web": {
       "output": "static",
@@ -29,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash_icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",

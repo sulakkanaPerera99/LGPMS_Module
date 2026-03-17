@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 export const insertData = (data,result) => {
     db.query("INSERT INTO est_income SET ?",data, (err,results)=> {

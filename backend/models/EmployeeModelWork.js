@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 import bcrypt from 'bcrypt';
 
 // get all user

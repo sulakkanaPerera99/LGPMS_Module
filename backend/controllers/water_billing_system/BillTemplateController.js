@@ -96,3 +96,24 @@ export const getBillHistory = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+export const getBulkBillDetails = async (req, res) => {
+    try {
+        const { sabhaCode, projectCode, year, month } = req.query;
+
+        if (!sabhaCode || !projectCode || !year) {
+            return res.status(400).json({ success: false, message: "Sabha Code, Project Code, and Year are required." });
+        }
+
+        const bills = await WaterBillModel.getBulkBills(sabhaCode, projectCode, year, month);
+
+        return res.status(200).json({
+            success: true,
+            data: bills
+        });
+
+    } catch (error) {
+        console.error("Controller Error (getBulkBillDetails):", error);
+        return res.status(500).json({ success: false, message: "Server Error" });
+    }
+};

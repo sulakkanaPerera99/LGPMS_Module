@@ -8,23 +8,22 @@ import {
   Alert, 
   ScrollView, 
   ActivityIndicator,
-  Keyboard
+  Keyboard,
+  KeyboardAvoidingView
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-// ✅ 1. Safe Area එක Import කරගන්න (react-native එකෙන් නෙවෙයි, මේකෙන් ගන්න)
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_BASE_URL = 'http://10.10.35.59:3000/api'; 
+const API_BASE_URL = 'https://elgservices.lk/api'; 
 
 export default function ReadingScreen() {
   const router = useRouter();
   
-  // ... (State Variables සහ Functions ටික එහෙමම තියන්න - වෙනසක් නෑ) ...
-  // (කලින් කෝඩ් එකේ තිබුණ searchCustomer, submitData ආදිය මෙතන තියෙනවා කියලා හිතන්න)
 
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState('');
@@ -181,11 +180,8 @@ export default function ReadingScreen() {
   };
 
   return (
-    // ✅ 2. ScrollView එක SafeAreaView එක ඇතුලට දාන්න
-    // flex: 1 දැම්මේ නැත්නම් Screen එක පේන්නේ නැති වෙයි.
-    // backgroundColor දැම්මේ උඩ සහ යට margin වල පාට වෙනස් නොවී තියෙන්න.
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f4f4' }}>
-      
+      <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         
         {/* --- Section 1: Filter (Project) --- */}
@@ -279,15 +275,14 @@ export default function ReadingScreen() {
         )}
 
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // ✅ 3. container එකේ උඩ padding එක අඩු කරන්න පුළුවන් දැන් (SafeArea එකෙන් ඉඩ එන නිසා)
   container: { padding: 15, backgroundColor: '#f4f4f4', flexGrow: 1 },
   
-  // ... අනිත් styles ටික එහෙමම තියන්න ...
   card: {
     backgroundColor: '#fff',
     padding: 15,

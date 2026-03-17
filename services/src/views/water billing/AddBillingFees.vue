@@ -3,7 +3,7 @@ import { ref, onMounted, watch} from 'vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 
-const connectionTypes = ['Domestic', 'Commercial', 'Construction/Industrial']
+const connectionTypes = ['Domestic', 'Commercial', 'Industrial/Construction']
 
 // Form State (For Adding)
 const projectCode = ref('')

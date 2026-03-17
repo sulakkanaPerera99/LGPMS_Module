@@ -45,6 +45,7 @@ app.use(cors({
     credentials: true
 }));
 
+
 app.use('/api', waterBillRoutes); 
 
 app.use('/api', billingFeesRoute);

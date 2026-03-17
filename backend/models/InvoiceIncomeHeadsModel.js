@@ -1,5 +1,5 @@
 // import connection
-import db from "../config/database.js";
+import db from "../config/database1.js";
 
 export const getHeadsByInvoice= (sbcode,invdate,invnum,rhead,result) => {
     db.query("SELECT invoice_num ,sb_rate_head,amount,discount  FROM tempory_invoice_save WHERE sabha =?  AND DATE(date) =? AND invoice_num =? AND sb_rate_head =? ",[sbcode,invdate,invnum,rhead], (err,results)=> {

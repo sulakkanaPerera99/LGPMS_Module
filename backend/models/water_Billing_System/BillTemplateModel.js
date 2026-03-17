@@ -95,3 +95,37 @@ export const getLastTwelveBills = async (accountId) => {
         throw error;
     }
 };
+
+
+export const getBulkBills = async (sabhaCode, projectCode, year, month) => {
+    try {
+        let query = `
+            SELECT 
+                wb.id AS bill_id,
+                wb.bill_number,
+                wb.billing_date,
+                wa.new_bill_number AS account_no,
+                COALESCE(ch.full_name, wa.full_name) AS full_name,
+                wb.total_amount AS account_balance
+            FROM water_bills wb
+            JOIN water_customer_accounts wa ON wb.account_id = wa.id
+            LEFT JOIN water_customer_history ch ON wb.customer_history_id = ch.id
+            WHERE wb.sabha_code = ? AND wa.project_code = ? AND YEAR(wb.billing_date) = ?
+        `;
+        const params = [sabhaCode, projectCode, year];
+
+        // මාසය ලබා දී ඇත්නම් පමණක් එය filter කිරීම
+        if (month) {
+            query += ` AND MONTH(wb.billing_date) = ?`;
+            params.push(month);
+        }
+
+        query += ` ORDER BY wa.new_bill_number ASC`;
+
+        const [rows] = await db.query(query, params);
+        return rows;
+    } catch (error) {
+        console.error("Database Error in getBulkBills:", error);
+        throw error;
+    }
+};
