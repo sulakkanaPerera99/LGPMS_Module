@@ -125,7 +125,7 @@
             </div>
           </div>
 
-          <div class="mt-4" style="text-align: right;">
+          <div class="mt-4" style="text-align: center;">
             <button 
               @click="proceedToPayment" 
               class="btn btn-success btn-lg" 
@@ -177,8 +177,8 @@ export default {
     if (accountId) {
       await this.fetchAccountDetails(accountId);
       if (this.currentSabha) {
-        await this.fetchAutomatedVotes(); // Vote heads ස්වයංක්‍රීයව ලබා ගැනීම
-        await this.fetchTariffConfigs(accountId); 
+        await this.fetchAutomatedVotes();
+        await this.fetchTariffConfigs(accountId);
       }
     } else {
       this.error = "Invalid request: No Account ID provided.";
@@ -186,18 +186,13 @@ export default {
     }
   },
   methods: {
-    // 1. සභාවට අදාළ Vote Heads ලබාගෙන Fallback Logic එක ක්‍රියාත්මක කිරීම
     async fetchAutomatedVotes() {
       try {
         const response = await axios.get(`/water-votes/${this.currentSabha}`);
         if (response.data) {
           const config = response.data;
-          
-          // ප්‍රධාන Current Month Vote එක
           const mainVote = config.current_vote;
           this.selectedRateHeads.current = mainVote;
-
-          // අනෙකුත් ඒවා නොමැති නම් Main Vote එක ආදේශ කිරීම (Fallback)
           this.selectedRateHeads.fine = config.fine_vote || mainVote;
           this.selectedRateHeads.arrears = config.arrears_vote || mainVote;
           this.selectedRateHeads.excess = config.excess_vote || mainVote;
@@ -206,20 +201,18 @@ export default {
         console.error("Error fetching automated vote configuration:", error);
       }
     },
-
     async fetchTariffConfigs(accountId) {
       try {
         const response = await axios.get(`/account-tariff-details/${accountId}`);
         if (response.data.status === 'success') {
           this.availableTariffConfigs.discounts = response.data.data.discounts;
           this.availableTariffConfigs.fines = response.data.data.fines;
-          this.applyAutomaticCalculations();
+          await this.fetchCalculatedPaymentDetails(accountId);
         }
       } catch (err) {
         console.error("Error fetching tariff configs:", err);
       }
     },
-
     async fetchAccountDetails(accountId) {
       try {
         this.loading = true;
@@ -247,76 +240,61 @@ export default {
       } finally {
         this.loading = false;
       }
-    },
+    },async fetchCalculatedPaymentDetails(accountId) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Backend එකට දත්ත යවන විට දැනට තිබෙන configuration rules ද එකතු කරන්න
+    const response = await axios.post('/water-billing/calculate-payable', {
+        account_id: accountId,
+        payment_date: today,
+        fine_rules: this.availableTariffConfigs.fines,     // Frontend එකෙන් යවනවා
+        discount_rules: this.availableTariffConfigs.discounts // Frontend එකෙන් යවනවා
+    });
 
-    applyAutomaticCalculations() {
-      const today = new Date().toISOString().split('T')[0];
-      let calcDiscount = 0;
-      let calcFine = 0;
+    if (response.data.status === 'success') {
+        const calculatedData = response.data.data;
+        this.appliedDiscount = calculatedData.appliedDiscounts || 0;
+        this.requiredAmounts.fine = calculatedData.appliedFines || 0;
+        
+        let newCurrent = this.originalCurrentAmount - this.appliedDiscount;
+        this.requiredAmounts.current = newCurrent > 0 ? newCurrent : 0;
+        this.requiredAmounts.arrears = this.originalArrearsAmount || 0;
 
-      if (this.availableTariffConfigs.discounts?.length > 0) {
-        const discConf = this.availableTariffConfigs.discounts[0];
-        if (discConf.date && today <= discConf.date) {
-          calcDiscount = discConf.type === 'percentage' 
-            ? (this.originalCurrentAmount * parseFloat(discConf.amount)) / 100 
-            : parseFloat(discConf.amount);
-        }
-      }
-
-      if (this.availableTariffConfigs.fines?.length > 0) {
-        const fineConf = this.availableTariffConfigs.fines[0];
-        let fArrears = this.originalArrearsAmount > 0 
-          ? (fineConf.type === 'percentage' ? (this.originalArrearsAmount * parseFloat(fineConf.amount)) / 100 : parseFloat(fineConf.amount)) 
-          : 0;
-        let fCurrent = (fineConf.date && today > fineConf.date)
-          ? (fineConf.type === 'percentage' ? (this.originalCurrentAmount * parseFloat(fineConf.amount)) / 100 : parseFloat(fineConf.amount))
-          : 0;
-        calcFine = fArrears + fCurrent;
-      }
-
-      this.appliedDiscount = calcDiscount;
-      this.requiredAmounts.fine = calcFine;
-      this.requiredAmounts.current = Math.max(0, this.originalCurrentAmount - calcDiscount);
-      this.distributePayment();
-    },
-
+        this.distributePayment();
+    }
+  } catch (err) {
+    console.error("Error fetching calculated payment details:", err);
+  }
+},
     distributePayment() {
       let remaining = parseFloat(this.enteredPaymentAmount) || 0;
       this.breakdownInputs.fine = 0;
       this.breakdownInputs.arrears = 0;
       this.breakdownInputs.current = 0;
       this.breakdownInputs.excess = 0;
-
-      // Allocation Priority: Fine -> Arrears -> Current -> Excess
       const allocFine = Math.min(remaining, this.requiredAmounts.fine);
       this.breakdownInputs.fine = allocFine;
       remaining -= allocFine;
-
       const allocArrears = Math.min(remaining, this.requiredAmounts.arrears);
       this.breakdownInputs.arrears = allocArrears;
       remaining -= allocArrears;
-
       const allocCurrent = Math.min(remaining, this.requiredAmounts.current);
       this.breakdownInputs.current = allocCurrent;
       remaining -= allocCurrent;
-
       if (remaining > 0) this.breakdownInputs.excess = remaining;
     },
-
     formatCurrency(value) {
       return parseFloat(value || 0).toFixed(2);
     },
-
     async proceedToPayment() {
       if (this.enteredPaymentAmount <= 0) return;
-
       const breakdownsArray = [
         { category: 'Fine', amount: this.breakdownInputs.fine, sb_rate_head: this.selectedRateHeads.fine },
         { category: 'Arrears', amount: this.breakdownInputs.arrears, sb_rate_head: this.selectedRateHeads.arrears },
         { category: 'Current Bill', amount: this.breakdownInputs.current, sb_rate_head: this.selectedRateHeads.current },
         { category: 'Excess', amount: this.breakdownInputs.excess, sb_rate_head: this.selectedRateHeads.excess }
       ].filter(b => b.amount > 0);
-
       const result = await Swal.fire({
         title: 'Confirm Payment?',
         text: `Are you sure you want to process LKR ${this.formatCurrency(this.enteredPaymentAmount)}?`,
@@ -325,9 +303,7 @@ export default {
         confirmButtonColor: '#42b883',
         confirmButtonText: 'Yes, Process it!'
       });
-
       if (!result.isConfirmed) return;
-
       this.isProcessing = true;
       try {
         const payload = {
@@ -336,13 +312,12 @@ export default {
           payment_amount: this.enteredPaymentAmount,
           sub_nic: this.currentUserNIC || "UNKNOWN",
           paymonth: new Date().toISOString().slice(0, 7),
-          breakdowns: breakdownsArray 
+          breakdowns: breakdownsArray
         };
-
         const response = await axios.post('/payments/process', payload);
         if (response.data.status === 'success') {
           await Swal.fire({ icon: 'success', title: 'Payment Recorded!', timer: 2000, showConfirmButton: false });
-          this.$router.push('/officer-dashboard'); 
+          this.$router.push('/officer-dashboard');
         } else {
           throw new Error(response.data.message || "Payment failed");
         }

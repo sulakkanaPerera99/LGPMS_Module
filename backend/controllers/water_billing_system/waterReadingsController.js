@@ -1,7 +1,7 @@
 import db from '../../config/database.js'; 
 import { getPendingCustomers, getProjectCodes } from '../../models/water_billing_system/waterReadingsModel.js';
 import { calculateBill } from '../../utils/BillCalculator.js'; 
-import { sendMobitelSMS } from '../../utils/mobitelSmsService.js'; // ✅ SMS Service එක Import කළා
+import { sendMobitelSMS } from '../../utils/mobitelSmsService.js';
 
 // 1. Get Pending Customers
 export const getPendingCustomersController = async (req, res) => {
@@ -225,11 +225,11 @@ export const saveBatchReadingsController = async (req, res) => {
                 project_code: reading.project_code, 
                 connection_type: accountType, 
                 is_samurdhi: isSamurdhi,      
-                is_metered: isMetered         
+                is_metered: isMetered
             }, previous_dues);
 
             // Bill Number Generate
-            const billNumber = `${reading.bill_number_ref}/${reading.year}/${reading.month}`;
+            const billNumber = `${reading.bill_number_ref}-${reading.year}-${reading.month}`;
 
             // =========================================================
             // 🟢 STEP 4: Save Bill

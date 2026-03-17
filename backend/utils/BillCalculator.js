@@ -31,7 +31,7 @@ const calculateSlabAmount = (units, slabList) => {
  * @param {Array} itemsList - Frontend එකෙන් එන Charges හෝ Discounts Array එක
  * @param {Number} baseAmount - ප්‍රතිශතය ගණනය කිරීමට අදාල මූලික අගය (Sub Total)
  */
-const calculateDynamicAmount = (itemsList, baseAmount = 0) => {
+export const calculateDynamicAmount = (itemsList, baseAmount = 0) => {
     let total = 0;
 
     if (Array.isArray(itemsList)) {
